@@ -26,9 +26,19 @@ spring:
     password: ${DB_PASSWORD:pass}
     driver-class-name: org.postgresql.Driver
 
+  # Flyway owns the schema. `baseline-on-migrate` is what makes the switch safe for someone already
+  # running this app: a database that Hibernate built is stamped as version 1 and starts at V2,
+  # while an empty one gets V1 first.
+  flyway:
+    baseline-on-migrate: true
+    baseline-version: 1
+    baseline-description: schema as ddl-auto left it
+
   jpa:
     hibernate:
-      ddl-auto: update
+      # validate, not update: a mapping that has drifted from the migrations now fails at startup
+      # instead of quietly rewriting the user's database.
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:

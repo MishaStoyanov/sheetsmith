@@ -75,6 +75,21 @@ This is the most common change, and the engine is built for it. The full six-sta
 A new `TRANSFORM_COLUMN` rule is easier still: a `@Component` implementing `ColumnTransform`
 documents itself into both prompts through the registry, and `ActionCatalog` is not edited at all.
 
+## Changing the schema
+
+Flyway owns the database; Hibernate only checks it (`ddl-auto: validate`). A mapping change without a
+migration therefore fails at startup rather than rewriting somebody's database quietly.
+
+1. Add `src/main/resources/db/migration/V<n>__what_it_does.sql`. Never edit a migration that has
+   shipped — Flyway records its checksum and refuses to run against a database that applied the old
+   one.
+2. Change the entity to match.
+3. `mvn test`. `SchemaMigrationTest` builds an empty PostgreSQL in a container, runs every migration
+   and starts the app against the result, so a column missed on either side fails there.
+
+`V1__baseline.sql` is the schema Hibernate's old `ddl-auto: update` produced. Databases that already
+have it are stamped at version 1 by `baseline-on-migrate` and start at V2; a fresh one runs V1.
+
 ## Commits
 
 Write the message for someone who will read it in a year while trying to understand why the code is

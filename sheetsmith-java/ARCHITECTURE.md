@@ -287,7 +287,12 @@ loosened casually:
   string-matched.
 - Job parallelism is controlled by a `Semaphore` bean (default `maxConcurrentJobs=1`), overridable via `MAX_CONCURRENT_JOBS`.
 - Database: PostgreSQL, defaults to `localhost:5432/xlsxai` / `postgres` / `pass`; override with `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`.
-- `ddl-auto: update` — Hibernate manages schema automatically during development.
+- Schema: **Flyway owns it**, `ddl-auto: validate`. Migrations are `src/main/resources/db/migration/`;
+  `V1__baseline.sql` is the schema as `ddl-auto: update` left it, generated from the mappings rather
+  than typed. `baseline-on-migrate: true` is what makes an existing database safe to upgrade —
+  Hibernate built it, so Flyway stamps it as version 1 and starts it at V2; an empty database runs V1
+  itself. Adding a column now means writing the next `V*.sql`: `validate` fails startup on a mapping
+  the migrations do not match, which is how `SchemaMigrationTest`'s container run catches it.
 
 ### Supported action types
 
