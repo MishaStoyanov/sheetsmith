@@ -15,7 +15,7 @@ import java.nio.file.Path;
 @Getter
 @Setter
 @Configuration
-@ConfigurationProperties(prefix = "xlsxai.storage")
+@ConfigurationProperties(prefix = "sheetsmith.storage")
 public class FileStorageConfig {
 
     private String uploadDir;

@@ -57,7 +57,7 @@ public class ExcelController {
      * A plan for a user with nothing to type yet: the sheet is inspected with the chat's read-only
      * tools first, so the suggestions come from the data rather than from the column names. That
      * inspection reads real cell values, which is why this endpoint is part of the chat for the
-     * purposes of {@code xlsxai.chat.enabled} even though it lives here.
+     * purposes of {@code sheetsmith.chat.enabled} even though it lives here.
      */
     @PostMapping("/suggest")
     public ResponseEntity<PlanResponseDto> suggest(@RequestBody @Valid SuggestRequest request) {

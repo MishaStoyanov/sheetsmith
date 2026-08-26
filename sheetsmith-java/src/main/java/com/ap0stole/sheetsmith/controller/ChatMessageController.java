@@ -26,7 +26,7 @@ import java.util.Map;
  * They live apart from {@link ChatController} because the rest of {@code /api/chat/sessions} is not
  * the chat at all — it is the shared document workspace the improve flow uploads into and reads
  * revisions from, and it has to keep working on an instance with no chat. Splitting them is what
- * lets {@code xlsxai.chat.enabled=false} remove the model-facing surface without taking the
+ * lets {@code sheetsmith.chat.enabled=false} remove the model-facing surface without taking the
  * product with it.
  */
 @Slf4j

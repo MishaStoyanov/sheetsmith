@@ -21,18 +21,18 @@ against it yet — it exists so that a job can record who ran it once there is a
 
 Three things carry weight, and they are worth understanding before you loosen any of them.
 
-**CORS is an allowlist, not `*`** (`xlsxai.security.allowed-origins`). Without authentication, a
+**CORS is an allowlist, not `*`** (`sheetsmith.security.allowed-origins`). Without authentication, a
 wildcard would let any page the user happens to have open drive their instance from their browser —
 including overwriting the stored API keys through `PUT /api/settings`. If you add an origin, add the
 specific one.
 
-**`POST /api/excel/improve/path` is disabled by default** (`xlsxai.security.path-endpoint-enabled`).
+**`POST /api/excel/improve/path` is disabled by default** (`sheetsmith.security.path-endpoint-enabled`).
 It reads and writes files by path, so when enabled both paths must resolve inside a configured root;
 `PathGuard` follows symlinks and resolves `..` rather than matching strings. Leave it off unless you
 are scripting against your own files.
 
 **Uploads are bounded** — 50 MB per file — and sessions and their revisions are deleted after
-`xlsxai.storage.ttl-days` (7 by default) by a nightly job.
+`sheetsmith.storage.ttl-days` (7 by default) by a nightly job.
 
 ## What leaves the machine
 
@@ -40,7 +40,7 @@ By default, only the sheet's *structure* reaches the language model — names, h
 formula text — plus the result of any query the chat itself runs, which does contain real cell
 values. The root README says exactly where those two lines fall.
 
-`XLSXAI_CHAT_ENABLED=false` removes the parts that could send anything more; they are absent from
+`SHEETSMITH_CHAT_ENABLED=false` removes the parts that could send anything more; they are absent from
 the running application rather than merely unused.
 
 If you point the app at OpenAI or Anthropic instead of a local Ollama, that data goes to them under

@@ -145,7 +145,7 @@ class PathGuardTest {
 
         assertThatThrownBy(() -> guard(false, root).resolveInput(input.toString(), "inputPath"))
                 .isInstanceOf(ApiException.class)
-                .hasMessageContaining("XLSXAI_PATH_ENDPOINT_ENABLED")
+                .hasMessageContaining("SHEETSMITH_PATH_ENDPOINT_ENABLED")
                 .extracting(e -> ((ApiException) e).getErrorCode())
                 .isEqualTo(ErrorCode.PATH_ENDPOINT_DISABLED);
     }
@@ -160,7 +160,7 @@ class PathGuardTest {
 
         assertThatThrownBy(() -> new PathGuard(config).resolveInput(input.toString(), "inputPath"))
                 .isInstanceOf(ApiException.class)
-                .hasMessageContaining("XLSXAI_PATH_ENDPOINT_ROOTS")
+                .hasMessageContaining("SHEETSMITH_PATH_ENDPOINT_ROOTS")
                 .extracting(e -> ((ApiException) e).getErrorCode())
                 .isEqualTo(ErrorCode.PATH_ENDPOINT_MISCONFIGURED);
 

@@ -64,26 +64,29 @@ logging:
     org.springframework: INFO
     org.hibernate.SQL: WARN
 
-xlsxai:
+# Renamed from `xlsxai` with the rest of the project. Every setting reads SHEETSMITH_* first and the
+# old XLSXAI_* second, so an .env written before the rename still configures the instance it always
+# did rather than silently reverting it to defaults.
+sheetsmith:
   storage:
-    upload-dir: ${XLSXAI_UPLOAD_DIR:./uploads}
-    result-dir: ${XLSXAI_RESULT_DIR:./results}
-    session-dir: ${XLSXAI_SESSION_DIR:./sessions}
-    ttl-days: ${XLSXAI_TTL_DAYS:7}
+    upload-dir: ${SHEETSMITH_UPLOAD_DIR:${XLSXAI_UPLOAD_DIR:./uploads}}
+    result-dir: ${SHEETSMITH_RESULT_DIR:${XLSXAI_RESULT_DIR:./results}}
+    session-dir: ${SHEETSMITH_SESSION_DIR:${XLSXAI_SESSION_DIR:./sessions}}
+    ttl-days: ${SHEETSMITH_TTL_DAYS:${XLSXAI_TTL_DAYS:7}}
   processing:
     max-concurrent-jobs: ${MAX_CONCURRENT_JOBS:1}
-    max-autosize-cells: ${XLSXAI_MAX_AUTOSIZE_CELLS:500000}
+    max-autosize-cells: ${SHEETSMITH_MAX_AUTOSIZE_CELLS:${XLSXAI_MAX_AUTOSIZE_CELLS:500000}}
   security:
-    allowed-origins: ${XLSXAI_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080}
-    path-endpoint-enabled: ${XLSXAI_PATH_ENDPOINT_ENABLED:false}
-    path-endpoint-roots: ${XLSXAI_PATH_ENDPOINT_ROOTS:}
+    allowed-origins: ${SHEETSMITH_ALLOWED_ORIGINS:${XLSXAI_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080}}
+    path-endpoint-enabled: ${SHEETSMITH_PATH_ENDPOINT_ENABLED:${XLSXAI_PATH_ENDPOINT_ENABLED:false}}
+    path-endpoint-roots: ${SHEETSMITH_PATH_ENDPOINT_ROOTS:${XLSXAI_PATH_ENDPOINT_ROOTS:}}
   chat:
     # false turns this into an improve-only instance: no chat, no data-grounded suggestions, and
     # nothing but the sheet's structure reaches the model.
-    enabled: ${XLSXAI_CHAT_ENABLED:true}
-    max-steps: ${XLSXAI_CHAT_MAX_STEPS:8}
-    max-cells: ${XLSXAI_CHAT_MAX_CELLS:300}
-    max-rows: ${XLSXAI_CHAT_MAX_ROWS:50}
-    history-messages: ${XLSXAI_CHAT_HISTORY:12}
-    repair-steps: ${XLSXAI_CHAT_REPAIR_STEPS:2}
-    stream-timeout-ms: ${XLSXAI_CHAT_STREAM_TIMEOUT_MS:600000}
+    enabled: ${SHEETSMITH_CHAT_ENABLED:${XLSXAI_CHAT_ENABLED:true}}
+    max-steps: ${SHEETSMITH_CHAT_MAX_STEPS:${XLSXAI_CHAT_MAX_STEPS:8}}
+    max-cells: ${SHEETSMITH_CHAT_MAX_CELLS:${XLSXAI_CHAT_MAX_CELLS:300}}
+    max-rows: ${SHEETSMITH_CHAT_MAX_ROWS:${XLSXAI_CHAT_MAX_ROWS:50}}
+    history-messages: ${SHEETSMITH_CHAT_HISTORY:${XLSXAI_CHAT_HISTORY:12}}
+    repair-steps: ${SHEETSMITH_CHAT_REPAIR_STEPS:${XLSXAI_CHAT_REPAIR_STEPS:2}}
+    stream-timeout-ms: ${SHEETSMITH_CHAT_STREAM_TIMEOUT_MS:${XLSXAI_CHAT_STREAM_TIMEOUT_MS:600000}}

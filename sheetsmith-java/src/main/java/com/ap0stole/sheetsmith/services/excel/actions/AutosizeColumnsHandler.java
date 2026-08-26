@@ -26,7 +26,7 @@ import java.util.Map;
  * <p>
  * Four things make this more than a one-line call to POI. It measures every value in a column through
  * AWT, so the cost follows the size of the sheet: the step sizes columns until
- * {@code xlsxai.processing.max-autosize-cells} is spent and then reports the rest as skipped, rather
+ * {@code sheetsmith.processing.max-autosize-cells} is spent and then reports the rest as skipped, rather
  * than refusing outright — the bound is per step, so a refusal only teaches the model to split the
  * range and do the same total work. That same measurement is the only thing here that needs fonts,
  * which a slim JRE container may not have, so a column that cannot be measured keeps the width it had

@@ -127,7 +127,7 @@ POST /api/chat/sessions              — copies the upload to sessions/{id}/rev-
   ← DocumentSessionDto { sessionId, filename, revision, sheets, charts }   — charts: see below
 POST /api/chat/sessions/{id}/messages
   → ChatAgentService.send()          — SessionLockRegistry, one workbook open for the turn
-      loop (max xlsxai.chat.max-steps):
+      loop (max sheetsmith.chat.max-steps):
         ChatLlmService.decide()      — one JSON object: {"tool",…} or {"answer": …}
         ChatToolRegistry.invoke()    — QueryTool (read) or ActionHandler (write)
         result appended to the trace fed back to the model
@@ -151,7 +151,7 @@ repair calls it triggered (their outcome is what the self-check reports), so tho
 differ by one position on a self-healing turn — `ChatStepDto.live()` vs `ChatStepDto.from()`.
 
 A listener that throws is swallowed: by the time a browser drops the stream the turn is mid-edit
-holding the session lock, and aborting it would leave half a change. `xlsxai.chat.stream-timeout-ms`
+holding the session lock, and aborting it would leave half a change. `sheetsmith.chat.stream-timeout-ms`
 (default 10 min) is deliberately far above any real turn — a timeout here kills work the user is
 still waiting for.
 
@@ -204,7 +204,7 @@ its "before" snapshot.
 **The tiering is a trade, and which way it pays depends on the provider.** A cloud model bills per
 token, so the compact index wins. A local one re-reads the prompt every step but caches the KV
 prefix, and swapping the *system* prompt mid-turn invalidates that cache and re-processes everything
-— on top of the extra round trip the restatement costs. `xlsxai.chat.full-catalog-always` (default
+— on top of the extra round trip the restatement costs. `sheetsmith.chat.full-catalog-always` (default
 false) sends the full rules from step one instead, keeping one stable prefix for the whole turn.
 
 Whichever way that flag is set, the escalation pass still runs exactly once per editing turn:
@@ -244,16 +244,16 @@ too, and each insists on a key at startup even though this app only ever uses ch
 
 ### Storage & concurrency
 
-- Files are written to `./sessions/{sessionId}/` (the working copies both flows use) and — for the scripting endpoints only — `./uploads` (input) and `./results` (output), configurable via `xlsxai.storage.*` or env vars `XLSXAI_UPLOAD_DIR` / `XLSXAI_RESULT_DIR` / `XLSXAI_SESSION_DIR`.
-- Chat budgets live under `xlsxai.chat.*` (`max-steps`, `max-cells`, `max-rows`, `history-messages`, `repair-steps`, `full-catalog-always`) — they exist to keep a turn bounded and tool results small.
-- `xlsxai.processing.max-autosize-cells` (default 500 000, override with `XLSXAI_MAX_AUTOSIZE_CELLS`) caps the cells (columns × rows) one `AUTOSIZE_COLUMNS` step may measure — roughly five seconds, which on a 50 000-row sheet is about ten columns rather than the whole sheet. Past the budget the step sizes what it can afford and reports the remainder as skipped; it deliberately does **not** refuse, because the budget is per step and a model told to narrow its range just issues two steps and does the same total work. It sits under `processing` rather than `chat` because actions run in **both** flows, and a budget only the chat honoured would leave the improve flow unbounded.
+- Files are written to `./sessions/{sessionId}/` (the working copies both flows use) and — for the scripting endpoints only — `./uploads` (input) and `./results` (output), configurable via `sheetsmith.storage.*` or env vars `SHEETSMITH_UPLOAD_DIR` / `SHEETSMITH_RESULT_DIR` / `SHEETSMITH_SESSION_DIR`.
+- Chat budgets live under `sheetsmith.chat.*` (`max-steps`, `max-cells`, `max-rows`, `history-messages`, `repair-steps`, `full-catalog-always`) — they exist to keep a turn bounded and tool results small.
+- `sheetsmith.processing.max-autosize-cells` (default 500 000, override with `SHEETSMITH_MAX_AUTOSIZE_CELLS`) caps the cells (columns × rows) one `AUTOSIZE_COLUMNS` step may measure — roughly five seconds, which on a 50 000-row sheet is about ten columns rather than the whole sheet. Past the budget the step sizes what it can afford and reports the remainder as skipped; it deliberately does **not** refuse, because the budget is per step and a model told to narrow its range just issues two steps and does the same total work. It sits under `processing` rather than `chat` because actions run in **both** flows, and a budget only the chat honoured would leave the improve flow unbounded.
 - The `ollama` profile pins `num-ctx` explicitly. Left unset, Ollama sizes the KV cache for the model's full trained context and the allocation simply fails on a consumer card — it is a startup error, not a slow path. `num-predict`, `temperature` and `keep-alive` are set there for the same "local model, JSON answers" reason.
 - `SessionLockRegistry` holds one lock per session and is taken by **both** writers of a revision chain: `ChatAgentService.send()` for the whole turn, and `JobService.processSessionJob()` around the whole read-modify-write (on its virtual thread, not the HTTP request). Without it a turn and a job would both derive the same "next revision" and one edit would vanish.
 - **Lock order: `jobSemaphore` first, then the session lock.** A job holding a slot may wait for a session; a job holding a session must never wait for a slot, or two jobs on one session deadlock. Chat turns take the session lock only and never the semaphore.
 
 ### Turning the chat off
 
-`xlsxai.chat.enabled=false` (env `XLSXAI_CHAT_ENABLED`) makes an improve-only instance whose promise
+`sheetsmith.chat.enabled=false` (env `SHEETSMITH_CHAT_ENABLED`) makes an improve-only instance whose promise
 is that nothing but sheet structure reaches the model. It is implemented as **absence**, not as
 guards: `@ConditionalOnChatEnabled` (a meta-annotation over `@ConditionalOnProperty`) is on
 `ChatAgentService`, `ChatToolRegistry`, `SuggestionService`, all five `QueryTool` beans and
@@ -283,14 +283,15 @@ a feature flag that looks settable invites a PUT that appears to turn the chat b
 No authentication, by design — this is self-hosted. Two guards carry that weight and must not be
 loosened casually:
 
-- `configs/SecurityConfig` + `WebConfig` — CORS is an allowlist (`xlsxai.security.allowed-origins`),
+- `configs/SecurityConfig` + `WebConfig` — CORS is an allowlist (`sheetsmith.security.allowed-origins`),
   not `*`. Without auth, `*` would let any site the user has open drive their instance, including
   overwriting the stored cloud API keys via `PUT /api/settings`.
 - `services/PathGuard` — `POST /api/excel/improve/path` is disabled by default; when enabled, both
   paths must resolve inside a configured root, with symlinks followed and `..` resolved rather than
   string-matched.
 - Job parallelism is controlled by a `Semaphore` bean (default `maxConcurrentJobs=1`), overridable via `MAX_CONCURRENT_JOBS`.
-- Database: PostgreSQL, defaults to `localhost:5432/xlsxai` / `postgres` / `pass`; override with `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`.
+- Database: PostgreSQL, defaults to `localhost:5432/xlsxai` / `postgres` / `pass`; override with `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`. The database name stayed `xlsxai` when everything else was renamed — it names a database that already exists on anyone running an earlier build, and a new default would point them at an empty one.
+- Settings are `sheetsmith.*` and their environment variables `SHEETSMITH_*`. Each placeholder in `application.yaml` reads the old `XLSXAI_*` name as a second fallback, so an `.env` written before the rename still configures the instance rather than silently reverting it to defaults.
 - Schema: **Flyway owns it**, `ddl-auto: validate`. Migrations are `src/main/resources/db/migration/`;
   `V1__baseline.sql` is the schema as `ddl-auto: update` left it, generated from the mappings rather
   than typed. `baseline-on-migrate: true` is what makes an existing database safe to upgrade —
@@ -318,7 +319,7 @@ so — `describe()` alone would report only the value written, and a deleted for
 the self-check to catch.
 
 `AUTOSIZE_COLUMNS` is the one action whose cost scales with the sheet rather than the range it was given
-— POI measures every value through AWT — so it is bounded by `xlsxai.processing.max-autosize-cells` and
+— POI measures every value through AWT — so it is bounded by `sheetsmith.processing.max-autosize-cells` and
 degrades to a counted skip both where fonts are unavailable and where the budget runs out. It also
 refreshes formula cells with a `FormulaEvaluator` before measuring: POI sizes a formula from its
 *cached* result, and the workbook is not recalculated until it is saved, so `ADD_FORMULA` followed by
@@ -515,11 +516,11 @@ Each handler lives in `services/excel/actions/`. Config models (Lombok records) 
 **A job never deletes a session's files.** A session-backed job's input and result *are* revisions of
 a live chain: deleting them would punch a hole in the undo history or take the current sheet with
 them. `FileStorageService.deleteJobFiles()` is the single guard — it skips anything under
-`xlsxai.storage.session-dir`, so such a job drops its record only, and both `JobService.deleteJob`
+`sheetsmith.storage.session-dir`, so such a job drops its record only, and both `JobService.deleteJob`
 and `FileCleanupService` go through it. Those files go when the session goes.
 
 Chat endpoints live under `/api/chat/sessions` — see README for the full list.
 
-`FileCleanupService` runs daily at 02:00 and deletes jobs (+ files) older than `xlsxai.storage.ttl-days` (default 7, override via `XLSXAI_TTL_DAYS`), plus sessions (+ their revision directories) idle for the same period.
+`FileCleanupService` runs daily at 02:00 and deletes jobs (+ files) older than `sheetsmith.storage.ttl-days` (default 7, override via `SHEETSMITH_TTL_DAYS`), plus sessions (+ their revision directories) idle for the same period.
 
 `application-prod.yaml` activates with `-Dspring-boot.run.profiles=prod` and enforces `ddl-auto: validate` + requires all DB env vars (`DB_HOST`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`).

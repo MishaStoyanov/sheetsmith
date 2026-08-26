@@ -11,7 +11,7 @@ import java.util.concurrent.Semaphore;
 @Getter
 @Setter
 @Configuration
-@ConfigurationProperties(prefix = "xlsxai.processing")
+@ConfigurationProperties(prefix = "sheetsmith.processing")
 public class ProcessingConfig {
 
     private int maxConcurrentJobs = 1;
@@ -26,7 +26,7 @@ public class ProcessingConfig {
      * reports the remainder as skipped: refusing outright bounded nothing, because the budget is per
      * step and two half-ranges cost the same as one whole one.
      * <p>
-     * It lives here rather than under {@code xlsxai.chat} because both the planner and the chat run
+     * It lives here rather than under {@code sheetsmith.chat} because both the planner and the chat run
      * actions, and a budget only the chat honoured would leave the improve flow unbounded.
      */
     private int maxAutosizeCells = 500_000;

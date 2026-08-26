@@ -81,8 +81,8 @@ public class PathGuard {
     private void requireEnabled() {
         if (!securityConfig.isPathEndpointEnabled()) {
             throw new ApiException(ErrorCode.PATH_ENDPOINT_DISABLED,
-                    "The by-path endpoint is disabled. Set XLSXAI_PATH_ENDPOINT_ENABLED=true and list "
-                            + "the allowed directories in XLSXAI_PATH_ENDPOINT_ROOTS (comma-separated) "
+                    "The by-path endpoint is disabled. Set SHEETSMITH_PATH_ENDPOINT_ENABLED=true and list "
+                            + "the allowed directories in SHEETSMITH_PATH_ENDPOINT_ROOTS (comma-separated) "
                             + "to enable it; upload the file instead to avoid enabling it at all.");
         }
     }
@@ -102,7 +102,7 @@ public class PathGuard {
         if (roots.isEmpty()) {
             throw new ApiException(ErrorCode.PATH_ENDPOINT_MISCONFIGURED,
                     "The by-path endpoint is enabled but no usable directory is configured. "
-                            + "Set XLSXAI_PATH_ENDPOINT_ROOTS to existing directories (comma-separated).");
+                            + "Set SHEETSMITH_PATH_ENDPOINT_ROOTS to existing directories (comma-separated).");
         }
         return roots;
     }

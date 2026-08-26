@@ -58,7 +58,7 @@ OLLAMA_MODEL=<whatever you have pulled>
 then start only the two services you need:
 
 ```bash
-docker compose up postgres xlsxai-app
+docker compose up postgres sheetsmith-app
 ```
 
 ### Working on the frontend
@@ -118,24 +118,24 @@ mvn spring-boot:run
 | `ANTHROPIC_MODEL` | — | e.g. `claude-sonnet-4-6` |
 | `DB_HOST` | `localhost` | PostgreSQL host |
 | `DB_PORT` | `5432` | PostgreSQL port |
-| `DB_NAME` | `xlsxai` | Database name |
+| `DB_NAME` | `xlsxai` | Database name — still the old name, so an existing install keeps its data |
 | `DB_USERNAME` | `postgres` | DB user |
 | `DB_PASSWORD` | `pass` | DB password |
-| `XLSXAI_UPLOAD_DIR` | `./uploads` | Input file storage |
-| `XLSXAI_RESULT_DIR` | `./results` | Result file storage |
-| `XLSXAI_SESSION_DIR` | `./sessions` | Chat working copies (one directory per session) |
-| `XLSXAI_TTL_DAYS` | `7` | Auto-delete jobs and idle chat sessions older than N days |
+| `SHEETSMITH_UPLOAD_DIR` | `./uploads` | Input file storage |
+| `SHEETSMITH_RESULT_DIR` | `./results` | Result file storage |
+| `SHEETSMITH_SESSION_DIR` | `./sessions` | Chat working copies (one directory per session) |
+| `SHEETSMITH_TTL_DAYS` | `7` | Auto-delete jobs and idle chat sessions older than N days |
 | `MAX_CONCURRENT_JOBS` | `1` | Parallel job limit |
-| `XLSXAI_MAX_AUTOSIZE_CELLS` | `500000` | Cells one `AUTOSIZE_COLUMNS` step may measure |
-| `XLSXAI_CHAT_ENABLED` | `true` | `false` removes the chat entirely — see [Running without the chat](#running-without-the-chat) |
-| `XLSXAI_CHAT_MAX_STEPS` | `8` | Tool calls the chat may make before it must answer |
-| `XLSXAI_CHAT_MAX_CELLS` | `300` | Cell cap for a single range read |
-| `XLSXAI_CHAT_MAX_ROWS` | `50` | Row cap for any query result |
-| `XLSXAI_CHAT_HISTORY` | `12` | Previous messages replayed to the model |
-| `XLSXAI_CHAT_STREAM_TIMEOUT_MS` | `600000` | How long `/messages/stream` holds the connection open |
-| `XLSXAI_ALLOWED_ORIGINS` | localhost:5173, localhost:8080 | Browser origins allowed to call the API |
-| `XLSXAI_PATH_ENDPOINT_ENABLED` | `false` | Enables `POST /api/excel/improve/path` |
-| `XLSXAI_PATH_ENDPOINT_ROOTS` | — | Directories that endpoint may read and write |
+| `SHEETSMITH_MAX_AUTOSIZE_CELLS` | `500000` | Cells one `AUTOSIZE_COLUMNS` step may measure |
+| `SHEETSMITH_CHAT_ENABLED` | `true` | `false` removes the chat entirely — see [Running without the chat](#running-without-the-chat) |
+| `SHEETSMITH_CHAT_MAX_STEPS` | `8` | Tool calls the chat may make before it must answer |
+| `SHEETSMITH_CHAT_MAX_CELLS` | `300` | Cell cap for a single range read |
+| `SHEETSMITH_CHAT_MAX_ROWS` | `50` | Row cap for any query result |
+| `SHEETSMITH_CHAT_HISTORY` | `12` | Previous messages replayed to the model |
+| `SHEETSMITH_CHAT_STREAM_TIMEOUT_MS` | `600000` | How long `/messages/stream` holds the connection open |
+| `SHEETSMITH_ALLOWED_ORIGINS` | localhost:5173, localhost:8080 | Browser origins allowed to call the API |
+| `SHEETSMITH_PATH_ENDPOINT_ENABLED` | `false` | Enables `POST /api/excel/improve/path` |
+| `SHEETSMITH_PATH_ENDPOINT_ROOTS` | — | Directories that endpoint may read and write |
 
 ---
 
@@ -145,7 +145,7 @@ For a deployment where the chat is not wanted and the privacy promise has to be 
 than trusted:
 
 ```bash
-XLSXAI_CHAT_ENABLED=false
+SHEETSMITH_CHAT_ENABLED=false
 ```
 
 The instance becomes the improve flow alone, and the only thing that can reach the model is the
@@ -185,13 +185,13 @@ inside a trusted network. Two defaults exist to keep that honest.
 and the API from the same origin, and `npm run dev` proxies `/api`, so nothing is cross-origin. It
 matters the moment someone hosts the UI separately: without auth, any website you have open could
 otherwise drive your instance — upload and download spreadsheets, delete history, or overwrite the
-LLM settings, which hold your cloud API keys. Only the origins in `XLSXAI_ALLOWED_ORIGINS` are
+LLM settings, which hold your cloud API keys. Only the origins in `SHEETSMITH_ALLOWED_ORIGINS` are
 accepted. Serving the UI from another host? Add that origin.
 
 **The server-side path endpoint is off.** `POST /api/excel/improve/path` reads and writes paths on
 the server, which is useful for scripting and dangerous when exposed. It is disabled unless
-`XLSXAI_PATH_ENDPOINT_ENABLED=true`, and when enabled both paths must resolve — symlinks followed —
-inside one of `XLSXAI_PATH_ENDPOINT_ROOTS`. Enabling it without roots refuses to start.
+`SHEETSMITH_PATH_ENDPOINT_ENABLED=true`, and when enabled both paths must resolve — symlinks followed —
+inside one of `SHEETSMITH_PATH_ENDPOINT_ROOTS`. Enabling it without roots refuses to start.
 
 If you put this on a network anyone else can reach, put an authenticating reverse proxy in front of
 it. Nothing here is a substitute for that.

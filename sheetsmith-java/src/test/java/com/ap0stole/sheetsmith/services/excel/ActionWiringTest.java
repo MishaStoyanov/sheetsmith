@@ -117,14 +117,24 @@ class ActionWiringTest {
                         .as("the Java default has to agree with the yaml default, or one of them is a lie")
                         .isEqualTo(500_000));
 
-        contexts.withPropertyValues("xlsxai.processing.max-autosize-cells=1234").run(context ->
+        contexts.withPropertyValues("sheetsmith.processing.max-autosize-cells=1234").run(context ->
                 assertThat(context.getBean(ProcessingConfig.class).getMaxAutosizeCells()).isEqualTo(1234));
 
         // The exact expression application.yaml uses, so the placeholder and its default are covered.
         contexts.withPropertyValues(
-                        "xlsxai.processing.max-autosize-cells=${XLSXAI_MAX_AUTOSIZE_CELLS:500000}")
+                        "sheetsmith.processing.max-autosize-cells="
+                                + "${SHEETSMITH_MAX_AUTOSIZE_CELLS:${XLSXAI_MAX_AUTOSIZE_CELLS:500000}}")
                 .run(context -> assertThat(context.getBean(ProcessingConfig.class).getMaxAutosizeCells())
                         .isEqualTo(500_000));
+
+        // And the second fallback in that same expression: an .env written before the rename still
+        // configures the instance instead of silently reverting it to the default.
+        contexts.withPropertyValues(
+                        "XLSXAI_MAX_AUTOSIZE_CELLS=4321",
+                        "sheetsmith.processing.max-autosize-cells="
+                                + "${SHEETSMITH_MAX_AUTOSIZE_CELLS:${XLSXAI_MAX_AUTOSIZE_CELLS:500000}}")
+                .run(context -> assertThat(context.getBean(ProcessingConfig.class).getMaxAutosizeCells())
+                        .isEqualTo(4321));
     }
 
     @Test
@@ -133,11 +143,11 @@ class ActionWiringTest {
         // A budget of 1 cannot afford a single column of a two-row sheet, so the step has to report
         // the column as unmeasured. A bean holding a default-constructed ProcessingConfig — 500 000 —
         // would size it instead, which is what makes this an assertion about the injected value.
-        contexts.withPropertyValues("xlsxai.processing.max-autosize-cells=1").run(context ->
+        contexts.withPropertyValues("sheetsmith.processing.max-autosize-cells=1").run(context ->
                 assertThat(sizeOneColumn(context.getBean(AutosizeColumnsHandler.class)))
                         .contains("not measured"));
 
-        contexts.withPropertyValues("xlsxai.processing.max-autosize-cells=500000").run(context ->
+        contexts.withPropertyValues("sheetsmith.processing.max-autosize-cells=500000").run(context ->
                 assertThat(sizeOneColumn(context.getBean(AutosizeColumnsHandler.class)))
                         .doesNotContain("not measured"));
     }

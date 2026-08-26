@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Configuration;
 @Getter
 @Setter
 @Configuration
-@ConfigurationProperties(prefix = "xlsxai.chat")
+@ConfigurationProperties(prefix = "sheetsmith.chat")
 public class ChatConfig {
 
     /** Maximum tool invocations the agent may make before it must answer. */

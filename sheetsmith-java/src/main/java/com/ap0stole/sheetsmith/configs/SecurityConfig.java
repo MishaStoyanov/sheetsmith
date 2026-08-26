@@ -19,7 +19,7 @@ import java.util.List;
 @Getter
 @Setter
 @Configuration
-@ConfigurationProperties(prefix = "xlsxai.security")
+@ConfigurationProperties(prefix = "sheetsmith.security")
 public class SecurityConfig {
 
     /** Browser origins allowed to call /api/**. A wildcard would let any open tab drive the instance. */
@@ -38,14 +38,14 @@ public class SecurityConfig {
     @PostConstruct
     public void validate() {
         if (allowedOrigins.isEmpty()) {
-            log.warn("xlsxai.security.allowed-origins is empty: every browser origin will be refused");
+            log.warn("sheetsmith.security.allowed-origins is empty: every browser origin will be refused");
         }
         if (!pathEndpointEnabled) {
             return;
         }
         if (pathEndpointRoots.stream().allMatch(root -> root == null || root.isBlank())) {
             throw new IllegalStateException(
-                    "XLSXAI_PATH_ENDPOINT_ENABLED is true but XLSXAI_PATH_ENDPOINT_ROOTS is empty. "
+                    "SHEETSMITH_PATH_ENDPOINT_ENABLED is true but SHEETSMITH_PATH_ENDPOINT_ROOTS is empty. "
                             + "Refusing to start: that combination would expose the whole filesystem "
                             + "through POST /api/excel/improve/path.");
         }

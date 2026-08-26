@@ -8,7 +8,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a bean as part of the chat, so that {@code xlsxai.chat.enabled=false} leaves it
+ * Marks a bean as part of the chat, so that {@code sheetsmith.chat.enabled=false} leaves it
  * <em>unregistered</em> rather than merely unreachable.
  * <p>
  * The distinction is the whole point of the flag. An instance run for its privacy guarantee should
@@ -18,6 +18,6 @@ import java.lang.annotation.Target;
  */
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-@ConditionalOnProperty(prefix = "xlsxai.chat", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "sheetsmith.chat", name = "enabled", havingValue = "true", matchIfMissing = true)
 public @interface ConditionalOnChatEnabled {
 }

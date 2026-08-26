@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * The privacy guarantee, as something a machine checks rather than something a README claims.
  * <p>
- * With {@code xlsxai.chat.enabled=false} the promise is that nothing but a sheet's structure can
+ * With {@code sheetsmith.chat.enabled=false} the promise is that nothing but a sheet's structure can
  * reach a language model. That is only true if the parts able to send cell values are <em>absent
  * from the context</em>, not merely unreferenced — an unreachable code path is one refactor away
  * from being reachable again, and nobody would notice. So this asserts absence.
@@ -43,7 +43,7 @@ class ChatDisabledTest {
     @Test
     @DisplayName("with the chat off, nothing that can read cell values is in the context at all")
     void theModelFacingBeansAreAbsent() {
-        contexts.withPropertyValues("xlsxai.chat.enabled=false").run(context -> {
+        contexts.withPropertyValues("sheetsmith.chat.enabled=false").run(context -> {
             assertThat(context).hasNotFailed();
 
             assertThat(context.getBeansOfType(QueryTool.class))

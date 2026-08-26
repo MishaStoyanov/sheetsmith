@@ -60,7 +60,7 @@ Two things to be precise about, because a privacy claim is worth only its except
 - **Improve sends structure**, plus the text label beside an existing formula, which it uses to
   avoid duplicating totals it already added.
 
-Both go away with one setting. `XLSXAI_CHAT_ENABLED=false` makes an improve-only instance where the
+Both go away with one setting. `SHEETSMITH_CHAT_ENABLED=false` makes an improve-only instance where the
 only thing that can reach the model is the sheet's structure — names, headers, ranges, formula text —
 and the parts that could send anything else are absent from the running application rather than
 merely unused. The [backend README](sheetsmith-java/README.md#running-without-the-chat) lists
@@ -98,8 +98,11 @@ the hard way:
 
 - there is no authentication — this is designed to be run on a machine you control, and the CORS
   allowlist is the only thing standing between a browser and the API;
-- the `xlsxai` name still shows up in configuration, environment variables and the database, from
-  before the app was called SheetSmith.
+- the database is still called `xlsxai` by default, from before the app was called SheetSmith —
+  deliberately, because changing that default would point an existing install at an empty database.
+  Everything else has been renamed: settings are `sheetsmith.*` and environment variables
+  `SHEETSMITH_*`, with the old `XLSXAI_*` names still read as a fallback so an existing `.env`
+  keeps working.
 
 Issues and pull requests are welcome — [CONTRIBUTING.md](CONTRIBUTING.md) covers running both
 halves, the bar for new code, and how to add an action. Security posture and how to report
