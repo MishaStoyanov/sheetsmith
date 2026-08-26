@@ -52,6 +52,23 @@ class SchemaMigrationTest {
         assertThat(applied).startsWith("1");
     }
 
+    @Test
+    @DisplayName("deleting a person keeps the record that their run happened")
+    void deletingUserClearsOwnerButKeepsJob() {
+        jdbc.update("insert into users (name, password_hash) values ('audit-fixture', 'x')");
+        Long userId = jdbc.queryForObject("select id from users where name = 'audit-fixture'", Long.class);
+
+        jdbc.update("insert into job_records "
+                + "(created_at, instruction, input_filename, input_file_path, status, user_id) "
+                + "values (now(), 'tidy it up', 'book.xlsx', '/tmp/book.xlsx', 'COMPLETED', ?)", userId);
+        Long jobId = jdbc.queryForObject("select id from job_records where user_id = ?", Long.class, userId);
+
+        jdbc.update("delete from users where id = ?", userId);
+
+        Long owner = jdbc.queryForObject("select user_id from job_records where id = ?", Long.class, jobId);
+        assertThat(owner).isNull();
+    }
+
     static boolean dockerAvailable() {
         try {
             return DockerClientFactory.instance().isDockerAvailable();

@@ -45,6 +45,21 @@ public class JobRecord {
     @Column(columnDefinition = "TEXT")
     private String errorMessage;
 
+    /**
+     * What the run cost, kept apart because providers price reading and writing differently.
+     * Null where the provider reported no usage — nothing fills these in yet.
+     */
+    private Long promptTokens;
+
+    private Long completionTokens;
+
+    private Long totalTokens;
+
+    /** Who asked for the run; null for every run made before there was anyone to attribute it to. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User startedBy;
+
     @OneToMany(mappedBy = "job", cascade = CascadeType.REMOVE, orphanRemoval = true)
     @OrderBy("executionOrder ASC")
     private List<ActionResult> actions = new ArrayList<>();
