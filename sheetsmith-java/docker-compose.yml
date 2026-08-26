@@ -1,0 +1,122 @@
+# Pinned so the project name — and therefore the volume names — no longer depend on what the
+# directory happens to be called.
+name: sheetsmith
+
+# Everything the app needs, in one command: Postgres, Ollama, the model, and the app itself.
+#
+# Values come from .env (copy .env.example) so this file and the docs cannot drift apart — the
+# defaults below are only what applies when .env says nothing.
+#
+# Already running Ollama on your machine? Skip the container and the 4 GB pull:
+#   docker compose up postgres sheetsmith-app
+# with OLLAMA_BASE_URL=http://host.docker.internal:11434 in your .env.
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-xlsxai}
+      POSTGRES_USER: ${DB_USERNAME:-xlsxai}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-xlsxai_pass}
+    ports:
+      # 5433 on the host: 5432 is usually already taken by a local Postgres.
+      - "${DB_HOST_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-xlsxai} -d ${DB_NAME:-xlsxai}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "${OLLAMA_HOST_PORT:-11434}:11434"
+    volumes:
+      # Named volume, so the model is pulled once and survives a restart.
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  # Runs once and exits: pulls the model, then gets out of the way. The app waits for it to
+  # finish, so the first request never lands on a server that has no model loaded.
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    volumes:
+      - ollama-models:/root/.ollama
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        model="${OLLAMA_MODEL:-llama3.1}"
+        echo "Pulling $$model — several GB on a first run, cached in a volume afterwards."
+        ollama pull "$$model"
+    restart: "no"
+
+  sheetsmith-app:
+    build:
+      # Repository root: the image also builds the sheetsmith-react UI, which lives alongside
+      # this module, and serves it from the same origin as the API.
+      context: ..
+      dockerfile: sheetsmith-java/Dockerfile
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-ollama}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-xlsxai}
+      DB_USERNAME: ${DB_USERNAME:-xlsxai}
+      DB_PASSWORD: ${DB_PASSWORD:-xlsxai_pass}
+      # Defaults to the container above. Point it at host.docker.internal to use an Ollama you
+      # already run yourself.
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
+      XLSXAI_ALLOWED_ORIGINS: ${XLSXAI_ALLOWED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
+      XLSXAI_TTL_DAYS: ${XLSXAI_TTL_DAYS:-7}
+      XLSXAI_CHAT_ENABLED: ${XLSXAI_CHAT_ENABLED:-true}
+      MAX_CONCURRENT_JOBS: ${MAX_CONCURRENT_JOBS:-1}
+    # Lets OLLAMA_BASE_URL=http://host.docker.internal:11434 work on Linux too, where Docker does
+    # not provide that name by itself.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - sheetsmith-uploads:/app/uploads
+      - sheetsmith-results:/app/results
+      - sheetsmith-sessions:/app/sessions
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  ollama-models:
+  sheetsmith-uploads:
+  sheetsmith-results:
+  sheetsmith-sessions:

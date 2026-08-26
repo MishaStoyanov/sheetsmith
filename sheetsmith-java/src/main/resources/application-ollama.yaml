@@ -1,0 +1,33 @@
+spring:
+  # Spring AI 1.0 picks one chat provider from this property, and leaves the other starters'
+  # auto-configuration alone. It replaces a list of auto-configuration class names to exclude, which
+  # was silently wrong the moment those classes moved package between 1.0.0-M6 and 1.0.0 — the
+  # excludes stopped matching, every provider tried to start, and the one without an API key brought
+  # the context down.
+  ai:
+    model:
+      chat: ollama
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      chat:
+        options:
+          model: ${OLLAMA_MODEL:llama3.1}
+          # Without num-ctx Ollama sizes the KV cache for the model's FULL trained context — for
+          # llama3.1 that is a 15 GB allocation that simply fails ("failed to allocate buffer for
+          # kv cache") on any consumer card. 8192 holds this app's largest prompt: the full action
+          # catalog, the sheet structure, the replayed history and a turn's tool trace.
+          num-ctx: ${OLLAMA_NUM_CTX:8192}
+          # A ceiling on runaway generation, not a target. Kept well above a chat decision (a small
+          # JSON object) because the same profile serves the planner, whose plan JSON grows with the
+          # number of steps — truncate that and the whole plan fails to parse.
+          num-predict: ${OLLAMA_NUM_PREDICT:2048}
+          # Both flows want one deterministic JSON object. Sampling buys nothing here and costs a
+          # whole agent step every time the reply comes back unparseable.
+          temperature: ${OLLAMA_TEMPERATURE:0.0}
+          # A cold load of an 8B model measured ~20s on this hardware. Chat turns arrive in bursts
+          # with think-time between them, which is exactly the gap the default 5m unload falls into.
+          keep-alive: ${OLLAMA_KEEP_ALIVE:30m}
+          # Worth trying once you can measure it: `format: json` makes Ollama constrain generation to
+          # valid JSON, which would retire the markdown fences and prose that currently cost a step
+          # via ChatLlmService's REJECTED path. Left off by default because it changes decoding for
+          # every local call and wants a live check first.

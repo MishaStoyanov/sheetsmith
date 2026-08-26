@@ -1,0 +1,40 @@
+package com.ap0stole.sheetsmith.services.excel.actions;
+
+import com.ap0stole.sheetsmith.excel_improver.charts.ChartHandler;
+import com.ap0stole.sheetsmith.excel_improver.charts.RenameChartTitleConfig;
+import com.ap0stole.sheetsmith.services.excel.ActionHandler;
+import com.ap0stole.sheetsmith.services.excel.StepTense;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.stereotype.Component;
+
+import java.util.Map;
+
+@Component
+public class RenameChartTitleHandler implements ActionHandler {
+
+    private final ObjectMapper mapper = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+    @Override
+    public String getType() {
+        return "RENAME_CHART_TITLE";
+    }
+
+    @Override
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+        RenameChartTitleConfig cfg = mapper.convertValue(properties, RenameChartTitleConfig.class);
+        new ChartHandler().renameTitle(workbook, cfg);
+
+        return null;
+    }
+
+    @Override
+    public String describe(Map<String, Object> properties, StepTense tense) {
+        String title = ActionDescriptions.text(properties, "newTitle");
+        return ActionDescriptions.verb(tense, "Rename", "Renamed") + " the chart title"
+                + (title == null ? "" : " to " + ActionDescriptions.quoted(title))
+                + ActionDescriptions.sheetSuffix(properties);
+    }
+}

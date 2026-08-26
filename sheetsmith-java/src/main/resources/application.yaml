@@ -1,0 +1,79 @@
+spring:
+  application:
+    name: sheetsmith
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:ollama}
+
+  # This app uses chat models and nothing else, but a provider starter also brings auto-configuration
+  # for embeddings, images, moderation and audio — each of which insists on an API key at startup.
+  # Turning them off here means a profile only has to say which chat provider it wants.
+  ai:
+    model:
+      embedding: none
+      image: none
+      moderation: none
+      audio:
+        speech: none
+        transcription: none
+
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:xlsxai}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:pass}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 55MB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    com.ap0stole: DEBUG
+    org.springframework: INFO
+    org.hibernate.SQL: WARN
+
+xlsxai:
+  storage:
+    upload-dir: ${XLSXAI_UPLOAD_DIR:./uploads}
+    result-dir: ${XLSXAI_RESULT_DIR:./results}
+    session-dir: ${XLSXAI_SESSION_DIR:./sessions}
+    ttl-days: ${XLSXAI_TTL_DAYS:7}
+  processing:
+    max-concurrent-jobs: ${MAX_CONCURRENT_JOBS:1}
+    max-autosize-cells: ${XLSXAI_MAX_AUTOSIZE_CELLS:500000}
+  security:
+    allowed-origins: ${XLSXAI_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080}
+    path-endpoint-enabled: ${XLSXAI_PATH_ENDPOINT_ENABLED:false}
+    path-endpoint-roots: ${XLSXAI_PATH_ENDPOINT_ROOTS:}
+  chat:
+    # false turns this into an improve-only instance: no chat, no data-grounded suggestions, and
+    # nothing but the sheet's structure reaches the model.
+    enabled: ${XLSXAI_CHAT_ENABLED:true}
+    max-steps: ${XLSXAI_CHAT_MAX_STEPS:8}
+    max-cells: ${XLSXAI_CHAT_MAX_CELLS:300}
+    max-rows: ${XLSXAI_CHAT_MAX_ROWS:50}
+    history-messages: ${XLSXAI_CHAT_HISTORY:12}
+    repair-steps: ${XLSXAI_CHAT_REPAIR_STEPS:2}
+    stream-timeout-ms: ${XLSXAI_CHAT_STREAM_TIMEOUT_MS:600000}

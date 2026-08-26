@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The UI is a sibling project, and its build output is gitignored — so it does not exist in
+      # a fresh checkout and Maven will never create it. Without these two steps the released jar
+      # serves the API and a blank page at /.
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: sheetsmith-react/package-lock.json
+
+      - name: Build the UI
+        working-directory: sheetsmith-react
+        # vite.config.js writes into ../sheetsmith-java/src/main/resources/static, which is where
+        # Spring Boot serves static resources from.
+        run: |
+          npm ci
+          npm run build
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build JAR
+        run: mvn -f sheetsmith-java/pom.xml package -DskipTests -q -ntp
+
+      # A jar without the UI still starts, still answers the API, and still looks like a successful
+      # release — which is exactly how it shipped unnoticed before. Fail loudly instead.
+      - name: Verify the UI is inside the jar
+        run: |
+          jar=$(ls sheetsmith-java/target/sheetsmith-*.jar)
+          if unzip -l "$jar" | grep -q 'BOOT-INF/classes/static/index.html'; then
+            echo "UI present in $jar"
+          else
+            echo "::error::$jar contains no BOOT-INF/classes/static/index.html — the UI build did not reach Maven."
+            exit 1
+          fi
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: sheetsmith-java/target/sheetsmith-*.jar
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

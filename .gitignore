@@ -1,0 +1,57 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+.aider*
+
+### Tooling ###
+.sonar/
+### Claude Code: the excel-task skill is committed as contributor docs; local state is not.
+.claude/*
+!.claude/skills/
+.claude/settings.local.json
+node_modules/
+dist/
+
+### Generated UI — `npm run build` in sheetsmith-react/ emits the bundle Spring Boot serves.
+### Produced by the build (locally and in the Docker image), so it is never committed.
+sheetsmith-java/src/main/resources/static/
+
+### Runtime data — user spreadsheets, never commit these ###
+uploads/
+results/
+sessions/
+.env
+*.xlsx
+!**/src/test/resources/*.xlsx
+### The one exception: the sample workbook the README invites people to try.
+!docs/*.xlsx

@@ -1,0 +1,14 @@
+spring:
+  # Spring AI 1.0 picks one chat provider from this property, and leaves the other starters'
+  # auto-configuration alone. It replaces a list of auto-configuration class names to exclude, which
+  # was silently wrong the moment those classes moved package between 1.0.0-M6 and 1.0.0 — the
+  # excludes stopped matching, every provider tried to start, and the one without an API key brought
+  # the context down.
+  ai:
+    model:
+      chat: openai
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          model: ${OPENAI_MODEL:gpt-4o}
