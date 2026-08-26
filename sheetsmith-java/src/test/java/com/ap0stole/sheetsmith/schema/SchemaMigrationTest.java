@@ -39,7 +39,8 @@ class SchemaMigrationTest {
                 String.class);
 
         assertThat(tables).contains(
-                "action_results", "chat_messages", "chat_sessions", "chat_steps", "job_records", "llm_settings");
+                "action_results", "chat_messages", "chat_sessions", "chat_steps", "job_records", "llm_settings",
+                "users");
     }
 
     @Test

@@ -13,6 +13,10 @@ tool, and it is stated plainly so nobody deploys it expecting otherwise.
 **Do not put it on the open internet.** If it has to be reachable from outside, put a reverse proxy
 with authentication in front of it, and do not rely on the guards below to stand in for that.
 
+The database has a `users` table, and it does not change any of the above. Nothing authenticates
+against it yet — it exists so that a job can record who ran it once there is a login to record. Read
+"unauthenticated by design" as still true until this paragraph says otherwise.
+
 ## What the guards actually do
 
 Three things carry weight, and they are worth understanding before you loosen any of them.
