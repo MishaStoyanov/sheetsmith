@@ -1,14 +1,14 @@
-package com.ap0stole.sheetsmith.services.chat;
+package com.ap0stole.sheetsmith.services;
 
 import com.ap0stole.sheetsmith.configs.FileStorageConfig;
 import com.ap0stole.sheetsmith.domain.dto.ExcelSchemaDto;
 import com.ap0stole.sheetsmith.domain.dto.SheetSchemaDto;
-import com.ap0stole.sheetsmith.domain.dto.chat.ChatSessionDto;
-import com.ap0stole.sheetsmith.domain.entity.ChatSession;
+import com.ap0stole.sheetsmith.domain.dto.DocumentSessionDto;
+import com.ap0stole.sheetsmith.domain.entity.DocumentSession;
 import com.ap0stole.sheetsmith.domain.enums.ChatRole;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.repository.ChatMessageRepository;
-import com.ap0stole.sheetsmith.repository.ChatSessionRepository;
+import com.ap0stole.sheetsmith.repository.DocumentSessionRepository;
 import com.ap0stole.sheetsmith.repository.ChatStepRepository;
 import com.ap0stole.sheetsmith.services.SchemaExtractorService;
 import com.ap0stole.sheetsmith.services.SessionSchemaCache;
@@ -37,12 +37,12 @@ import static org.mockito.Mockito.*;
  * The working copy is the chat's safety net: the upload is never edited and history is
  * append-only, so these tests pin that behaviour down.
  */
-class ChatSessionServiceTest {
+class DocumentSessionServiceTest {
 
-    private ChatSessionRepository sessionRepository;
+    private DocumentSessionRepository sessionRepository;
     private ChatMessageRepository messageRepository;
     private SchemaExtractorService schemaExtractorService;
-    private ChatSessionService service;
+    private DocumentSessionService service;
     private Path sessionRoot;
 
     @BeforeEach
@@ -54,7 +54,7 @@ class ChatSessionServiceTest {
         storageConfig.setResultDir(tempDir.resolve("results").toString());
         storageConfig.setSessionDir(sessionRoot.toString());
 
-        sessionRepository = mock(ChatSessionRepository.class);
+        sessionRepository = mock(DocumentSessionRepository.class);
         messageRepository = mock(ChatMessageRepository.class);
         ChatStepRepository stepRepository = mock(ChatStepRepository.class);
         schemaExtractorService = mock(SchemaExtractorService.class);
@@ -72,14 +72,14 @@ class ChatSessionServiceTest {
                 .charts(List.of())
                 .build());
 
-        service = new ChatSessionService(storageConfig, sessionRepository, messageRepository,
+        service = new DocumentSessionService(storageConfig, sessionRepository, messageRepository,
                 stepRepository, new SessionSchemaCache(schemaExtractorService));
     }
 
     @Test
     @DisplayName("a new session starts from a copy, leaving the upload untouched")
     void createsWorkingCopy() throws Exception {
-        ChatSessionDto dto = service.create(upload("sales.xlsx"));
+        DocumentSessionDto dto = service.create(upload("sales.xlsx"));
 
         assertThat(dto.revision()).isZero();
         assertThat(dto.filename()).isEqualTo("sales.xlsx");
@@ -90,7 +90,7 @@ class ChatSessionServiceTest {
     @Test
     @DisplayName("editing the workbook writes the next revision and leaves the previous one intact")
     void commitsNextRevision() throws Exception {
-        ChatSession session = openSession();
+        DocumentSession session = openSession();
 
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
             workbook.createSheet("Edited");
@@ -106,7 +106,7 @@ class ChatSessionServiceTest {
     @Test
     @DisplayName("undo copies an old revision forward instead of deleting history")
     void revertIsAppendOnly() throws Exception {
-        ChatSession session = openSession();
+        DocumentSession session = openSession();
         long originalSize = Files.size(service.revisionPath(session, 0));
 
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
@@ -126,7 +126,7 @@ class ChatSessionServiceTest {
     @Test
     @DisplayName("a revision an improve job wrote itself becomes current and is announced in the transcript")
     void commitsExternalRevision() throws Exception {
-        ChatSession session = openSession();
+        DocumentSession session = openSession();
         Files.copy(service.revisionPath(session, 0), service.nextRevisionPath(session));
 
         int revision = service.commitExternalRevision(session, "Applied outside the chat.");
@@ -141,7 +141,7 @@ class ChatSessionServiceTest {
     @Test
     @DisplayName("a revision nobody wrote is refused rather than pointing the session at nothing")
     void refusesToCommitARevisionThatWasNeverWritten() throws Exception {
-        ChatSession session = openSession();
+        DocumentSession session = openSession();
 
         assertThatThrownBy(() -> service.commitExternalRevision(session, "Applied outside the chat."))
                 .isInstanceOf(ApiException.class)
@@ -152,7 +152,7 @@ class ChatSessionServiceTest {
     @Test
     @DisplayName("reverting to a revision that never existed is rejected")
     void rejectsUnknownRevision() throws Exception {
-        ChatSession session = openSession();
+        DocumentSession session = openSession();
 
         assertThatThrownBy(() -> service.revert(session.getId(), 7))
                 .isInstanceOf(ApiException.class)
@@ -172,7 +172,7 @@ class ChatSessionServiceTest {
     @Test
     @DisplayName("a revision's schema is read from the file once, however often it is asked for")
     void readsARevisionOnlyOnce() throws Exception {
-        ChatSession session = openSession();
+        DocumentSession session = openSession();
 
         service.describe(session.getId());
         service.describe(session.getId());
@@ -184,7 +184,7 @@ class ChatSessionServiceTest {
     @Test
     @DisplayName("a new revision busts the cached schema — the chat must never see the old sheet")
     void newRevisionBustsTheCachedSchema() throws Exception {
-        ChatSession session = openSession();
+        DocumentSession session = openSession();
         service.describe(session.getId());
 
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
@@ -200,7 +200,7 @@ class ChatSessionServiceTest {
     @Test
     @DisplayName("deleting a session drops its cached schemas along with its files")
     void deleteEvictsTheCachedSchema() throws Exception {
-        ChatSession session = openSession();
+        DocumentSession session = openSession();
         service.describe(session.getId());
 
         service.delete(session.getId());
@@ -210,9 +210,9 @@ class ChatSessionServiceTest {
     }
 
     /** Creates a session on disk and wires the repository to hand it back by id. */
-    private ChatSession openSession() throws Exception {
-        ChatSessionDto dto = service.create(upload("sales.xlsx"));
-        ChatSession session = ChatSession.create("sales.xlsx",
+    private DocumentSession openSession() throws Exception {
+        DocumentSessionDto dto = service.create(upload("sales.xlsx"));
+        DocumentSession session = DocumentSession.create("sales.xlsx",
                 sessionRoot.resolve(dto.sessionId()).toString());
         setId(session, dto.sessionId());
         when(sessionRepository.findById(dto.sessionId())).thenReturn(Optional.of(session));
@@ -220,8 +220,8 @@ class ChatSessionServiceTest {
         return session;
     }
 
-    private void setId(ChatSession session, String id) throws Exception {
-        var field = ChatSession.class.getDeclaredField("id");
+    private void setId(DocumentSession session, String id) throws Exception {
+        var field = DocumentSession.class.getDeclaredField("id");
         field.setAccessible(true);
         field.set(session, id);
     }

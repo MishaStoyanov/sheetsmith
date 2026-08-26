@@ -41,10 +41,14 @@ The app accepts a natural-language instruction + an `.xlsx` file, asks an LLM to
 
 The sheet has exactly one home: the session's revision chain (`sessions/{id}/rev-N.xlsx`,
 append-only). The improve flow and the chat both read the current revision and commit their result as
-the next one, so neither can leave the other behind and undo covers both. `ChatSession` is therefore
-the **shared document workspace, not a chat-only class** — that is why `JobService` depends on
-`ChatSessionService`. The name is historical (the chat introduced it); renaming it is a separate
-mechanical pass.
+the next one, so neither can leave the other behind and undo covers both. `DocumentSession` is
+therefore the **shared document workspace, not a chat-only class** — that is why `JobService`
+depends on `DocumentSessionService`, and why both live outside `services/chat` and
+`domain/dto/chat`. They were called `ChatSession*` until the chat's name stopped being true of them.
+
+The HTTP paths did **not** move with the class: uploads still open a workspace at
+`POST /api/chat/sessions`. A URL is somebody's script, and renaming it is a decision about the
+public surface rather than about honest naming inside the code.
 
 ### Request flow — the UI flow, session-backed
 
@@ -63,11 +67,11 @@ POST /api/excel/apply {planToken, steps}
       → saves JobRecord (status=PROCESSING)
       → Thread.ofVirtual() → processSessionJob()
           → jobSemaphore.acquire()      — then SessionLockRegistry.acquire(); never the reverse
-          → input  = ChatSessionService.currentPath(session)
-            result = ChatSessionService.nextRevisionPath(session)
+          → input  = DocumentSessionService.currentPath(session)
+            result = DocumentSessionService.nextRevisionPath(session)
           → ExcelAutomationService.applyChanges()  (+ one fixPlan retry if everything failed)
           → finalizes JobRecord (COMPLETED / PARTIAL / FAILED)
-          → unless FAILED: ChatSessionService.commitExternalRevision() — the pointer moves
+          → unless FAILED: DocumentSessionService.commitExternalRevision() — the pointer moves
   ← returns { jobId }
 ```
 
@@ -120,7 +124,7 @@ the result of each tool it explicitly runs.
 
 ```
 POST /api/chat/sessions              — copies the upload to sessions/{id}/rev-0.xlsx
-  ← ChatSessionDto { sessionId, filename, revision, sheets, charts }   — charts: see below
+  ← DocumentSessionDto { sessionId, filename, revision, sheets, charts }   — charts: see below
 POST /api/chat/sessions/{id}/messages
   → ChatAgentService.send()          — SessionLockRegistry, one workbook open for the turn
       loop (max xlsxai.chat.max-steps):
@@ -128,7 +132,7 @@ POST /api/chat/sessions/{id}/messages
         ChatToolRegistry.invoke()    — QueryTool (read) or ActionHandler (write)
         result appended to the trace fed back to the model
       → budget spent? one final call forcing {"answer"}
-      → any mutation? ChatSessionService.commitRevision() writes rev-N+1
+      → any mutation? DocumentSessionService.commitRevision() writes rev-N+1
   ← ChatTurnDto { message + step chain, mutated, revision }
 
 POST /api/chat/sessions/{id}/messages/stream    — the same turn, narrated (SseEmitter)
@@ -154,7 +158,7 @@ still waiting for.
 The frontend hand-parses the SSE frames (`chatApi.js` `streamChatMessage`) because `EventSource`
 cannot POST, and falls back to the plain `POST /messages` **silently** if the stream never starts.
 
-**`ChatSessionDto` carries the sheet's charts.** The browser parses the workbook with SheetJS, which
+**`DocumentSessionDto` carries the sheet's charts.** The browser parses the workbook with SheetJS, which
 does not read embedded charts at all — so without this the preview could only *synthesise* a chart
 from whatever numeric columns it found, and would show a made-up bar chart to a user who has a pie.
 `SchemaExtractorService.extractCharts()` therefore returns structured `ChartDefinitionDto`s — type
@@ -208,7 +212,7 @@ Whichever way that flag is set, the escalation pass still runs exactly once per 
 re-asking), but it always takes the error baseline. Skipping the pass would leave `errorsBefore`
 null and silently disable the self-check.
 
-**`ChatSessionService`** owns the working copy — for the improve flow as much as for the chat.
+**`DocumentSessionService`** owns the working copy — for the improve flow as much as for the chat.
 Revisions are append-only, so undo copies an old revision forward rather than deleting anything.
 Two ways in, and nothing else works out a revision number:
 
@@ -259,7 +263,7 @@ away from being reachable again; a missing bean is not.
 Three things about the shape of this, because each was a trap:
 
 - **`/api/chat/sessions` is not the chat.** It is the shared document workspace the improve flow
-  uploads into and reads revisions from (`ChatSessionService`), so it must keep working. Only the two
+  uploads into and reads revisions from (`DocumentSessionService`), so it must keep working. Only the two
   model-facing endpoints were split out into `ChatMessageController`; the rest stayed in
   `ChatController`.
 - **`POST /api/excel/suggest` is chat machinery living in the improve controller.** It calls

@@ -3,7 +3,6 @@ package com.ap0stole.sheetsmith.services;
 import com.ap0stole.sheetsmith.configs.FileStorageConfig;
 import com.ap0stole.sheetsmith.domain.entity.JobRecord;
 import com.ap0stole.sheetsmith.repository.JobRepository;
-import com.ap0stole.sheetsmith.services.chat.ChatSessionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,7 +43,7 @@ class FileCleanupServiceTest {
 
         jobRepository = mock(JobRepository.class);
         cleanupService = new FileCleanupService(jobRepository, storageConfig,
-                new FileStorageService(storageConfig), mock(ChatSessionService.class));
+                new FileStorageService(storageConfig), mock(DocumentSessionService.class));
     }
 
     @Test

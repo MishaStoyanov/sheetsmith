@@ -6,19 +6,18 @@ import com.ap0stole.sheetsmith.domain.dto.ApplyPlanRequest;
 import com.ap0stole.sheetsmith.domain.dto.PlanRequest;
 import com.ap0stole.sheetsmith.domain.dto.PlanStepDto;
 import com.ap0stole.sheetsmith.domain.entity.ActionResult;
-import com.ap0stole.sheetsmith.domain.entity.ChatSession;
+import com.ap0stole.sheetsmith.domain.entity.DocumentSession;
 import com.ap0stole.sheetsmith.domain.entity.JobRecord;
 import com.ap0stole.sheetsmith.domain.enums.JobStatus;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.llm.AiPlanningService;
 import com.ap0stole.sheetsmith.repository.ActionResultRepository;
 import com.ap0stole.sheetsmith.repository.ChatMessageRepository;
-import com.ap0stole.sheetsmith.repository.ChatSessionRepository;
+import com.ap0stole.sheetsmith.repository.DocumentSessionRepository;
 import com.ap0stole.sheetsmith.repository.ChatStepRepository;
 import com.ap0stole.sheetsmith.repository.JobRepository;
 import com.ap0stole.sheetsmith.requests.ActionStep;
 import com.ap0stole.sheetsmith.requests.AutomationRequest;
-import com.ap0stole.sheetsmith.services.chat.ChatSessionService;
 import com.ap0stole.sheetsmith.services.excel.ActionRegistry;
 import com.ap0stole.sheetsmith.services.excel.ExcelAutomationService;
 import com.ap0stole.sheetsmith.services.excel.StepTense;
@@ -61,12 +60,12 @@ class JobServiceSessionTest {
     private static final String JOB_SHEET = "JobEdit";
 
     private final Map<Long, JobRecord> jobs = new ConcurrentHashMap<>();
-    private final Map<String, ChatSession> sessions = new ConcurrentHashMap<>();
+    private final Map<String, DocumentSession> sessions = new ConcurrentHashMap<>();
     private final AtomicLong jobIds = new AtomicLong();
 
     private Path uploadDir;
     private Path resultDir;
-    private ChatSessionService sessionService;
+    private DocumentSessionService sessionService;
     private JobRepository jobRepository;
     private JobService jobService;
     private AiPlanningService planningService;
@@ -81,9 +80,9 @@ class JobServiceSessionTest {
         storageConfig.setResultDir(resultDir.toString());
         storageConfig.setSessionDir(tempDir.resolve("sessions").toString());
 
-        ChatSessionRepository sessionRepository = mock(ChatSessionRepository.class);
+        DocumentSessionRepository sessionRepository = mock(DocumentSessionRepository.class);
         when(sessionRepository.save(any())).thenAnswer(call -> {
-            ChatSession session = call.getArgument(0);
+            DocumentSession session = call.getArgument(0);
             sessions.put(session.getId(), session);
             return session;
         });
@@ -117,7 +116,7 @@ class JobServiceSessionTest {
         when(automationService.applyChanges(anyString(), anyString(), any(), any()))
                 .thenAnswer(call -> applySheet(call.getArgument(0), call.getArgument(1), call.getArgument(3)));
 
-        sessionService = new ChatSessionService(storageConfig, sessionRepository, messageRepository,
+        sessionService = new DocumentSessionService(storageConfig, sessionRepository, messageRepository,
                 mock(ChatStepRepository.class), new SessionSchemaCache(new SchemaExtractorService(new ChatConfig())));
 
         jobService = new JobService(jobRepository, actionResultRepository, new FileStorageService(storageConfig),
@@ -128,7 +127,7 @@ class JobServiceSessionTest {
     @Test
     @DisplayName("an improve job lands as the session's next revision, leaving the previous one on disk")
     void improveRunBecomesTheNextRevision() throws Exception {
-        ChatSession session = openSession();
+        DocumentSession session = openSession();
 
         Long jobId = runImprove(session, "add a summary sheet");
 
@@ -147,7 +146,7 @@ class JobServiceSessionTest {
     @Test
     @DisplayName("undo after an improve run brings the pre-run sheet back")
     void revertUndoesAnImproveRun() throws Exception {
-        ChatSession session = openSession();
+        DocumentSession session = openSession();
         runImprove(session, "add a summary sheet");
 
         int revision = sessionService.revert(session.getId(), 0);
@@ -160,7 +159,7 @@ class JobServiceSessionTest {
     @Test
     @DisplayName("deleting a job whose files are session revisions keeps the session's chain intact")
     void deletingASessionJobKeepsTheRevisions() throws Exception {
-        ChatSession session = openSession();
+        DocumentSession session = openSession();
         Long jobId = runImprove(session, "add a summary sheet");
 
         jobService.deleteJob(jobId);
@@ -173,7 +172,7 @@ class JobServiceSessionTest {
     @Test
     @DisplayName("a plan with no steps is refused out loud rather than rendered as an empty screen")
     void emptyPlanFailsLoudly() throws Exception {
-        ChatSession session = openSession();
+        DocumentSession session = openSession();
         // What a model does when the catalog has nothing for the instruction: it answers in prose,
         // which parses down to zero actions.
         when(planningService.generatePlan(anyString(), anyString())).thenReturn(new AutomationRequest());
@@ -187,7 +186,7 @@ class JobServiceSessionTest {
     @Test
     @DisplayName("steps that name no real action are refused, not shown as \"Unknown step\" cards")
     void aPlanOfUnknownStepsFailsLoudly() throws Exception {
-        ChatSession session = openSession();
+        DocumentSession session = openSession();
         // Found by running the app against a 0.5B model: it invented its own JSON shape
         // ({"stepName": …, "stepArgs": …}) and every step parsed with a null type. That answered
         // 200 with review cards reading "Unknown step" — a plan nobody can act on or diagnose.
@@ -201,7 +200,7 @@ class JobServiceSessionTest {
     @Test
     @DisplayName("one bad step among good ones still gives a plan — the card can be dropped")
     void aPartlyUnknownPlanSurvives() throws Exception {
-        ChatSession session = openSession();
+        DocumentSession session = openSession();
         ActionStep good = new ActionStep();
         good.setType("ADD_SHEET");
         good.getProperties().put("name", "Summary");
@@ -236,7 +235,7 @@ class JobServiceSessionTest {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     /** Drives the real plan-then-apply contract and waits for the virtual thread to publish. */
-    private Long runImprove(ChatSession session, String instruction) {
+    private Long runImprove(DocumentSession session, String instruction) {
         String token = jobService.generatePlan(new PlanRequest(session.getId(), instruction)).planToken();
         Long jobId = jobService.applyPlan(new ApplyPlanRequest(token,
                 List.of(new PlanStepDto(0, "ADD_SHEET", Map.of("sheetName", "Summary"), "Add a sheet"))));
@@ -249,7 +248,7 @@ class JobServiceSessionTest {
         return jobId;
     }
 
-    private ChatSession openSession() throws Exception {
+    private DocumentSession openSession() throws Exception {
         String sessionId = sessionService.create(upload()).sessionId();
         return sessions.get(sessionId);
     }

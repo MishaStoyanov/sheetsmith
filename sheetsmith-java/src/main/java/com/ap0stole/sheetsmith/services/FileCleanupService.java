@@ -3,7 +3,6 @@ package com.ap0stole.sheetsmith.services;
 import com.ap0stole.sheetsmith.configs.FileStorageConfig;
 import com.ap0stole.sheetsmith.domain.entity.JobRecord;
 import com.ap0stole.sheetsmith.repository.JobRepository;
-import com.ap0stole.sheetsmith.services.chat.ChatSessionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -21,12 +20,12 @@ public class FileCleanupService {
     private final JobRepository jobRepository;
     private final FileStorageConfig storageConfig;
     private final FileStorageService fileStorageService;
-    private final ChatSessionService chatSessionService;
+    private final DocumentSessionService documentSessionService;
 
     @Scheduled(cron = "0 0 2 * * *")
-    public void cleanupIdleChatSessions() {
+    public void cleanupIdleDocumentSessions() {
         LocalDateTime threshold = LocalDateTime.now().minusDays(storageConfig.getTtlDays());
-        int deleted = chatSessionService.deleteIdleSince(threshold);
+        int deleted = documentSessionService.deleteIdleSince(threshold);
         if (deleted > 0) {
             log.info("Cleanup: deleted {} idle chat sessions (older than {} days)", deleted, storageConfig.getTtlDays());
         }

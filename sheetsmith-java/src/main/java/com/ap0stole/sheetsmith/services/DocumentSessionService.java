@@ -1,19 +1,19 @@
-package com.ap0stole.sheetsmith.services.chat;
+package com.ap0stole.sheetsmith.services;
 
 import com.ap0stole.sheetsmith.configs.FileStorageConfig;
 import com.ap0stole.sheetsmith.domain.dto.ExcelSchemaDto;
 import com.ap0stole.sheetsmith.domain.dto.SheetSchemaDto;
 import com.ap0stole.sheetsmith.domain.dto.chat.ChatMessageDto;
-import com.ap0stole.sheetsmith.domain.dto.chat.ChatSessionDto;
+import com.ap0stole.sheetsmith.domain.dto.DocumentSessionDto;
 import com.ap0stole.sheetsmith.domain.dto.chat.ChatStepDto;
 import com.ap0stole.sheetsmith.domain.entity.ChatMessage;
-import com.ap0stole.sheetsmith.domain.entity.ChatSession;
+import com.ap0stole.sheetsmith.domain.entity.DocumentSession;
 import com.ap0stole.sheetsmith.domain.entity.ChatStep;
 import com.ap0stole.sheetsmith.domain.enums.ChatRole;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
 import com.ap0stole.sheetsmith.repository.ChatMessageRepository;
-import com.ap0stole.sheetsmith.repository.ChatSessionRepository;
+import com.ap0stole.sheetsmith.repository.DocumentSessionRepository;
 import com.ap0stole.sheetsmith.repository.ChatStepRepository;
 import com.ap0stole.sheetsmith.services.SessionSchemaCache;
 import lombok.RequiredArgsConstructor;
@@ -48,12 +48,12 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ChatSessionService {
+public class DocumentSessionService {
 
     private static final String REVISION_PREFIX = "rev-";
 
     private final FileStorageConfig storageConfig;
-    private final ChatSessionRepository sessionRepository;
+    private final DocumentSessionRepository sessionRepository;
     private final ChatMessageRepository messageRepository;
     private final ChatStepRepository stepRepository;
     private final SessionSchemaCache schemaCache;
@@ -61,10 +61,10 @@ public class ChatSessionService {
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     @Transactional
-    public ChatSessionDto create(MultipartFile file) throws IOException {
+    public DocumentSessionDto create(MultipartFile file) throws IOException {
         validateXlsx(file);
 
-        ChatSession session = ChatSession.create(originalName(file), "");
+        DocumentSession session = DocumentSession.create(originalName(file), "");
         Path directory = Path.of(storageConfig.getSessionDir()).resolve(session.getId());
         Files.createDirectories(directory);
         session.setDirectory(directory.toAbsolutePath().toString());
@@ -81,28 +81,28 @@ public class ChatSessionService {
     }
 
     @Transactional(readOnly = true)
-    public ChatSession require(String sessionId) {
+    public DocumentSession require(String sessionId) {
         return sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ApiException(ErrorCode.SESSION_NOT_FOUND,
                         "Chat session not found or expired: " + sessionId));
     }
 
     @Transactional(readOnly = true)
-    public ChatSessionDto describe(String sessionId) {
-        ChatSession session = require(sessionId);
+    public DocumentSessionDto describe(String sessionId) {
+        DocumentSession session = require(sessionId);
         return describe(session, session.getCurrentRevision(), schema(session));
     }
 
     /** Keeps a session alive while it is being used — cleanup only removes idle ones. */
     @Transactional
-    public void touch(ChatSession session) {
+    public void touch(DocumentSession session) {
         session.touch();
         sessionRepository.save(session);
     }
 
     @Transactional
     public void delete(String sessionId) {
-        ChatSession session = require(sessionId);
+        DocumentSession session = require(sessionId);
         deleteQuietly(session);
         log.info("Chat session {} deleted", sessionId);
     }
@@ -110,18 +110,18 @@ public class ChatSessionService {
     /** Used by the daily cleanup job to drop sessions nobody has touched in a while. */
     @Transactional
     public int deleteIdleSince(LocalDateTime cutoff) {
-        List<ChatSession> stale = sessionRepository.findByLastActivityAtBefore(cutoff);
+        List<DocumentSession> stale = sessionRepository.findByLastActivityAtBefore(cutoff);
         stale.forEach(this::deleteQuietly);
         return stale.size();
     }
 
     // ── Revisions ─────────────────────────────────────────────────────────────
 
-    public Path revisionPath(ChatSession session, int revision) {
+    public Path revisionPath(DocumentSession session, int revision) {
         return Path.of(session.getDirectory()).resolve(REVISION_PREFIX + revision + ".xlsx");
     }
 
-    public Path currentPath(ChatSession session) {
+    public Path currentPath(DocumentSession session) {
         return revisionPath(session, session.getCurrentRevision());
     }
 
@@ -130,7 +130,7 @@ public class ChatSessionService {
      * job writes its result straight to disk — aim here and then call
      * {@link #commitExternalRevision}; nobody else works out the next number.
      */
-    public Path nextRevisionPath(ChatSession session) {
+    public Path nextRevisionPath(DocumentSession session) {
         return revisionPath(session, session.getCurrentRevision() + 1);
     }
 
@@ -139,7 +139,7 @@ public class ChatSessionService {
      * preview grid — which reads cached values — shows numbers rather than blanks.
      */
     @Transactional
-    public int commitRevision(ChatSession session, XSSFWorkbook workbook) throws IOException {
+    public int commitRevision(DocumentSession session, XSSFWorkbook workbook) throws IOException {
         int next = session.getCurrentRevision() + 1;
         try {
             workbook.getCreationHelper().createFormulaEvaluator().evaluateAll();
@@ -164,7 +164,7 @@ public class ChatSessionService {
      * sheet moved under it.
      */
     @Transactional
-    public int commitExternalRevision(ChatSession session, String note) {
+    public int commitExternalRevision(DocumentSession session, String note) {
         int next = session.getCurrentRevision() + 1;
         if (!Files.exists(revisionPath(session, next))) {
             throw new ApiException(ErrorCode.FILE_NOT_FOUND,
@@ -183,7 +183,7 @@ public class ChatSessionService {
     /** Undo is append-only: reverting copies an old revision forward instead of deleting history. */
     @Transactional
     public int revert(String sessionId, int revision) throws IOException {
-        ChatSession session = require(sessionId);
+        DocumentSession session = require(sessionId);
         if (revision < 0 || revision > session.getCurrentRevision()) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR,
                     "No such revision: " + revision, "revision");
@@ -206,7 +206,7 @@ public class ChatSessionService {
 
     @Transactional(readOnly = true)
     public Resource currentFile(String sessionId) {
-        ChatSession session = require(sessionId);
+        DocumentSession session = require(sessionId);
         Path path = currentPath(session);
         if (!Files.exists(path)) {
             throw new ApiException(ErrorCode.FILE_NOT_FOUND, "Working copy missing for session " + sessionId);
@@ -217,7 +217,7 @@ public class ChatSessionService {
     // ── Messages ──────────────────────────────────────────────────────────────
 
     @Transactional
-    public ChatMessage record(ChatSession session, ChatRole role, String content, Integer revisionAfter) {
+    public ChatMessage record(DocumentSession session, ChatRole role, String content, Integer revisionAfter) {
         ChatMessage message = ChatMessage.of(session, role, content);
         message.setRevisionAfter(revisionAfter);
         return messageRepository.save(message);
@@ -262,7 +262,7 @@ public class ChatSessionService {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    public String tableContext(ChatSession session) {
+    public String tableContext(DocumentSession session) {
         return schema(session).toPromptString();
     }
 
@@ -270,7 +270,7 @@ public class ChatSessionService {
      * The structure of the session's current revision. Every caller goes through here so the
      * workbook is opened once per revision rather than once per request.
      */
-    public ExcelSchemaDto schema(ChatSession session) {
+    public ExcelSchemaDto schema(DocumentSession session) {
         return schemaCache.get(session.getId(), session.getCurrentRevision(), currentPath(session).toString());
     }
 
@@ -278,8 +278,8 @@ public class ChatSessionService {
      * One schema read serves both halves of the DTO — the charts have to come from the same
      * revision as the sheet names, or the preview would draw a chart the sheet no longer has.
      */
-    private ChatSessionDto describe(ChatSession session, int revision, ExcelSchemaDto schema) {
-        return new ChatSessionDto(
+    private DocumentSessionDto describe(DocumentSession session, int revision, ExcelSchemaDto schema) {
+        return new DocumentSessionDto(
                 session.getId(),
                 session.getOriginalFilename(),
                 revision,
@@ -287,7 +287,7 @@ public class ChatSessionService {
                 schema.getCharts());
     }
 
-    private void deleteQuietly(ChatSession session) {
+    private void deleteQuietly(DocumentSession session) {
         schemaCache.evictSession(session.getId());
         List<Long> messageIds = messageRepository.findBySessionIdOrderByIdAsc(session.getId())
                 .stream().map(ChatMessage::getId).toList();

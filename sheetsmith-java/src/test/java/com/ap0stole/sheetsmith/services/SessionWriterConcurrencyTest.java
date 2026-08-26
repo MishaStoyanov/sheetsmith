@@ -6,7 +6,7 @@ import com.ap0stole.sheetsmith.domain.dto.ApplyPlanRequest;
 import com.ap0stole.sheetsmith.domain.dto.PlanRequest;
 import com.ap0stole.sheetsmith.domain.dto.PlanStepDto;
 import com.ap0stole.sheetsmith.domain.entity.ActionResult;
-import com.ap0stole.sheetsmith.domain.entity.ChatSession;
+import com.ap0stole.sheetsmith.domain.entity.DocumentSession;
 import com.ap0stole.sheetsmith.domain.entity.JobRecord;
 import com.ap0stole.sheetsmith.domain.enums.JobStatus;
 import com.ap0stole.sheetsmith.llm.AgentDecision;
@@ -14,13 +14,12 @@ import com.ap0stole.sheetsmith.llm.AiPlanningService;
 import com.ap0stole.sheetsmith.llm.ChatLlmService;
 import com.ap0stole.sheetsmith.repository.ActionResultRepository;
 import com.ap0stole.sheetsmith.repository.ChatMessageRepository;
-import com.ap0stole.sheetsmith.repository.ChatSessionRepository;
+import com.ap0stole.sheetsmith.repository.DocumentSessionRepository;
 import com.ap0stole.sheetsmith.repository.ChatStepRepository;
 import com.ap0stole.sheetsmith.repository.JobRepository;
 import com.ap0stole.sheetsmith.requests.ActionStep;
 import com.ap0stole.sheetsmith.requests.AutomationRequest;
 import com.ap0stole.sheetsmith.services.chat.ChatAgentService;
-import com.ap0stole.sheetsmith.services.chat.ChatSessionService;
 import com.ap0stole.sheetsmith.services.chat.ChatToolRegistry;
 import com.ap0stole.sheetsmith.services.chat.ToolInvocation;
 import com.ap0stole.sheetsmith.services.excel.ActionRegistry;
@@ -72,10 +71,10 @@ class SessionWriterConcurrencyTest {
     private static final String CHAT_MARK = "chat";
 
     private final Map<Long, JobRecord> jobs = new ConcurrentHashMap<>();
-    private final Map<String, ChatSession> sessions = new ConcurrentHashMap<>();
+    private final Map<String, DocumentSession> sessions = new ConcurrentHashMap<>();
     private final AtomicLong jobIds = new AtomicLong();
 
-    private ChatSessionService sessionService;
+    private DocumentSessionService sessionService;
     private ChatAgentService agentService;
     private JobService jobService;
 
@@ -86,9 +85,9 @@ class SessionWriterConcurrencyTest {
         storageConfig.setResultDir(tempDir.resolve("results").toString());
         storageConfig.setSessionDir(tempDir.resolve("sessions").toString());
 
-        ChatSessionRepository sessionRepository = mock(ChatSessionRepository.class);
+        DocumentSessionRepository sessionRepository = mock(DocumentSessionRepository.class);
         when(sessionRepository.save(any())).thenAnswer(call -> {
-            ChatSession session = call.getArgument(0);
+            DocumentSession session = call.getArgument(0);
             sessions.put(session.getId(), session);
             return session;
         });
@@ -141,7 +140,7 @@ class SessionWriterConcurrencyTest {
         SchemaExtractorService schemaExtractor = new SchemaExtractorService(new ChatConfig());
         SessionLockRegistry sessionLocks = new SessionLockRegistry();
 
-        sessionService = new ChatSessionService(storageConfig, sessionRepository, messageRepository,
+        sessionService = new DocumentSessionService(storageConfig, sessionRepository, messageRepository,
                 mock(ChatStepRepository.class), new SessionSchemaCache(schemaExtractor));
         agentService = new ChatAgentService(sessionService, toolRegistry, chatLlmService, new ChatConfig(),
                 errorScanner, new ObjectMapper(), sessionLocks);
@@ -153,7 +152,7 @@ class SessionWriterConcurrencyTest {
     @Test
     @DisplayName("a chat turn and an improve job on one session serialise, and both edits survive")
     void chatTurnAndImproveJobDoNotInterleave() throws Exception {
-        ChatSession session = openSession();
+        DocumentSession session = openSession();
         CountDownLatch start = new CountDownLatch(1);
 
         Thread chat = new Thread(() -> {
@@ -209,7 +208,7 @@ class SessionWriterConcurrencyTest {
         return List.of(ActionResult.success(job, "ADD_SHEET", 0, "Added a sheet"));
     }
 
-    private ChatSession openSession() throws Exception {
+    private DocumentSession openSession() throws Exception {
         return sessions.get(sessionService.create(upload()).sessionId());
     }
 

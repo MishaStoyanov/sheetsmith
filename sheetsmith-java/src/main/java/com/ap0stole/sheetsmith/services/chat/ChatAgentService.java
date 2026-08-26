@@ -6,13 +6,14 @@ import com.ap0stole.sheetsmith.domain.dto.chat.ChatMessageDto;
 import com.ap0stole.sheetsmith.domain.dto.chat.ChatStepDto;
 import com.ap0stole.sheetsmith.domain.dto.chat.ChatTurnDto;
 import com.ap0stole.sheetsmith.domain.entity.ChatMessage;
-import com.ap0stole.sheetsmith.domain.entity.ChatSession;
+import com.ap0stole.sheetsmith.domain.entity.DocumentSession;
 import com.ap0stole.sheetsmith.domain.entity.ChatStep;
 import com.ap0stole.sheetsmith.domain.enums.ChatRole;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
 import com.ap0stole.sheetsmith.llm.AgentDecision;
 import com.ap0stole.sheetsmith.llm.ChatLlmService;
+import com.ap0stole.sheetsmith.services.DocumentSessionService;
 import com.ap0stole.sheetsmith.services.SessionLockRegistry;
 import com.ap0stole.sheetsmith.services.excel.FormulaErrorScanner;
 import com.ap0stole.sheetsmith.services.excel.FormulaErrorScanner.CellError;
@@ -48,7 +49,7 @@ public class ChatAgentService {
     /** Pseudo-tool name for the self-check, so the repair shows up in "how I got there" like any step. */
     private static final String SELF_CHECK_TOOL = "SELF_CHECK";
 
-    private final ChatSessionService sessionService;
+    private final DocumentSessionService sessionService;
     private final ChatToolRegistry toolRegistry;
     private final ChatLlmService chatLlmService;
     private final ChatConfig chatConfig;
@@ -75,7 +76,7 @@ public class ChatAgentService {
     }
 
     private ChatTurnDto runTurn(String sessionId, String text, boolean readOnly, TurnListener listener) {
-        ChatSession session = sessionService.require(sessionId);
+        DocumentSession session = sessionService.require(sessionId);
 
         sessionService.touch(session);
 
@@ -257,7 +258,7 @@ public class ChatAgentService {
         turn.trace.append('\n');
     }
 
-    private ChatTurnDto persist(ChatSession session, Turn turn, int revision, boolean mutated) {
+    private ChatTurnDto persist(DocumentSession session, Turn turn, int revision, boolean mutated) {
 
         ChatMessage message = sessionService.record(session, ChatRole.ASSISTANT, turn.answer,
                 mutated ? revision : null);

@@ -1,7 +1,8 @@
 package com.ap0stole.sheetsmith.controller;
 
+import com.ap0stole.sheetsmith.domain.dto.DocumentSessionDto;
 import com.ap0stole.sheetsmith.domain.dto.chat.*;
-import com.ap0stole.sheetsmith.services.chat.ChatSessionService;
+import com.ap0stole.sheetsmith.services.DocumentSessionService;
 import com.ap0stole.sheetsmith.services.chat.ManualEditService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,16 +37,16 @@ public class ChatController {
     private static final String XLSX_MIME =
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-    private final ChatSessionService sessionService;
+    private final DocumentSessionService sessionService;
     private final ManualEditService manualEditService;
 
     @PostMapping
-    public ResponseEntity<ChatSessionDto> create(@RequestParam("file") MultipartFile file) throws IOException {
+    public ResponseEntity<DocumentSessionDto> create(@RequestParam("file") MultipartFile file) throws IOException {
         return ResponseEntity.ok(sessionService.create(file));
     }
 
     @GetMapping("/{sessionId}")
-    public ResponseEntity<ChatSessionDto> get(@PathVariable String sessionId) {
+    public ResponseEntity<DocumentSessionDto> get(@PathVariable String sessionId) {
         return ResponseEntity.ok(sessionService.describe(sessionId));
     }
 

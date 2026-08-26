@@ -1,10 +1,11 @@
 package com.ap0stole.sheetsmith.services.chat;
 
 import com.ap0stole.sheetsmith.domain.dto.chat.CellEditsRequest;
-import com.ap0stole.sheetsmith.domain.entity.ChatSession;
+import com.ap0stole.sheetsmith.domain.entity.DocumentSession;
 import com.ap0stole.sheetsmith.domain.enums.ChatRole;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
+import com.ap0stole.sheetsmith.services.DocumentSessionService;
 import com.ap0stole.sheetsmith.services.SessionLockRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,7 @@ import java.util.concurrent.locks.ReentrantLock;
 @RequiredArgsConstructor
 public class ManualEditService {
 
-    private final ChatSessionService sessionService;
+    private final DocumentSessionService sessionService;
     private final SessionLockRegistry sessionLocks;
 
     public int apply(String sessionId, CellEditsRequest request) {
@@ -45,7 +46,7 @@ public class ManualEditService {
             // The session is read INSIDE the lock on purpose. Reading first and locking second lets
             // two flushes queued behind a slow write both see the same current revision and derive
             // the same "next" one — the second then overwrites the first instead of appending.
-            ChatSession session = sessionService.require(sessionId);
+            DocumentSession session = sessionService.require(sessionId);
 
             try (FileInputStream in = new FileInputStream(sessionService.currentPath(session).toFile());
                  XSSFWorkbook workbook = new XSSFWorkbook(in)) {

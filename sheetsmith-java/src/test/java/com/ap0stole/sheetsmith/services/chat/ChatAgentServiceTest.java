@@ -1,10 +1,11 @@
 package com.ap0stole.sheetsmith.services.chat;
 
+import com.ap0stole.sheetsmith.services.DocumentSessionService;
 import com.ap0stole.sheetsmith.configs.ChatConfig;
 import com.ap0stole.sheetsmith.domain.dto.chat.ChatStepDto;
 import com.ap0stole.sheetsmith.domain.dto.chat.ChatTurnDto;
 import com.ap0stole.sheetsmith.domain.entity.ChatMessage;
-import com.ap0stole.sheetsmith.domain.entity.ChatSession;
+import com.ap0stole.sheetsmith.domain.entity.DocumentSession;
 import com.ap0stole.sheetsmith.domain.enums.ChatRole;
 import com.ap0stole.sheetsmith.llm.AgentDecision;
 import com.ap0stole.sheetsmith.llm.ChatLlmService;
@@ -43,23 +44,23 @@ class ChatAgentServiceTest {
     private static final String SESSION_ID = "session-1";
     private static final CellError DIV_ZERO = new CellError("Sales", "C4", "#DIV/0!");
 
-    private ChatSessionService sessionService;
+    private DocumentSessionService sessionService;
     private ChatToolRegistry toolRegistry;
     private ChatLlmService chatLlmService;
     private ChatConfig chatConfig;
     private FormulaErrorScanner errorScanner;
     private ChatAgentService agent;
 
-    private ChatSession session;
+    private DocumentSession session;
 
     @BeforeEach
     void setUp(@TempDir Path tempDir) throws Exception {
         Path workbookPath = tempDir.resolve("rev-0.xlsx");
         writeWorkbook(workbookPath);
 
-        session = ChatSession.create("sales.xlsx", tempDir.toString());
+        session = DocumentSession.create("sales.xlsx", tempDir.toString());
 
-        sessionService = mock(ChatSessionService.class);
+        sessionService = mock(DocumentSessionService.class);
         toolRegistry = mock(ChatToolRegistry.class);
         chatLlmService = mock(ChatLlmService.class);
         errorScanner = mock(FormulaErrorScanner.class);

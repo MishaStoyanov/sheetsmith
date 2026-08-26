@@ -1,8 +1,9 @@
 package com.ap0stole.sheetsmith.services.chat;
 
+import com.ap0stole.sheetsmith.services.DocumentSessionService;
 import com.ap0stole.sheetsmith.domain.dto.chat.CellEditsRequest;
 import com.ap0stole.sheetsmith.domain.dto.chat.CellEditsRequest.CellEdit;
-import com.ap0stole.sheetsmith.domain.entity.ChatSession;
+import com.ap0stole.sheetsmith.domain.entity.DocumentSession;
 import com.ap0stole.sheetsmith.domain.enums.ChatRole;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.services.SessionLockRegistry;
@@ -35,9 +36,9 @@ import static org.mockito.Mockito.*;
  */
 class ManualEditServiceTest {
 
-    private ChatSessionService sessionService;
+    private DocumentSessionService sessionService;
     private ManualEditService service;
-    private ChatSession session;
+    private DocumentSession session;
     private Path current;
     private Path committed;
 
@@ -47,8 +48,8 @@ class ManualEditServiceTest {
         committed = tempDir.resolve("rev-1.xlsx");
         writeWorkbook(current);
 
-        session = ChatSession.create("sales.xlsx", tempDir.toString());
-        sessionService = mock(ChatSessionService.class);
+        session = DocumentSession.create("sales.xlsx", tempDir.toString());
+        sessionService = mock(DocumentSessionService.class);
 
         when(sessionService.require(anyString())).thenReturn(session);
         when(sessionService.currentPath(session)).thenReturn(current);
@@ -200,13 +201,13 @@ class ManualEditServiceTest {
         // which is what makes reading outside the lock observable.
         java.util.concurrent.atomic.AtomicInteger committed = new java.util.concurrent.atomic.AtomicInteger(0);
         when(sessionService.require(anyString())).thenAnswer(call -> {
-            ChatSession snapshot = ChatSession.create("sales.xlsx", session.getDirectory());
+            DocumentSession snapshot = DocumentSession.create("sales.xlsx", session.getDirectory());
             snapshot.setCurrentRevision(committed.get());
             return snapshot;
         });
         when(sessionService.currentPath(any())).thenReturn(current);
         when(sessionService.commitRevision(any(), any())).thenAnswer(call -> {
-            ChatSession s = call.getArgument(0);
+            DocumentSession s = call.getArgument(0);
             Thread.sleep(120);                       // a big workbook takes seconds; this is the window
             int next = s.getCurrentRevision() + 1;
             committed.set(next);

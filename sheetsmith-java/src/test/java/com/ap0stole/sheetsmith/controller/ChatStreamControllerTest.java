@@ -8,7 +8,7 @@ import com.ap0stole.sheetsmith.domain.dto.chat.ChatTurnDto;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
 import com.ap0stole.sheetsmith.services.chat.ChatAgentService;
-import com.ap0stole.sheetsmith.services.chat.ChatSessionService;
+import com.ap0stole.sheetsmith.services.DocumentSessionService;
 import com.ap0stole.sheetsmith.services.chat.ManualEditService;
 import com.ap0stole.sheetsmith.services.chat.ToolInvocation;
 import com.ap0stole.sheetsmith.services.chat.TurnListener;
@@ -64,7 +64,7 @@ class ChatStreamControllerTest {
     private ChatAgentService agentService;
 
     @MockitoBean
-    private ChatSessionService sessionService;
+    private DocumentSessionService sessionService;
 
     @MockitoBean
     private ManualEditService manualEditService;

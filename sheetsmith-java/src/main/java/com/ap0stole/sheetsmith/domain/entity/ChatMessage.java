@@ -21,7 +21,7 @@ public class ChatMessage {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "session_id", nullable = false)
-    private ChatSession session;
+    private DocumentSession session;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -36,7 +36,7 @@ public class ChatMessage {
     /** Revision of the working copy once this message was handled; lets the UI offer "undo". */
     private Integer revisionAfter;
 
-    public static ChatMessage of(ChatSession session, ChatRole role, String content) {
+    public static ChatMessage of(DocumentSession session, ChatRole role, String content) {
         ChatMessage message = new ChatMessage();
         message.session = session;
         message.role = role;

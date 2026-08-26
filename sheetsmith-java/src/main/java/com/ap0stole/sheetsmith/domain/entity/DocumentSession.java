@@ -19,11 +19,11 @@ import java.util.UUID;
  * original stays intact.
  */
 @Entity
-@Table(name = "chat_sessions")
+@Table(name = "document_sessions")
 @Getter
 @Setter
 @NoArgsConstructor
-public class ChatSession {
+public class DocumentSession {
 
     @Id
     private String id;
@@ -45,8 +45,8 @@ public class ChatSession {
     @Column(nullable = false)
     private int currentRevision;
 
-    public static ChatSession create(String originalFilename, String directory) {
-        ChatSession session = new ChatSession();
+    public static DocumentSession create(String originalFilename, String directory) {
+        DocumentSession session = new DocumentSession();
         session.id = UUID.randomUUID().toString();
         session.createdAt = LocalDateTime.now();
         session.lastActivityAt = session.createdAt;

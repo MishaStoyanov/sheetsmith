@@ -1,4 +1,4 @@
-package com.ap0stole.sheetsmith.domain.dto.chat;
+package com.ap0stole.sheetsmith.domain.dto;
 
 import com.ap0stole.sheetsmith.domain.dto.ChartDefinitionDto;
 
@@ -12,7 +12,7 @@ import java.util.List;
  * see embedded charts at all. It is read from the current revision, so it follows an improve run,
  * a chat turn and an undo through the same refetch the frontend already does.
  */
-public record ChatSessionDto(
+public record DocumentSessionDto(
         String sessionId,
         String filename,
         int revision,

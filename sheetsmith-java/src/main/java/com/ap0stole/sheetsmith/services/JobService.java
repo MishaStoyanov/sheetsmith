@@ -2,7 +2,7 @@ package com.ap0stole.sheetsmith.services;
 
 import com.ap0stole.sheetsmith.domain.dto.*;
 import com.ap0stole.sheetsmith.domain.entity.ActionResult;
-import com.ap0stole.sheetsmith.domain.entity.ChatSession;
+import com.ap0stole.sheetsmith.domain.entity.DocumentSession;
 import com.ap0stole.sheetsmith.domain.entity.JobRecord;
 import com.ap0stole.sheetsmith.domain.enums.JobStatus;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
@@ -12,7 +12,6 @@ import com.ap0stole.sheetsmith.repository.ActionResultRepository;
 import com.ap0stole.sheetsmith.repository.JobRepository;
 import com.ap0stole.sheetsmith.requests.ActionStep;
 import com.ap0stole.sheetsmith.requests.AutomationRequest;
-import com.ap0stole.sheetsmith.services.chat.ChatSessionService;
 import com.ap0stole.sheetsmith.services.excel.ActionRegistry;
 import com.ap0stole.sheetsmith.services.excel.ExcelAutomationService;
 import com.ap0stole.sheetsmith.services.excel.StepTense;
@@ -39,7 +38,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 /**
- * Runs improve jobs. The plan-then-apply flow works on a {@link ChatSession}: it reads that
+ * Runs improve jobs. The plan-then-apply flow works on a {@link DocumentSession}: it reads that
  * session's current revision and commits its result as the next one, so an improve run sits in the
  * same append-only chain as a chat turn and can be undone the same way. The scripting entry points
  * ({@code /improve}, {@code /improve/path}) still pass files around and own no session.
@@ -58,7 +57,7 @@ public class JobService {
     private final ActionRegistry actionRegistry;
     private final PathGuard pathGuard;
     private final Semaphore jobSemaphore;
-    private final ChatSessionService chatSessionService;
+    private final DocumentSessionService documentSessionService;
     private final SessionLockRegistry sessionLocks;
 
     private final ConcurrentHashMap<String, PendingPlan> pendingPlans = new ConcurrentHashMap<>();
@@ -72,9 +71,9 @@ public class JobService {
      * so reading one while another writer appends the next is safe — and this call waits on the LLM.
      */
     public PlanResponseDto generatePlan(PlanRequest request) {
-        ChatSession session = chatSessionService.require(request.sessionId());
+        DocumentSession session = documentSessionService.require(request.sessionId());
 
-        ExcelSchemaDto schema = chatSessionService.schema(session);
+        ExcelSchemaDto schema = documentSessionService.schema(session);
         AutomationRequest plan = aiPlanningService.generatePlan(request.instruction(), schema.toPromptString());
 
         // A model that answers in prose instead of JSON parses down to zero steps, and a plan of
@@ -147,7 +146,7 @@ public class JobService {
             throw new ApiException(ErrorCode.JOB_NOT_FOUND, "Plan token not found or expired");
         }
 
-        ChatSession session = chatSessionService.require(pending.sessionId());
+        DocumentSession session = documentSessionService.require(pending.sessionId());
 
         List<ActionStep> steps = request.steps().stream().map(dto -> {
             ActionStep step = new ActionStep();
@@ -162,7 +161,7 @@ public class JobService {
         // A best guess only: the revisions the job actually reads and writes are resolved under the
         // session lock, since a chat turn may commit before the job gets its slot.
         JobRecord job = JobRecord.create(pending.instruction(), pending.filename(),
-                chatSessionService.currentPath(session).toString());
+                documentSessionService.currentPath(session).toString());
         jobRepository.save(job);
 
         Long jobId = job.getId();
@@ -285,9 +284,9 @@ public class JobService {
 
         ReentrantLock lock = sessionLocks.acquire(sessionId);
         try {
-            ChatSession session = chatSessionService.require(sessionId);
-            String inputPath = chatSessionService.currentPath(session).toString();
-            String resultPath = chatSessionService.nextRevisionPath(session).toString();
+            DocumentSession session = documentSessionService.require(sessionId);
+            String inputPath = documentSessionService.currentPath(session).toString();
+            String resultPath = documentSessionService.nextRevisionPath(session).toString();
 
             JobRecord job = startJob(jobId, inputPath);
             List<ActionResult> results = runPlan(job, inputPath, resultPath, instruction, prePlan);
@@ -295,7 +294,7 @@ public class JobService {
 
             // A job that changed nothing must not spend a revision — undo would step over a no-op.
             if (status != JobStatus.FAILED) {
-                chatSessionService.commitExternalRevision(session,
+                documentSessionService.commitExternalRevision(session,
                         "Applied outside the chat: \"" + instruction + "\" — I'm now working with the new version.");
             }
         } catch (Exception e) {
