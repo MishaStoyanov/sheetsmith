@@ -66,6 +66,13 @@ export async function applyPlan(planToken, steps) {
   return (await res.json()).jobId;
 }
 
+/** The run list the History screen shows. Newest first is the server's default. */
+export async function getHistory(page = 0, size = 20) {
+  const res = await authFetch(`${BASE}/api/history?page=${page}&size=${size}`);
+  if (!res.ok) throw new Error(await readErrorMessage(res, `History failed: ${res.status}`));
+  return res.json();
+}
+
 export async function getJobStatus(jobId) {
   const res = await authFetch(`${BASE}/api/history/${jobId}`);
   if (!res.ok) throw new Error(await readErrorMessage(res, `Status check failed: ${res.status}`));
