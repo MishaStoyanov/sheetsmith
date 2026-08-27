@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Button from './components/Button.jsx';
 import DefaultPasswordNotice from './components/DefaultPasswordNotice.jsx';
+import { ChevronIcon, SettingsIcon } from './components/NavIcons.jsx';
 
 /**
  * Everything around the page: the header, and a left column that collapses to icons.
@@ -81,10 +82,11 @@ export default function AppShell({
         }
         .ss-nav-icon {
           width: 18px;
+          height: 18px;
           flex-shrink: 0;
-          text-align: center;
-          font-size: 14px;
-          line-height: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
       `}</style>
 
@@ -135,6 +137,9 @@ export default function AppShell({
               data-active={tab.route === route}
               onClick={() => onNavigate(tab.route)}
               title={expanded ? undefined : tab.label}
+              /* Named in both states: collapsed there is no text beside the icon, and an icon
+                 cannot be read aloud. */
+              aria-label={tab.label}
             >
               <span className="ss-nav-icon">{tab.icon}</span>
               {expanded && tab.label}
@@ -149,8 +154,9 @@ export default function AppShell({
             className="ss-nav-item"
             onClick={onOpenSettings}
             title={expanded ? undefined : 'Settings'}
+            aria-label="Settings"
           >
-            <span className="ss-nav-icon">⚙</span>
+            <span className="ss-nav-icon"><SettingsIcon /></span>
             {expanded && 'Settings'}
           </button>
 
@@ -159,9 +165,10 @@ export default function AppShell({
             className="ss-nav-item"
             onClick={toggleNav}
             title={expanded ? 'Collapse the menu' : 'Expand the menu'}
+            aria-label={expanded ? 'Collapse the menu' : 'Expand the menu'}
             style={{ height: 32, color: 'var(--text-faint)', fontSize: 12.5 }}
           >
-            <span className="ss-nav-icon" style={{ fontSize: 13 }}>{expanded ? '⟨' : '⟩'}</span>
+            <span className="ss-nav-icon"><ChevronIcon pointing={expanded ? 'left' : 'right'} /></span>
             {expanded && 'Collapse'}
           </button>
         </nav>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { themes } from './theme.js';
 import AppShell from './AppShell.jsx';
 import AnalyticsScreen from './AnalyticsScreen.jsx';
+import { ChartIcon, ClockIcon, SheetIcon, UsersIcon } from './components/NavIcons.jsx';
 import ImproveScreen from './ImproveScreen.jsx';
 import UsersScreen from './UsersScreen.jsx';
 import HistoryScreen from './HistoryScreen.jsx';
@@ -82,12 +83,12 @@ export default function App() {
   // Built from what the instance has rather than hidden with CSS: an entry that leads somewhere
   // refusing to answer is worse than no entry at all.
   const tabs = [
-    { route: 'improve', label: 'Improve', icon: '▦' },
-    { route: 'history', label: 'History', icon: '⧗' },
-    { route: 'analytics', label: 'Analytics', icon: '◔' },
+    { route: 'improve', label: 'Improve', icon: <SheetIcon /> },
+    { route: 'history', label: 'History', icon: <ClockIcon /> },
+    { route: 'analytics', label: 'Analytics', icon: <ChartIcon /> },
     // Only where there are accounts to manage. Hiding it with CSS would leave a route that
     // answers nothing.
-    ...(capabilities.authEnabled ? [{ route: 'users', label: 'Users', icon: '◍' }] : []),
+    ...(capabilities.authEnabled ? [{ route: 'users', label: 'Users', icon: <UsersIcon /> }] : []),
   ];
 
   const screens = {
