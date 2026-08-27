@@ -63,7 +63,9 @@ class SpendLimitTest {
         jdbc.update("delete from users where name like 'budget-%'");
 
         seededId = jdbc.queryForObject("select min(id) from users", Long.class);
-        jdbc.update("update users set role = 'SUPERADMIN' where id = ?", seededId);
+        // The budget goes back too: one case here deliberately gives the seeded account a ceiling,
+        // and without this the next case inherits it and asserts against the wrong world.
+        jdbc.update("update users set role = 'SUPERADMIN', monthly_budget = null where id = ?", seededId);
 
         jdbc.update("insert into users (name, password_hash, must_change_password, role) "
                 + "values ('budget-dana', 'x', false, 'USER')");
@@ -91,11 +93,15 @@ class SpendLimitTest {
 
     /** A call by this person, dated so it lands inside or outside the current month. */
     private void spent(Long userId, String provider, String model, long promptTokens, String when) {
+        spent(userId, "CLOUD", provider, model, promptTokens, when);
+    }
+
+    private void spent(Long userId, String mode, String provider, String model, long promptTokens, String when) {
         jdbc.update("""
                 insert into llm_usage (kind, user_id, prompt, prompt_tokens, completion_tokens,
                         total_tokens, provider_mode, provider, model, started_at, finished_at)
-                values ('CHAT', ?, 'x', ?, 0, ?, 'CLOUD', ?, ?, ?::timestamp, ?::timestamp)
-                """, userId, promptTokens, promptTokens, provider, model, when, when);
+                values ('CHAT', ?, 'x', ?, 0, ?, ?, ?, ?, ?::timestamp, ?::timestamp)
+                """, userId, promptTokens, promptTokens, mode, provider, model, when, when);
     }
 
     private String thisMonth() {
@@ -374,6 +380,62 @@ class SpendLimitTest {
         assertThatThrownBy(() -> userService.setMonthlyBudget(boss, new BigDecimal("99.00"), boss))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("your own spend limit");
+    }
+
+    @Test
+    @DisplayName("a local run never counts as money, even if somebody has priced that model")
+    void localRunsAreNeverMoney() {
+        // A model on your own machine bills nothing, whatever the price list says about it. Checked
+        // against what the run recorded rather than inferred from the prices, so a price entered on
+        // a local model by mistake cannot start refusing somebody's work.
+        prices.upsert(new UpsertPriceRequest("OLLAMA", "gemma4:12b",
+                new BigDecimal("99.00"), new BigDecimal("99.00")));
+        limitFor(danaId, "1.00");
+        as(danaId, "budget-dana");
+        spent(danaId, "LOCAL", "OLLAMA", "gemma4:12b", 10_000_000, thisMonth());
+
+        assertThat(budgets.spentThisMonth(danaId)).isEqualByComparingTo("0.0000");
+        assertThatCode(() -> budgets.requireHeadroom()).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("cloud calls to the same model still count")
+    void cloudRunsStillCount() {
+        prices.upsert(new UpsertPriceRequest("OPENAI", "gpt-4o",
+                new BigDecimal("2.00"), new BigDecimal("10.00")));
+        limitFor(danaId, "10.00");
+        as(danaId, "budget-dana");
+        spent(danaId, "LOCAL", "OPENAI", "gpt-4o", 5_000_000, thisMonth());
+        spent(danaId, "CLOUD", "OPENAI", "gpt-4o", 1_000_000, thisMonth());
+
+        assertThat(budgets.spentThisMonth(danaId))
+                .as("only the cloud half of the same model")
+                .isEqualByComparingTo("2.0000");
+    }
+
+    @Test
+    @DisplayName("nobody but the superadmin sets the superadmin's limit")
+    void administratorsCannotLimitTheAccountAboveThem() {
+        // The other half of the hierarchy. Without it an administrator could put a ceiling on the
+        // account above them, and a fresh self-hosted instance would start counting money its owner
+        // never asked it to count.
+        Long boss = insertAdmin("budget-boss-three");
+        as(boss, "budget-boss-three");
+
+        assertThatThrownBy(() -> userService.setMonthlyBudget(seededId, new BigDecimal("5.00"), boss))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("Only the superadmin");
+
+        assertThat(jdbc.queryForObject("select monthly_budget from users where id = ?",
+                BigDecimal.class, seededId))
+                .as("a fresh superadmin has no ceiling unless they chose one")
+                .isNull();
+    }
+
+    private Long insertAdmin(String name) {
+        jdbc.update("insert into users (name, password_hash, must_change_password, role) "
+                + "values (?, 'x', false, 'ADMIN')", name);
+        return jdbc.queryForObject("select id from users where name = ?", Long.class, name);
     }
 
     static boolean dockerAvailable() {

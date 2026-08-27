@@ -4,7 +4,7 @@
 # (docker-compose.yml already sets context: ..)
 
 # Stage 1: build the SheetSmith React UI
-FROM node:20-alpine AS ui
+FROM node:24-alpine AS ui
 WORKDIR /repo/sheetsmith-react
 # Lockfile first: dependencies only reinstall when they actually change.
 COPY sheetsmith-react/package.json sheetsmith-react/package-lock.json ./

@@ -16,10 +16,12 @@ jobs:
       # The UI is a sibling project, and its build output is gitignored — so it does not exist in
       # a fresh checkout and Maven will never create it. Without these two steps the released jar
       # serves the API and a blank page at /.
-      - name: Set up Node 20
+      # Same version CI tests on. A release built by a different Node than the one the suite ran
+      # against is the same mismatch that made release.yml build with the wrong JDK.
+      - name: Set up Node 24
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: sheetsmith-react/package-lock.json
 

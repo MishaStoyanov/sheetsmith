@@ -23,11 +23,17 @@ import java.util.Optional;
 /**
  * What a person has spent this month, and whether they may spend more.
  * <p>
- * <strong>What this can see.</strong> Spend is only knowable for a model that has a price. A local
- * model costs nothing and a model nobody has priced costs an unknown amount, and both therefore
- * count as zero here. That is the honest reach of a limit denominated in money rather than a gap to
- * be papered over — the alternative would be to guess, and a budget enforced against a guess is
- * worse than no budget. The interface says as much where the limit is set.
+ * <strong>What this can see.</strong> Two conditions, and they are not the same one.
+ * <p>
+ * A call counts only if it went to a <em>cloud</em> provider — a model running on your own machine
+ * bills nothing, whatever the price list happens to say about it. That is checked against what the
+ * run actually recorded rather than inferred from whether somebody priced the model, because a
+ * price entered on a local model by mistake would otherwise start refusing that person's work.
+ * <p>
+ * And it counts only if that model has a price, because an unpriced one costs an unknown amount
+ * rather than nothing. That is the honest reach of a limit denominated in money — the alternative
+ * would be to guess, and a budget enforced against a guess is worse than no budget. The interface
+ * says as much where the limit is set.
  * <p>
  * <strong>The month is the calendar month</strong>, in the server's own time zone. A rolling
  * thirty days would be defensible and harder to reason about: "what have I spent this month" is a
@@ -103,6 +109,8 @@ public class BudgetService {
                        coalesce(sum(completion_tokens), 0) as completion_tokens
                 from llm_usage
                 where user_id = ? and started_at >= ?
+                  -- Cloud only. A local run costs no money, so no price on it can make one.
+                  and provider_mode = 'CLOUD'
                 group by provider, model
                 """, rs -> {
             ModelPrice price = priceList.get(key(rs.getString("provider"), rs.getString("model")));

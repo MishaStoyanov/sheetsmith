@@ -242,6 +242,14 @@ public class UserService {
                     "You cannot set your own spend limit — a limit you can lift is not a limit.",
                     "monthlyBudget");
         }
+        // The other half of the same hierarchy, and the half that was missing: an administrator
+        // could set one on the account above them. The superadmin starts with no ceiling and only
+        // ever has the one they chose — which is the point of it on an instance somebody spun up in
+        // five minutes and does not care about counting.
+        if (user.getRole() == Role.SUPERADMIN && !id.equals(callerId)) {
+            throw new ApiException(ErrorCode.FORBIDDEN,
+                    "Only the superadmin sets their own spend limit.", "monthlyBudget");
+        }
         if (budget != null && budget.signum() < 0) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "A spend limit cannot be negative",
                     "monthlyBudget");

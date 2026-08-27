@@ -60,10 +60,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node 20
+      # 24, matching what the project is developed on. It said 20, and the frontend job died before
+      # running a single test: jsdom 30 pulls an undici that calls webidl.util.markAsUncloneable,
+      # which Node 20 does not have. Nothing was wrong with the code — the runner was simply older
+      # than the machine the tests were written on, which is the first thing a CI is for.
+      - name: Set up Node 24
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: sheetsmith-react/package-lock.json
 
