@@ -9,7 +9,9 @@ name: sheetsmith
 #
 # Already running Ollama on your machine? Skip the container and the 4 GB pull:
 #   docker compose up postgres sheetsmith-app
-# with OLLAMA_BASE_URL=http://host.docker.internal:11434 in your .env.
+# with OLLAMA_BASE_URL=http://host.docker.internal:11434 in your .env. This genuinely skips it —
+# sheetsmith-app deliberately does not depend on the model puller, which it used to, and that made
+# this line false.
 
 services:
 
@@ -47,8 +49,9 @@ services:
       start_period: 20s
     restart: unless-stopped
 
-  # Runs once and exits: pulls the model, then gets out of the way. The app waits for it to
-  # finish, so the first request never lands on a server that has no model loaded.
+  # Runs once and exits: pulls the model, then gets out of the way. The app does not wait for it —
+  # see the note on sheetsmith-app's depends_on — so on a first run the stack is up long before the
+  # model is, and asking it to do something before the pull finishes will fail until it does.
   ollama-init:
     image: ollama/ollama:latest
     depends_on:
@@ -109,11 +112,19 @@ services:
       - sheetsmith-uploads:/app/uploads
       - sheetsmith-results:/app/results
       - sheetsmith-sessions:/app/sessions
+    # Postgres only, and that is the whole point. Waiting on ollama-init as well made the comment
+    # at the top of this file untrue: `docker compose up postgres sheetsmith-app` resolved the
+    # dependency anyway and started a 4.9 GB model pull, which is exactly what somebody choosing
+    # that command is trying to avoid. Measured, not guessed — it got 170 MB in before being
+    # stopped.
+    #
+    # The dependency was buying a small nicety: that the first request could never land on a server
+    # with no model. It is not worth blocking startup on a multi-gigabyte download for, and the
+    # application starts perfectly well without a model — it needs one when somebody asks it to do
+    # something, not when it boots.
     depends_on:
       postgres:
         condition: service_healthy
-      ollama-init:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health || exit 1"]
       interval: 15s
