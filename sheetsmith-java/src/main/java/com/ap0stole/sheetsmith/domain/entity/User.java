@@ -11,10 +11,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * A person a job can be attributed to.
+ * A person a job can be attributed to, and — when {@code sheetsmith.auth.enabled} is on — someone
+ * who can log in.
  * <p>
- * There is no authentication in this app yet, so nothing creates one of these on its own — the table
- * exists first, and the code that fills it comes with the login it belongs to.
+ * The first row is seeded by migration rather than created here, so where it came from is a line in
+ * the schema's history rather than a side effect of whichever boot ran first.
  */
 @Entity
 @Table(name = "users")
@@ -33,6 +34,14 @@ public class User {
     /** A hash, never what the user typed — the column is named so that it cannot be misread. */
     @Column(nullable = false)
     private String passwordHash;
+
+    /**
+     * Set on the seeded {@code admin} alone, and cleared the first time its password is changed.
+     * It is what stops {@code admin}/{@code admin} quietly surviving an instance being put in
+     * front of other people.
+     */
+    @Column(nullable = false)
+    private boolean mustChangePassword;
 
     public static User of(String name, String passwordHash) {
         User user = new User();
