@@ -21,6 +21,7 @@ public record AnalyticsSummaryDto(
         List<Slice> byModel,
         List<UserSlice> byUser,
         List<Bucket> overTime,
+        List<UserBucket> overTimeByUser,
         boolean costKnown,
         List<String> unpricedModels) {
 
@@ -40,5 +41,16 @@ public record AnalyticsSummaryDto(
     }
 
     public record Bucket(String label, long calls, long totalTokens, BigDecimal cost) {
+    }
+
+    /**
+     * The same buckets, split by whose call it was.
+     * <p>
+     * Flat rather than nested inside the bucket, so a screen drawing only the total never walks
+     * past a dimension it is not using. Empty when every call in range belongs to the same person
+     * (or to nobody), because a stack of one segment is a plain bar wearing a legend.
+     */
+    public record UserBucket(String label, Long userId, String name, long calls, long totalTokens,
+                             BigDecimal cost) {
     }
 }

@@ -44,7 +44,7 @@ function money(value, short = false) {
 }
 
 /** Spend and volume, with one switch between the two measures rather than two axes on one plot. */
-export default function AnalyticsScreen({ theme, authEnabled }) {
+export default function AnalyticsScreen({ theme }) {
   const [filters, setFilters] = useState(EMPTY);
   const [granularity, setGranularity] = useState('day');
   const [measure, setMeasure] = useState('tokens');
@@ -81,8 +81,30 @@ export default function AnalyticsScreen({ theme, authEnabled }) {
   const totals = data?.totals;
 
   // Only where it says something: a breakdown by person on an instance where every call belongs to
-  // the same person (or to nobody) is one bar labelled with their name.
+  // the same person (or to nobody) is one bar labelled with their name. The server decides it —
+  // the question is about the data, and asking here would let the two charts disagree.
   const peopleWorthShowing = (data?.byUser ?? []).length > 1;
+  const splitByPerson = (data?.overTimeByUser ?? []).length > 0;
+
+  // The series order comes from the by-person totals, so the same person keeps the same colour in
+  // both charts and a date filter that drops someone does not repaint everyone else.
+  const people = splitByPerson
+    ? data.byUser.map(person => person.name).filter(name => data.overTimeByUser.some(row => row.name === name))
+    : [];
+
+  const overTime = (data?.overTime ?? []).map(bucket => {
+    if (!splitByPerson) {
+      return { label: bucket.label, value: value(bucket) ?? 0 };
+    }
+    // The bar is the sum of its own parts rather than the separately-rounded total: a stack that
+    // overshoots its own axis by a hundredth of a cent is a bug people can see.
+    const parts = {};
+    for (const row of data.overTimeByUser) {
+      if (row.label === bucket.label) parts[row.name] = (parts[row.name] ?? 0) + (value(row) ?? 0);
+    }
+    const total = Object.values(parts).reduce((sum, part) => sum + part, 0);
+    return { label: bucket.label, value: total, parts };
+  });
 
   return (
     <div style={{ maxWidth: 1180, margin: '0 auto', padding: '40px 28px 100px' }}>
@@ -162,7 +184,8 @@ export default function AnalyticsScreen({ theme, authEnabled }) {
       <div style={{ display: 'grid', gap: 12, marginBottom: 12 }}>
         <TimeBarChart
           title={asMoney ? 'Spend over time' : 'Tokens over time'}
-          buckets={(data?.overTime ?? []).map(b => ({ label: b.label, value: value(b) ?? 0 }))}
+          buckets={overTime}
+          keys={people}
           format={format}
           theme={theme}
           empty={loading ? 'Loading…' : 'No calls in this range'}
@@ -178,7 +201,7 @@ export default function AnalyticsScreen({ theme, authEnabled }) {
           empty={loading ? 'Loading…' : 'No calls in this range'}
         />
 
-        {peopleWorthShowing && authEnabled && (
+        {peopleWorthShowing && (
           <DonutChart
             title={asMoney ? 'Spend by person' : 'Tokens by person'}
             slices={data.byUser.map(s => ({ label: s.name, value: value(s) ?? 0 }))}

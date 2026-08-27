@@ -71,12 +71,19 @@ public class AnalyticsService {
         }
         boolean costKnown = !priceList.isEmpty() && unpriced.size() < rows.size();
 
+        // Read once, aggregated twice. The total per bucket and the same buckets split by owner
+        // are the same rows summed along different axes; two queries could disagree with each
+        // other, which is the whole reason this endpoint is one call and not five.
+        List<Row> timeRows = overTimeRows(query, where);
+        Map<Long, String> names = names();
+
         return new AnalyticsSummaryDto(
                 totals(rows, priceList, where),
                 slices(rows, priceList, Row::provider),
                 slices(rows, priceList, r -> r.provider() + " / " + r.model()),
-                byUser(rows, priceList),
-                overTime(query, where, priceList),
+                byUser(rows, priceList, names),
+                overTime(timeRows, priceList),
+                overTimeByUser(timeRows, priceList, names),
                 costKnown,
                 List.copyOf(unpriced));
     }
@@ -117,10 +124,8 @@ public class AnalyticsService {
                 .toList();
     }
 
-    private List<AnalyticsSummaryDto.UserSlice> byUser(List<Row> rows, Map<String, ModelPrice> priceList) {
-        Map<Long, String> names = new HashMap<>();
-        jdbc.query("select id, name from users", rs -> { names.put(rs.getLong("id"), rs.getString("name")); });
-
+    private List<AnalyticsSummaryDto.UserSlice> byUser(List<Row> rows, Map<String, ModelPrice> priceList,
+                                                       Map<Long, String> names) {
         Map<Long, List<Row>> grouped = new LinkedHashMap<>();
         for (Row row : rows) {
             grouped.computeIfAbsent(row.userId(), k -> new ArrayList<>()).add(row);
@@ -128,9 +133,7 @@ public class AnalyticsService {
 
         return grouped.entrySet().stream()
                 .map(e -> new AnalyticsSummaryDto.UserSlice(e.getKey(),
-                        // Named as what it is. Calls made before there were accounts, or on an
-                        // instance with none, belong to nobody — and that is most of them.
-                        e.getKey() == null ? "No owner" : names.getOrDefault(e.getKey(), "Deleted account"),
+                        name(e.getKey(), names),
                         e.getValue().stream().mapToLong(Row::calls).sum(),
                         e.getValue().stream().mapToLong(Row::totalTokens).sum(),
                         cost(e.getValue(), priceList)))
@@ -138,8 +141,8 @@ public class AnalyticsService {
                 .toList();
     }
 
-    private List<AnalyticsSummaryDto.Bucket> overTime(AnalyticsQuery query, Where where,
-                                                      Map<String, ModelPrice> priceList) {
+    /** The time rows as the database returned them, still carrying the owner. */
+    private List<Row> overTimeRows(AnalyticsQuery query, Where where) {
         String unit = BUCKETS.get(query.granularity() == null ? "day" : query.granularity().toLowerCase());
         if (unit == null) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR,
@@ -147,24 +150,28 @@ public class AnalyticsService {
                     "granularity");
         }
 
-        List<Row> rows = jdbc.query("""
+        return jdbc.query("""
                         select to_char(date_trunc('%s', started_at), 'YYYY-MM-DD') as bucket,
                                coalesce(provider, 'unknown') as provider,
                                coalesce(model, 'unknown')    as model,
+                               user_id,
                                count(*) as calls,
                                coalesce(sum(prompt_tokens), 0)     as prompt_tokens,
                                coalesce(sum(completion_tokens), 0) as completion_tokens,
                                coalesce(sum(total_tokens), 0)      as total_tokens
                         from llm_usage
                         """.formatted(unit) + where.sql() + """
-                         group by bucket, provider, model order by bucket
+                         group by bucket, provider, model, user_id order by bucket
                         """,
-                (rs, i) -> new Row(rs.getString("provider"), rs.getString("model"), null,
+                (rs, i) -> new Row(rs.getString("provider"), rs.getString("model"),
+                        rs.getObject("user_id") == null ? null : rs.getLong("user_id"),
                         rs.getLong("calls"), rs.getLong("prompt_tokens"),
                         rs.getLong("completion_tokens"), rs.getLong("total_tokens"))
                         .withBucket(rs.getString("bucket")),
                 where.args());
+    }
 
+    private List<AnalyticsSummaryDto.Bucket> overTime(List<Row> rows, Map<String, ModelPrice> priceList) {
         Map<String, List<Row>> grouped = new LinkedHashMap<>();
         for (Row row : rows) {
             grouped.computeIfAbsent(row.bucket(), k -> new ArrayList<>()).add(row);
@@ -175,6 +182,53 @@ public class AnalyticsService {
                         e.getValue().stream().mapToLong(Row::totalTokens).sum(),
                         cost(e.getValue(), priceList)))
                 .toList();
+    }
+
+    /**
+     * The buckets split by owner, or nothing at all.
+     * <p>
+     * One owner in range means one segment per bar, which is the plain chart again with a legend
+     * bolted on — so it answers empty and the screen draws the total it already has. The rule lives
+     * here rather than on the screen because the question is about the data, and the data is here.
+     */
+    private List<AnalyticsSummaryDto.UserBucket> overTimeByUser(List<Row> rows,
+                                                                Map<String, ModelPrice> priceList,
+                                                                Map<Long, String> names) {
+        long owners = rows.stream().map(Row::userId).map(String::valueOf).distinct().count();
+        if (owners < 2) {
+            return List.of();
+        }
+
+        Map<String, List<Row>> grouped = new LinkedHashMap<>();
+        for (Row row : rows) {
+            grouped.computeIfAbsent(row.bucket() + "\u0000" + row.userId(), k -> new ArrayList<>()).add(row);
+        }
+        return grouped.values().stream()
+                .map(group -> new AnalyticsSummaryDto.UserBucket(
+                        group.getFirst().bucket(),
+                        group.getFirst().userId(),
+                        name(group.getFirst().userId(), names),
+                        group.stream().mapToLong(Row::calls).sum(),
+                        group.stream().mapToLong(Row::totalTokens).sum(),
+                        cost(group, priceList)))
+                .toList();
+    }
+
+    /**
+     * Named as what it is. Calls made before there were accounts, or on an instance with none,
+     * belong to nobody — and on most instances that is all of them.
+     */
+    private static String name(Long userId, Map<Long, String> names) {
+        if (userId == null) {
+            return "No owner";
+        }
+        return names.getOrDefault(userId, "Deleted account");
+    }
+
+    private Map<Long, String> names() {
+        Map<Long, String> names = new HashMap<>();
+        jdbc.query("select id, name from users", rs -> { names.put(rs.getLong("id"), rs.getString("name")); });
+        return names;
     }
 
     // ── Money ─────────────────────────────────────────────────────────────────

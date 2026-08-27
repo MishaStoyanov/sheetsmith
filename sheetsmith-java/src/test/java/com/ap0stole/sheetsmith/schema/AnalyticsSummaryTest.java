@@ -186,6 +186,71 @@ class AnalyticsSummaryTest {
         assertThat(analytics.summary(AnalyticsQuery.unfiltered()).totals().documents()).isEqualTo(2);
     }
 
+    @Test
+    @DisplayName("the split over time is left empty when every call has the same owner")
+    void oneOwnerIsNotAStack() {
+        call("2026-08-01 10:00", "CHAT", danaId, "s1", "OPENAI", "gpt-4o", 100, 10);
+        call("2026-08-02 10:00", "CHAT", danaId, "s1", "OPENAI", "gpt-4o", 100, 10);
+
+        AnalyticsSummaryDto summary = analytics.summary(AnalyticsQuery.unfiltered());
+
+        assertThat(summary.overTime()).hasSize(2);
+        assertThat(summary.overTimeByUser())
+                .as("a stack of one segment is the plain chart wearing a legend")
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("the split over time names the owner of every part, unowned calls included")
+    void twoOwnersSplitEachBucket() {
+        call("2026-08-01 10:00", "CHAT", danaId, "s1", "OPENAI", "gpt-4o", 100, 10);
+        call("2026-08-01 11:00", "CHAT", null, "s1", "OPENAI", "gpt-4o", 500, 50);
+        call("2026-08-02 10:00", "CHAT", danaId, "s1", "OPENAI", "gpt-4o", 700, 70);
+
+        List<AnalyticsSummaryDto.UserBucket> split = analytics.summary(AnalyticsQuery.unfiltered()).overTimeByUser();
+
+        assertThat(split).extracting(AnalyticsSummaryDto.UserBucket::label,
+                        AnalyticsSummaryDto.UserBucket::name, AnalyticsSummaryDto.UserBucket::totalTokens)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple("2026-08-01", "analytics-fixture", 110L),
+                        org.assertj.core.groups.Tuple.tuple("2026-08-01", "No owner", 550L),
+                        org.assertj.core.groups.Tuple.tuple("2026-08-02", "analytics-fixture", 770L));
+    }
+
+    @Test
+    @DisplayName("the parts of a bucket add up to the bucket")
+    void thePartsAddUpToTheWhole() {
+        // The chart draws the bar from its own parts, so a split that does not sum to the total is
+        // a stack that overshoots or falls short of the axis it is drawn against.
+        prices.upsert(new UpsertPriceRequest("OPENAI", "gpt-4o",
+                new BigDecimal("2.00"), new BigDecimal("10.00")));
+        call("2026-08-01 10:00", "CHAT", danaId, "s1", "OPENAI", "gpt-4o", 1_000_000, 100_000);
+        call("2026-08-01 11:00", "CHAT", null, "s1", "OPENAI", "gpt-4o", 3_000_000, 200_000);
+
+        AnalyticsSummaryDto summary = analytics.summary(AnalyticsQuery.unfiltered());
+
+        AnalyticsSummaryDto.Bucket whole = summary.overTime().getFirst();
+        List<AnalyticsSummaryDto.UserBucket> parts = summary.overTimeByUser();
+
+        assertThat(parts.stream().mapToLong(AnalyticsSummaryDto.UserBucket::totalTokens).sum())
+                .isEqualTo(whole.totalTokens());
+        assertThat(parts.stream().map(AnalyticsSummaryDto.UserBucket::cost)
+                .reduce(BigDecimal.ZERO, BigDecimal::add))
+                .isEqualByComparingTo(whole.cost());
+    }
+
+    @Test
+    @DisplayName("a filter that leaves one owner drops the split with it")
+    void filteringDownToOneOwnerDropsTheSplit() {
+        call("2026-08-01 10:00", "CHAT", danaId, "s1", "OPENAI", "gpt-4o", 100, 10);
+        call("2026-08-01 11:00", "CHAT", null, "s1", "OPENAI", "gpt-4o", 500, 50);
+
+        AnalyticsQuery mineOnly = new AnalyticsQuery(null, null, List.of(danaId), false, null, null, null, "day");
+
+        assertThat(analytics.summary(AnalyticsQuery.unfiltered()).overTimeByUser()).hasSize(2);
+        assertThat(analytics.summary(mineOnly).overTimeByUser()).isEmpty();
+    }
+
     static boolean dockerAvailable() {
         try {
             return DockerClientFactory.instance().isDockerAvailable();
