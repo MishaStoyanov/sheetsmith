@@ -26,11 +26,16 @@ const money = (value) => {
  * track would be drawing a proportion of nothing, and 140% is the fact worth reading anyway.
  */
 export default function BudgetBar({ spent, limit, compact = false }) {
-  // Both states occupy the same box. The column is right-aligned, so a bare run of text ended at
-  // the cell's edge while the gauge beside it started a fixed width further left — the two rows
-  // did not line up, and a column that does not line up reads as a mistake even when the numbers
-  // are right.
-  const box = { display: 'inline-block', width: compact ? 150 : 200, textAlign: 'left' };
+  // Both states occupy the same box, in both directions.
+  //
+  // Across: the column is right-aligned, so a bare run of text ended at the cell's edge while the
+  // gauge beside it started a fixed width further left.
+  //
+  // And down: the gauge is two lines tall — figures above a track — where "no limit" is one, and
+  // the cell aligns to the top, so the single line hung at the top of a space the other row filled.
+  // Fixing the height and centring inside it puts both on the same line whichever row you read.
+  const height = compact ? 23 : 27;
+  const box = { display: 'inline-block', width: compact ? 150 : 200, height, textAlign: 'left' };
 
   // No ceiling is a real state, not a missing one.
   //
@@ -40,7 +45,15 @@ export default function BudgetBar({ spent, limit, compact = false }) {
   // limit" beside an account that had plainly spent something.
   if (limit == null) {
     return (
-      <span style={{ ...box, fontFamily: mono, fontSize: compact ? 12 : 12.5, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>
+      <span style={{
+        ...box,
+        display: 'inline-flex',
+        alignItems: 'center',
+        fontFamily: mono,
+        fontSize: compact ? 12 : 12.5,
+        color: 'var(--text-faint)',
+        whiteSpace: 'nowrap',
+      }}>
         {spent == null ? 'no limit' : `${money(spent)} · no limit`}
       </span>
     );
