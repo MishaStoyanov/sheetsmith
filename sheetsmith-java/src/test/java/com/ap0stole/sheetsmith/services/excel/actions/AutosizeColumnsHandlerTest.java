@@ -1,5 +1,6 @@
 package com.ap0stole.sheetsmith.services.excel.actions;
 
+import com.ap0stole.sheetsmith.services.excel.actions.view.AutosizeColumnsHandler;
 import com.ap0stole.sheetsmith.configs.ProcessingConfig;
 import com.ap0stole.sheetsmith.services.excel.StepTense;
 import org.apache.poi.ss.usermodel.Cell;

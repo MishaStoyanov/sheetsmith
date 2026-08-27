@@ -1,5 +1,6 @@
 package com.ap0stole.sheetsmith.services.excel.actions;
 
+import com.ap0stole.sheetsmith.services.excel.actions.formula.LookupFromSheetHandler;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.CellValue;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;

@@ -1,5 +1,7 @@
 package com.ap0stole.sheetsmith.services.excel.actions;
 
+import com.ap0stole.sheetsmith.services.excel.actions.view.GroupRowsHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.view.PageSetupHandler;
 import org.apache.poi.ss.usermodel.PrintSetup;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFSheet;

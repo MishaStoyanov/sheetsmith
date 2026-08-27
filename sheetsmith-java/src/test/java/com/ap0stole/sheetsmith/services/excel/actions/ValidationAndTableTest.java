@@ -1,5 +1,7 @@
 package com.ap0stole.sheetsmith.services.excel.actions;
 
+import com.ap0stole.sheetsmith.services.excel.actions.table.CreateTableHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.table.DataValidationHandler;
 import com.ap0stole.sheetsmith.services.excel.StepTense;
 import org.apache.poi.ss.usermodel.DataValidation;
 import org.apache.poi.ss.usermodel.DataValidationConstraint;

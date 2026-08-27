@@ -1,5 +1,6 @@
 package com.ap0stole.sheetsmith.services.excel.actions;
 
+import com.ap0stole.sheetsmith.services.excel.actions.formula.GroupByHandler;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;

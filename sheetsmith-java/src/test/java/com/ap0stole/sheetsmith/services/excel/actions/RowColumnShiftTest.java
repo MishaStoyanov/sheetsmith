@@ -1,5 +1,11 @@
 package com.ap0stole.sheetsmith.services.excel.actions;
 
+import com.ap0stole.sheetsmith.services.excel.actions.chart.CreateChartHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.structure.DeleteColumnsHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.structure.DeleteRowsHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.structure.InsertColumnsHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.structure.InsertRowsHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.structure.StructureShift;
 import com.ap0stole.sheetsmith.services.excel.StepTense;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFRow;

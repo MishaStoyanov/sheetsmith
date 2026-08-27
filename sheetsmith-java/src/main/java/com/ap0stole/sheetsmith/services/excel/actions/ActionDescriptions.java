@@ -13,18 +13,18 @@ import java.util.Map;
  * from the LLM, so every method tolerates missing keys, nulls and wrong types and returns
  * {@code null} rather than throwing.
  */
-final class ActionDescriptions {
+public final class ActionDescriptions {
 
     private ActionDescriptions() {
     }
 
     /** The leading verb, the only part of a step's sentence that differs between a proposal and a record. */
-    static String verb(StepTense tense, String imperative, String past) {
+    public static String verb(StepTense tense, String imperative, String past) {
         return tense == StepTense.IMPERATIVE ? imperative : past;
     }
 
     /** Scalar value of {@code key} as trimmed text, or {@code null} when absent/blank/non-scalar. */
-    static String text(Map<String, Object> properties, String key) {
+    public static String text(Map<String, Object> properties, String key) {
         Object raw = raw(properties, key);
         if (raw == null || raw instanceof Map<?, ?> || raw instanceof Collection<?>) {
             return null;
@@ -33,7 +33,7 @@ final class ActionDescriptions {
         return value.isEmpty() || "null".equalsIgnoreCase(value) ? null : value;
     }
 
-    static Integer integer(Map<String, Object> properties, String key) {
+    public static Integer integer(Map<String, Object> properties, String key) {
         Object raw = raw(properties, key);
         if (raw instanceof Number number) {
             return number.intValue();
@@ -49,7 +49,7 @@ final class ActionDescriptions {
         }
     }
 
-    static boolean flag(Map<String, Object> properties, String key, boolean fallback) {
+    public static boolean flag(Map<String, Object> properties, String key, boolean fallback) {
         Object raw = raw(properties, key);
         if (raw instanceof Boolean bool) {
             return bool;
@@ -68,7 +68,7 @@ final class ActionDescriptions {
     }
 
     /** Range or cell reference without sheet prefix and absolute markers; {@code B12:B12} collapses to {@code B12}. */
-    static String range(Map<String, Object> properties, String key) {
+    public static String range(Map<String, Object> properties, String key) {
         String value = text(properties, key);
         if (value == null) {
             return null;
@@ -82,20 +82,20 @@ final class ActionDescriptions {
     }
 
     /** Formula normalised to a single leading {@code =}. */
-    static String formula(Map<String, Object> properties, String key) {
+    public static String formula(Map<String, Object> properties, String key) {
         String value = text(properties, key);
         return value == null ? null : "=" + value.replaceAll("^=+", "");
     }
 
     /** {@code "column C"} for a 0-based {@code columnIndex}. */
-    static String column(Map<String, Object> properties, String key) {
+    public static String column(Map<String, Object> properties, String key) {
         Integer index = integer(properties, key);
         String letter = index == null ? null : columnLetter(index);
         return letter == null ? null : "column " + letter;
     }
 
     /** 0-based column index as an Excel column letter (0 -> A, 26 -> AA). */
-    static String columnLetter(int index) {
+    public static String columnLetter(int index) {
         if (index < 0) {
             return null;
         }
@@ -106,7 +106,7 @@ final class ActionDescriptions {
         return letters.toString();
     }
 
-    static String quoted(String value) {
+    public static String quoted(String value) {
         return '"' + value + '"';
     }
 
@@ -115,7 +115,7 @@ final class ActionDescriptions {
      * {@code 16 rows from row 5} — from either a range or {@code at} plus {@code count}. Shared so
      * that the same keys read the same on every card that names rows.
      */
-    static String rowSpan(Map<String, Object> properties) {
+    public static String rowSpan(Map<String, Object> properties) {
         String range = text(properties, "range");
         if (range != null) {
             return "rows " + range;
@@ -130,7 +130,7 @@ final class ActionDescriptions {
     }
 
     /** {@code  on "Sales"} when the action names a sheet, empty string otherwise. */
-    static String sheetSuffix(Map<String, Object> properties) {
+    public static String sheetSuffix(Map<String, Object> properties) {
         String sheet = text(properties, "sheetName");
         if (sheet == null) {
             sheet = text(properties, "sourceSheet");
@@ -139,7 +139,7 @@ final class ActionDescriptions {
     }
 
     /** Comparison operator in words, or {@code null} when it is missing or unrecognised. */
-    static String comparison(String operator) {
+    public static String comparison(String operator) {
         if (operator == null) {
             return null;
         }
@@ -155,7 +155,7 @@ final class ActionDescriptions {
     }
 
     /** Styling bits chained with commas, e.g. {@code blue background (#1E3A8A), bold}; empty when nothing is styled. */
-    static String styling(Map<String, Object> properties) {
+    public static String styling(Map<String, Object> properties) {
         List<String> bits = new ArrayList<>();
         String background = color(properties, "backgroundColor");
         if (background != null) {
@@ -180,7 +180,7 @@ final class ActionDescriptions {
      * colours rather than applying them to something, falling back to the value the handler will
      * use when none was asked for.
      */
-    static String colorWords(String value, String fallback) {
+    public static String colorWords(String value, String fallback) {
         String chosen = value == null || value.isBlank() ? fallback : value.trim();
         String hex = hex(chosen);
         return hex == null ? chosen.toLowerCase(Locale.ROOT) : colorName(hex) + " (" + hex + ")";

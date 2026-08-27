@@ -1,5 +1,6 @@
 package com.ap0stole.sheetsmith.services.excel.actions;
 
+import com.ap0stole.sheetsmith.services.excel.actions.view.FreezePanesHandler;
 import com.ap0stole.sheetsmith.services.excel.StepTense;
 import org.apache.poi.ss.util.PaneInformation;
 import org.apache.poi.xssf.usermodel.XSSFSheet;

@@ -1,14 +1,14 @@
 package com.ap0stole.sheetsmith.services.excel;
+import com.ap0stole.sheetsmith.services.excel.actions.format.AlignCellsHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.view.AutosizeColumnsHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.view.FreezePanesHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.format.NumberFormatHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.format.SetBordersHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.cell.SetCellValueHandler;
 
 import com.ap0stole.sheetsmith.configs.ProcessingConfig;
 import com.ap0stole.sheetsmith.llm.ActionCatalogPrompt;
 import com.ap0stole.sheetsmith.services.excel.transform.ColumnTransformRegistry;
-import com.ap0stole.sheetsmith.services.excel.actions.AlignCellsHandler;
-import com.ap0stole.sheetsmith.services.excel.actions.AutosizeColumnsHandler;
-import com.ap0stole.sheetsmith.services.excel.actions.FreezePanesHandler;
-import com.ap0stole.sheetsmith.services.excel.actions.NumberFormatHandler;
-import com.ap0stole.sheetsmith.services.excel.actions.SetBordersHandler;
-import com.ap0stole.sheetsmith.services.excel.actions.SetCellValueHandler;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.DisplayName;

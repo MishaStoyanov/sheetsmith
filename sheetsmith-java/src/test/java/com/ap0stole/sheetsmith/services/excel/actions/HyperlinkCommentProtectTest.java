@@ -1,5 +1,8 @@
 package com.ap0stole.sheetsmith.services.excel.actions;
 
+import com.ap0stole.sheetsmith.services.excel.actions.annotate.CommentHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.annotate.HyperlinkHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.sheet.ProtectSheetHandler;
 import org.apache.poi.common.usermodel.HyperlinkType;
 import org.apache.poi.ss.usermodel.FontUnderline;
 import org.apache.poi.xssf.usermodel.XSSFCell;

@@ -547,7 +547,29 @@ chosen colour with a default one is refused rather than producing a scale whose 
 Omitting `midColor` is how two-colour is asked for, which is why absence is a real choice here and
 not a missing key.
 
-Each handler lives in `services/excel/actions/`. Config models (Lombok records) are in `services/excel/model/`.
+Each handler lives in a group under `services/excel/actions/`, and its config model (a Lombok
+record) in the matching group under `services/excel/model/` — the two trees mirror each other, so a
+handler and its config are one directory apart:
+
+| group | what it changes |
+|---|---|
+| `cell` | the contents of cells: values, clearing, merging, bulk rewrites, a header rename |
+| `format` | how cells look, including the three that colour by value |
+| `structure` | rows and columns that move, and the reordering of data |
+| `formula` | steps that write formulas |
+| `sheet` | whole sheets: adding, deleting, renaming, protecting |
+| `view` | how the sheet is read rather than what it says: freezing, outlining, printing |
+| `chart` | charts and sparklines |
+| `table` | a table or a validation — the sheet's future rather than its contents |
+| `annotate` | hyperlinks and comments |
+
+`ActionDescriptions` stays at the root of `actions/` and `SheetTargetConfig` at the root of
+`model/`: both are shared by every group. Splitting the packages is what made them public — they
+had been package-private, which is worth knowing before treating either as an internal detail.
+
+A test lives in the package of the thing it tests, which matters where a test pins something
+package-private: `SparklineHandlerTest` asserts the extension GUID literal, and that constant is
+not public.
 
 ### Query tool types (chat only, 5 total)
 

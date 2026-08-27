@@ -1,5 +1,7 @@
 package com.ap0stole.sheetsmith.services.excel.actions;
 
+import com.ap0stole.sheetsmith.services.excel.actions.format.ColorScaleHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.format.DataBarsHandler;
 import org.apache.poi.ss.usermodel.ColorScaleFormatting;
 import org.apache.poi.ss.usermodel.ConditionType;
 import org.apache.poi.ss.usermodel.ConditionalFormatting;

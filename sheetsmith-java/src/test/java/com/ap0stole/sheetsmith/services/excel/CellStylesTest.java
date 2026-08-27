@@ -1,10 +1,10 @@
 package com.ap0stole.sheetsmith.services.excel;
 
-import com.ap0stole.sheetsmith.excel_improver.coloring.StyleConfig;
-import com.ap0stole.sheetsmith.excel_improver.coloring.StyleHandler;
-import com.ap0stole.sheetsmith.services.excel.actions.AlignCellsHandler;
-import com.ap0stole.sheetsmith.services.excel.actions.NumberFormatHandler;
-import com.ap0stole.sheetsmith.services.excel.actions.SetBordersHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.format.AlignCellsHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.format.NumberFormatHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.format.SetBordersHandler;
+import com.ap0stole.sheetsmith.services.excel.model.format.StyleConfig;
+import com.ap0stole.sheetsmith.services.excel.actions.format.StyleHandler;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;

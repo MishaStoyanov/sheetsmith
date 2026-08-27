@@ -1,5 +1,7 @@
 package com.ap0stole.sheetsmith.services.excel.actions;
 
+import com.ap0stole.sheetsmith.services.excel.actions.sheet.DeleteSheetHandler;
+import com.ap0stole.sheetsmith.services.excel.actions.cell.UnmergeCellsHandler;
 import com.ap0stole.sheetsmith.services.excel.StepTense;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
