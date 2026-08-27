@@ -80,6 +80,10 @@ sheetsmith:
     allowed-origins: ${SHEETSMITH_ALLOWED_ORIGINS:${XLSXAI_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080}}
     path-endpoint-enabled: ${SHEETSMITH_PATH_ENDPOINT_ENABLED:${XLSXAI_PATH_ENDPOINT_ENABLED:false}}
     path-endpoint-roots: ${SHEETSMITH_PATH_ENDPOINT_ROOTS:${XLSXAI_PATH_ENDPOINT_ROOTS:}}
+  auth:
+    # false — the default — is the solo case: no login screen, no owner on a run, no user list.
+    # There is no XLSXAI_ fallback here because this setting never had an old name.
+    enabled: ${SHEETSMITH_AUTH_ENABLED:false}
   chat:
     # false turns this into an improve-only instance: no chat, no data-grounded suggestions, and
     # nothing but the sheet's structure reaches the model.

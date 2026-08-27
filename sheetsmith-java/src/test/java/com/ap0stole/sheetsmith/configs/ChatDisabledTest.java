@@ -91,14 +91,14 @@ class ChatDisabledTest {
     @Test
     @DisplayName("the capabilities a UI reads say plainly what the instance will and will not send")
     void capabilitiesAreHonest() {
-        CapabilitiesDto off = CapabilitiesDto.of(false);
+        CapabilitiesDto off = CapabilitiesDto.of(false, false);
         assertThat(off.chatEnabled()).isFalse();
         assertThat(off.suggestionsEnabled())
                 .as("suggestions inspect real cell values, so they go with the chat")
                 .isFalse();
         assertThat(off.sendsOnlyStructure()).isTrue();
 
-        CapabilitiesDto on = CapabilitiesDto.of(true);
+        CapabilitiesDto on = CapabilitiesDto.of(true, false);
         assertThat(on.sendsOnlyStructure())
                 .as("with a chat present, claiming structure-only would be a lie")
                 .isFalse();

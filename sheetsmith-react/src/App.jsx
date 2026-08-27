@@ -25,7 +25,9 @@ export default function App() {
 
   // An older build has no /api/capabilities; treating that as "chat on" keeps it working, and a
   // server that really has the chat off answers the question rather than staying silent.
-  const [capabilities, setCapabilities] = useState({ chatEnabled: true, suggestionsEnabled: true, sendsOnlyStructure: false });
+  // authEnabled defaults false for the same reason read the other way round: a build that does not
+  // report it has no authentication either, so the honest fallback is "nobody is asked to log in".
+  const [capabilities, setCapabilities] = useState({ chatEnabled: true, suggestionsEnabled: true, sendsOnlyStructure: false, authEnabled: false });
   useEffect(() => {
     getCapabilities().then(setCapabilities).catch(() => {});
   }, []);

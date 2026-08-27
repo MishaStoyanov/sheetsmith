@@ -1,5 +1,6 @@
 package com.ap0stole.sheetsmith.controller;
 
+import com.ap0stole.sheetsmith.configs.AuthConfig;
 import com.ap0stole.sheetsmith.configs.ChatConfig;
 import com.ap0stole.sheetsmith.domain.dto.CapabilitiesDto;
 import lombok.RequiredArgsConstructor;
@@ -21,9 +22,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class CapabilitiesController {
 
     private final ChatConfig chatConfig;
+    private final AuthConfig authConfig;
 
     @GetMapping
     public ResponseEntity<CapabilitiesDto> capabilities() {
-        return ResponseEntity.ok(CapabilitiesDto.of(chatConfig.isEnabled()));
+        return ResponseEntity.ok(CapabilitiesDto.of(chatConfig.isEnabled(), authConfig.isEnabled()));
     }
 }
