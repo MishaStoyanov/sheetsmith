@@ -1,3 +1,5 @@
+import Button from './components/Button.jsx';
+
 const mono = "'JetBrains Mono', monospace";
 
 /**
@@ -18,12 +20,7 @@ export default function NotFound({ onHome }) {
         The link may be out of date, or the page may only exist on an instance set up differently
         from this one.
       </p>
-      <button
-        onClick={onHome}
-        style={{ height: 38, padding: '0 18px', borderRadius: 9, border: 'none', background: 'var(--accent)', color: 'var(--on-accent)', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
-      >
-        Back to the spreadsheet
-      </button>
+      <Button onClick={onHome} variant="primary" size="lg">Back to the spreadsheet</Button>
     </div>
   );
 }

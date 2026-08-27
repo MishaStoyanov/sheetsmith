@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Button from './components/Button.jsx';
 
 const mono = "'JetBrains Mono', monospace";
 
@@ -45,20 +46,13 @@ export default function AppShell({
         <span style={{ fontSize: 12, color: 'var(--text-faint)', display: 'flex', alignItems: 'center', gap: 5 }}>
           <span style={{ color: 'var(--accent)' }}>⟡</span> {providerMode === 'CLOUD' ? 'Cloud mode' : 'Local mode'}
         </span>
-        <button
-          onClick={onToggleTheme}
-          style={{ marginLeft: 8, height: 32, padding: '0 14px', borderRadius: 8, border: '1px solid var(--border-strong)', background: 'transparent', color: 'var(--text-dim)', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
-        >
+        <Button onClick={onToggleTheme} style={{ marginLeft: 8 }}>
           {theme === 'light' ? 'Dark' : 'Light'}
-        </button>
+        </Button>
         {user && (
-          <button
-            onClick={onSignOut}
-            title={`Signed in as ${user.name}`}
-            style={{ marginLeft: 8, height: 32, padding: '0 14px', borderRadius: 8, border: '1px solid var(--border-strong)', background: 'transparent', color: 'var(--text-dim)', fontFamily: 'inherit', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
-          >
+          <Button onClick={onSignOut} title={`Signed in as ${user.name}`} style={{ marginLeft: 8 }}>
             Sign out
-          </button>
+          </Button>
         )}
       </div>
 

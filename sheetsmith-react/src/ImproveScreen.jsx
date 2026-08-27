@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import Button from './components/Button.jsx';
 import SheetGrid from './SheetGrid.jsx';
 import SuggestionsPanel from './SuggestionsPanel.jsx';
 import ChatPanel, { useChatPanelLayout } from './ChatPanel.jsx';
@@ -608,9 +609,9 @@ export default function ImproveScreen({ theme, capabilities, providerMode, onOpe
               <button onClick={handleReset} style={{ height: 32, padding: '0 14px', borderRadius: 8, border: '1px solid var(--del)', background: 'transparent', color: 'var(--del)', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}>
                 Try again
               </button>
-              <button onClick={onOpenSettings} style={{ height: 32, padding: '0 14px', borderRadius: 8, border: '1px solid var(--del)', background: 'transparent', color: 'var(--del)', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}>
+              <Button onClick={onOpenSettings} variant="danger">
                 Provider settings
-              </button>
+              </Button>
             </div>
           </div>
         )}

@@ -1,14 +1,10 @@
 import { useState } from 'react';
 import { themes } from './theme.js';
+import Button from './components/Button.jsx';
+import Field from './components/Field.jsx';
 import { login } from './authApi.js';
 
-const mono = "'JetBrains Mono', monospace";
-
-/**
- * The whole app when nobody is signed in. Styled from the same theme tokens as everything else —
- * the primitives this will be rebuilt on do not exist yet, so the inline styles here match the
- * idiom of the panels around them rather than inventing a second one.
- */
+/** The whole app when nobody is signed in. */
 export default function LoginScreen({ theme, onSignedIn }) {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
@@ -16,9 +12,11 @@ export default function LoginScreen({ theme, onSignedIn }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
+  const ready = name.trim() && password;
+
   const submit = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !password || busy) return;
+    if (!ready || busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -30,12 +28,6 @@ export default function LoginScreen({ theme, onSignedIn }) {
     } finally {
       setBusy(false);
     }
-  };
-
-  const field = {
-    width: '100%', height: 38, padding: '0 12px', borderRadius: 8,
-    border: '1px solid var(--border-strong)', background: 'var(--surface-2)',
-    color: 'var(--text)', fontFamily: 'inherit', fontSize: 14, boxSizing: 'border-box',
   };
 
   return (
@@ -57,26 +49,22 @@ export default function LoginScreen({ theme, onSignedIn }) {
           <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em' }}>SheetSmith</span>
         </div>
 
-        <label style={{ display: 'block', fontSize: 12.5, color: 'var(--text-dim)', marginBottom: 5 }}>
-          Username
-        </label>
-        <input
+        <Field
+          label="Username"
           value={name}
           onChange={e => setName(e.target.value)}
           autoFocus
           autoComplete="username"
-          style={{ ...field, fontFamily: mono, marginBottom: 14 }}
+          monospace
         />
 
-        <label style={{ display: 'block', fontSize: 12.5, color: 'var(--text-dim)', marginBottom: 5 }}>
-          Password
-        </label>
-        <input
+        <Field
+          label="Password"
           type="password"
           value={password}
           onChange={e => setPassword(e.target.value)}
           autoComplete="current-password"
-          style={{ ...field, fontFamily: mono, marginBottom: 14 }}
+          monospace
         />
 
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-dim)', marginBottom: 18, cursor: 'pointer' }}>
@@ -93,19 +81,9 @@ export default function LoginScreen({ theme, onSignedIn }) {
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={busy || !name.trim() || !password}
-          style={{
-            width: '100%', height: 40, borderRadius: 9, border: 'none',
-            background: 'var(--accent)', color: 'var(--on-accent)', fontFamily: 'inherit',
-            fontSize: 14, fontWeight: 600,
-            cursor: busy || !name.trim() || !password ? 'default' : 'pointer',
-            opacity: busy || !name.trim() || !password ? 0.6 : 1,
-          }}
-        >
+        <Button type="submit" variant="primary" size="lg" block disabled={busy || !ready}>
           {busy ? 'Signing in…' : 'Sign in'}
-        </button>
+        </Button>
       </form>
     </div>
   );
