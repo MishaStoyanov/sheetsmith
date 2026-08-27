@@ -29,7 +29,8 @@ class SecurityChainTest {
 
     @Nested
     @WebMvcTest(controllers = CapabilitiesController.class)
-    @Import({AuthConfig.class, SecurityProperties.class, SecurityConfig.class, ChatConfig.class})
+    @Import({AuthConfig.class, SecurityProperties.class, SecurityConfig.class, ChatConfig.class,
+            AuthTestBeans.class})
     @DisplayName("with authentication off — the default")
     class AuthOff {
 
@@ -66,7 +67,8 @@ class SecurityChainTest {
 
     @Nested
     @WebMvcTest(controllers = CapabilitiesController.class)
-    @Import({AuthConfig.class, SecurityProperties.class, SecurityConfig.class, ChatConfig.class})
+    @Import({AuthConfig.class, SecurityProperties.class, SecurityConfig.class, ChatConfig.class,
+            AuthTestBeans.class})
     @TestPropertySource(properties = "sheetsmith.auth.enabled=true")
     @DisplayName("with authentication on")
     class AuthOn {

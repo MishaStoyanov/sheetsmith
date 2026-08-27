@@ -1,14 +1,15 @@
+import { authFetch } from './authApi.js';
 // Same-origin by design — see the note in api.js.
 const BASE = '';
 
 export async function getSettings() {
-  const res = await fetch(`${BASE}/api/settings`);
+  const res = await authFetch(`${BASE}/api/settings`);
   if (!res.ok) throw new Error(`Failed to load settings: ${res.status}`);
   return res.json();
 }
 
 export async function updateSettings(settings) {
-  const res = await fetch(`${BASE}/api/settings`, {
+  const res = await authFetch(`${BASE}/api/settings`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(settings),
@@ -18,7 +19,7 @@ export async function updateSettings(settings) {
 }
 
 export async function getOllamaModels(baseUrl) {
-  const res = await fetch(`${BASE}/api/settings/ollama/models?baseUrl=${encodeURIComponent(baseUrl)}`);
+  const res = await authFetch(`${BASE}/api/settings/ollama/models?baseUrl=${encodeURIComponent(baseUrl)}`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message || `Failed to fetch Ollama models: ${res.status}`);
@@ -33,7 +34,7 @@ export async function getOllamaModels(baseUrl) {
  * exists for.
  */
 export async function getCapabilities() {
-  const res = await fetch(`${BASE}/api/capabilities`);
+  const res = await authFetch(`${BASE}/api/capabilities`);
   if (!res.ok) throw new Error(`Failed to fetch capabilities: ${res.status}`);
   return res.json();
 }

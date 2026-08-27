@@ -1,5 +1,6 @@
 package com.ap0stole.sheetsmith.configs;
 
+import com.ap0stole.sheetsmith.auth.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -12,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -37,8 +39,17 @@ public class SecurityConfig {
             "/api/capabilities", "/actuator/health"
     };
 
+    /**
+     * The three ways in. They must stay open or there is no way to become authenticated: signing in
+     * has no token yet, and refreshing runs precisely because the access token has expired.
+     */
+    private static final String[] AUTH_ENTRY_POINTS = {
+            "/api/auth/login", "/api/auth/refresh", "/api/auth/logout"
+    };
+
     private final AuthConfig authConfig;
     private final SecurityProperties securityProperties;
+    private final JwtAuthenticationFilter jwtFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -71,8 +82,11 @@ public class SecurityConfig {
                 // cross-origin call before the real request was ever made.
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(ALWAYS_OPEN).permitAll()
+                .requestMatchers(AUTH_ENTRY_POINTS).permitAll()
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll());
+
+        http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

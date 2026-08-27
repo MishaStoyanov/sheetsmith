@@ -1,3 +1,4 @@
+import { authFetch } from './authApi.js';
 // Same-origin by design — see the note in api.js.
 const BASE = '';
 
@@ -14,21 +15,21 @@ async function readErrorMessage(res, fallback) {
 export async function createChatSession(file) {
   const fd = new FormData();
   fd.append('file', file);
-  const res = await fetch(`${BASE}/api/chat/sessions`, { method: 'POST', body: fd });
+  const res = await authFetch(`${BASE}/api/chat/sessions`, { method: 'POST', body: fd });
   if (!res.ok) throw new Error(await readErrorMessage(res, `Could not start chat: ${res.status}`));
   return res.json();
 }
 
 // → { sessionId, filename, revision, sheets: [names], charts: [definitions] }
 export async function getChatSession(sessionId) {
-  const res = await fetch(`${BASE}/api/chat/sessions/${sessionId}`);
+  const res = await authFetch(`${BASE}/api/chat/sessions/${sessionId}`);
   if (!res.ok) throw new Error(await readErrorMessage(res, `Could not load chat session: ${res.status}`));
   return res.json();
 }
 
 // → { message: {id, role, content, steps, revisionAfter, createdAt}, mutated, revision }
 export async function sendChatMessage(sessionId, text) {
-  const res = await fetch(`${BASE}/api/chat/sessions/${sessionId}/messages`, {
+  const res = await authFetch(`${BASE}/api/chat/sessions/${sessionId}/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
@@ -52,7 +53,7 @@ export class StreamUnavailable extends Error {}
 export async function streamChatMessage(sessionId, text, onStep) {
   let res;
   try {
-    res = await fetch(`${BASE}/api/chat/sessions/${sessionId}/messages/stream`, {
+    res = await authFetch(`${BASE}/api/chat/sessions/${sessionId}/messages/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
       body: JSON.stringify({ text }),
@@ -110,14 +111,14 @@ export async function streamChatMessage(sessionId, text, onStep) {
 
 // → [message, ...]
 export async function getChatMessages(sessionId) {
-  const res = await fetch(`${BASE}/api/chat/sessions/${sessionId}/messages`);
+  const res = await authFetch(`${BASE}/api/chat/sessions/${sessionId}/messages`);
   if (!res.ok) throw new Error(await readErrorMessage(res, `Could not load messages: ${res.status}`));
   return res.json();
 }
 
 // → ArrayBuffer of the current .xlsx
 export async function getChatFile(sessionId) {
-  const res = await fetch(`${BASE}/api/chat/sessions/${sessionId}/file`);
+  const res = await authFetch(`${BASE}/api/chat/sessions/${sessionId}/file`);
   if (!res.ok) throw new Error(await readErrorMessage(res, `Could not fetch the sheet: ${res.status}`));
   return res.arrayBuffer();
 }
@@ -128,7 +129,7 @@ export async function getChatFile(sessionId) {
 // Commits the grid's manual edits as one revision. Without this they live only in the browser
 // and are dropped the moment anything refreshes the sheet.
 export async function saveChatEdits(sessionId, cellEdits, sheetRenames) {
-  const res = await fetch(`${BASE}/api/chat/sessions/${sessionId}/edits`, {
+  const res = await authFetch(`${BASE}/api/chat/sessions/${sessionId}/edits`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -143,7 +144,7 @@ export async function saveChatEdits(sessionId, cellEdits, sheetRenames) {
 }
 
 export async function revertChatSession(sessionId, revision) {
-  const res = await fetch(`${BASE}/api/chat/sessions/${sessionId}/revert`, {
+  const res = await authFetch(`${BASE}/api/chat/sessions/${sessionId}/revert`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ revision }),
@@ -153,7 +154,7 @@ export async function revertChatSession(sessionId, revision) {
 }
 
 export async function deleteChatSession(sessionId) {
-  const res = await fetch(`${BASE}/api/chat/sessions/${sessionId}`, { method: 'DELETE' });
+  const res = await authFetch(`${BASE}/api/chat/sessions/${sessionId}`, { method: 'DELETE' });
   if (!res.ok && res.status !== 404) {
     throw new Error(await readErrorMessage(res, `Could not close chat: ${res.status}`));
   }

@@ -59,7 +59,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 // The real chain, not Spring Boot's default one: without it the slice gets CSRF protection this
 // app does not use, and every POST here answers 403 — a failure about the test's own wiring rather
 // than about the endpoint.
-@Import({ChatConfig.class, SecurityProperties.class, AuthConfig.class, SecurityConfig.class})
+@Import({ChatConfig.class, SecurityProperties.class, AuthConfig.class, SecurityConfig.class,
+        com.ap0stole.sheetsmith.configs.AuthTestBeans.class})
 class ChatStreamControllerTest {
 
     private static final String SESSION_ID = "session-1";
