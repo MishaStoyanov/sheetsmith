@@ -7,12 +7,14 @@ import com.ap0stole.sheetsmith.domain.entity.JobRecord;
 import com.ap0stole.sheetsmith.domain.enums.JobStatus;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
+import com.ap0stole.sheetsmith.auth.CurrentUser;
 import com.ap0stole.sheetsmith.llm.AiPlanningService;
 import com.ap0stole.sheetsmith.llm.LlmEngine;
 import com.ap0stole.sheetsmith.llm.PlanningResult;
 import com.ap0stole.sheetsmith.llm.TokenUsage;
 import com.ap0stole.sheetsmith.repository.ActionResultRepository;
 import com.ap0stole.sheetsmith.repository.JobRepository;
+import com.ap0stole.sheetsmith.repository.UserRepository;
 import com.ap0stole.sheetsmith.requests.ActionStep;
 import com.ap0stole.sheetsmith.requests.AutomationRequest;
 import com.ap0stole.sheetsmith.services.excel.ActionRegistry;
@@ -63,6 +65,8 @@ public class JobService {
     private final Semaphore jobSemaphore;
     private final DocumentSessionService documentSessionService;
     private final SessionLockRegistry sessionLocks;
+    private final CurrentUser currentUser;
+    private final UserRepository users;
 
     private final ConcurrentHashMap<String, PendingPlan> pendingPlans = new ConcurrentHashMap<>();
 
@@ -175,6 +179,7 @@ public class JobService {
                 documentSessionService.currentPath(session).toString());
         addUsage(job, pending.usage());
         recordEngine(job, pending.engine());
+        attributeToCaller(job);
         jobRepository.save(job);
 
         Long jobId = job.getId();
@@ -193,6 +198,7 @@ public class JobService {
         String resultPath = fileStorageService.buildResultPath(inputPath);
 
         JobRecord job = JobRecord.create(instruction, file.getOriginalFilename(), inputPath);
+        attributeToCaller(job);
         jobRepository.save(job);
 
         Thread.ofVirtual().start(() ->
@@ -209,6 +215,7 @@ public class JobService {
         String filename = Path.of(inputPath).getFileName().toString();
 
         JobRecord job = JobRecord.create(request.getInstruction(), filename, inputPath);
+        attributeToCaller(job);
         jobRepository.save(job);
 
         Thread.ofVirtual().start(() ->
@@ -367,6 +374,23 @@ public class JobService {
         }
 
         return results;
+    }
+
+    /**
+     * Records who asked for the run — and is called from the request thread on purpose.
+     * <p>
+     * The work itself happens on a virtual thread, where the security context does not follow: ask
+     * there and every run comes out ownerless, which looks exactly like the no-login case and would
+     * never be questioned. So the caller is read while the request is still the one asking.
+     * <p>
+     * Nobody signed in is a legitimate answer, not a failure. With authentication off the column
+     * stays null and the history shows a dash, because an audit that invents an owner is worse than
+     * one that admits it does not know.
+     */
+    private void attributeToCaller(JobRecord job) {
+        currentUser.id()
+                .flatMap(users::findById)
+                .ifPresent(job::setStartedBy);
     }
 
     /**

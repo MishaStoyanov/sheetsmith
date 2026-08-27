@@ -92,6 +92,9 @@ sheetsmith:
     # Empty means the instance generates one and keeps it. Set this only when more than one
     # instance shares a database, since only then do they have to agree on tokens.
     jwt-secret: ${SHEETSMITH_JWT_SECRET:}
+    # Lost the password? Set this, start once, then remove it. While it is set every restart
+    # resets the password again, and it sits in plain text in the environment.
+    admin-password-reset: ${SHEETSMITH_ADMIN_PASSWORD_RESET:}
   chat:
     # false turns this into an improve-only instance: no chat, no data-grounded suggestions, and
     # nothing but the sheet's structure reaches the model.

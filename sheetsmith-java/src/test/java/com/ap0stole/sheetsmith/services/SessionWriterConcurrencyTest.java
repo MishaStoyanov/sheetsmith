@@ -149,7 +149,9 @@ class SessionWriterConcurrencyTest {
                 errorScanner, new ObjectMapper(), sessionLocks);
         jobService = new JobService(jobRepository, actionResultRepository, new FileStorageService(storageConfig),
                 schemaExtractor, planningService, automationService, actionRegistry,
-                mock(PathGuard.class), new Semaphore(1), sessionService, sessionLocks);
+                mock(PathGuard.class), new Semaphore(1), sessionService, sessionLocks,
+                new com.ap0stole.sheetsmith.auth.CurrentUser(),
+                mock(com.ap0stole.sheetsmith.repository.UserRepository.class));
     }
 
     @Test

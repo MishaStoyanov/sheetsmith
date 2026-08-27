@@ -130,7 +130,11 @@ class JobServiceSessionTest {
 
         jobService = new JobService(jobRepository, actionResultRepository, new FileStorageService(storageConfig),
                 new SchemaExtractorService(new ChatConfig()), planningService, automationService, actionRegistry,
-                mock(PathGuard.class), new Semaphore(1), sessionService, new SessionLockRegistry());
+                mock(PathGuard.class), new Semaphore(1), sessionService, new SessionLockRegistry(),
+                // Nobody signed in: with authentication off a run has no owner, which is the shape
+                // every test here already assumes.
+                new com.ap0stole.sheetsmith.auth.CurrentUser(),
+                mock(com.ap0stole.sheetsmith.repository.UserRepository.class));
     }
 
     @Test

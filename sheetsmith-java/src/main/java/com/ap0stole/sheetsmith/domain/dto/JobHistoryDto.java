@@ -29,6 +29,10 @@ public class JobHistoryDto {
     private final String provider;
     private final String model;
 
+    /** Who asked for it, or null — shown as a dash rather than as an invented name. */
+    private final Long startedByUserId;
+    private final String startedByName;
+
     private JobHistoryDto(Long id, LocalDateTime createdAt, JobStatus status,
                           String instruction, String inputFilename, List<AppliedActionDto> appliedActions,
                           String errorMessage, JobRecord job) {
@@ -45,6 +49,8 @@ public class JobHistoryDto {
         this.providerMode = job.getProviderMode();
         this.provider = job.getProvider();
         this.model = job.getModel();
+        this.startedByUserId = job.getStartedBy() == null ? null : job.getStartedBy().getId();
+        this.startedByName = job.getStartedBy() == null ? null : job.getStartedBy().getName();
     }
 
     // For paginated list — does NOT access lazy actions collection

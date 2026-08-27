@@ -49,6 +49,13 @@ public class AuthConfig {
      */
     private String jwtSecret = "";
 
+    /**
+     * Set it, restart once, and the default account gets this password — then unset it. The way
+     * back in for an instance whose password is lost, since there is no mail server to send a
+     * reset link from and nobody but the operator can reach their database.
+     */
+    private String adminPasswordReset = "";
+
     @PostConstruct
     public void announce() {
         if (enabled) {
