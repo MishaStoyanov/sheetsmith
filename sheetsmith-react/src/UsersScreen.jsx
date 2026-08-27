@@ -95,7 +95,7 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
             Everyone who can sign in. There are no roles yet, so every account can manage every other.
           </p>
         </div>
-        <Button variant="primary" onClick={() => setCreating(true)}>Add someone</Button>
+        <Button variant="primary" onClick={() => setCreating(true)}>Add user</Button>
       </div>
 
       <div style={{ margin: '22px 0 18px' }}>
@@ -118,7 +118,7 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
         rows={data?.content ?? []}
         loading={loading}
         filtered={!!keyword}
-        empty={{ icon: '◍', title: 'No accounts', hint: 'Add one to let somebody else in.' }}
+        empty={{ icon: '◍', title: 'No accounts', hint: 'Add one to let another person in.' }}
         emptyFiltered={{ icon: '◍', title: 'Nobody by that name', hint: 'Try a shorter search.' }}
       />
 
@@ -192,7 +192,7 @@ function CreateDialog({ open, onClose, onSubmit }) {
   return (
     <Modal
       open={open}
-      title="Add someone"
+      title="Add user"
       onClose={reset}
       footer={
         <>
