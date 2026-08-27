@@ -33,18 +33,58 @@ export async function getOllamaModels(baseUrl) {
  * would fail — and, more to the point, because their absence is the guarantee such an instance
  * exists for.
  */
-/** The people who could own a run. Only reachable on an instance with accounts. */
-export async function searchUsers(keyword) {
+/**
+ * A page of accounts. Returns the page rather than its rows: the users screen needs the total to
+ * page through, and unwrapping here would leave one caller reaching for a field the other threw
+ * away.
+ */
+export async function searchUsers(keyword, page = 0, size = 200) {
   const res = await authFetch(`${BASE}/api/users/search`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ keyword, size: 200, sort: 'name' }),
+    body: JSON.stringify({ keyword, page, size, sort: 'name' }),
   });
   if (!res.ok) throw new Error(`Failed to load users: ${res.status}`);
-  return (await res.json()).content;
+  return res.json();
+}
+
+async function userError(res, fallback) {
+  try {
+    const body = await res.json();
+    return body.message || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export async function createUser(name, password) {
+  const res = await authFetch(`${BASE}/api/users`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, password }),
+  });
+  if (!res.ok) throw new Error(await userError(res, 'Could not create that account'));
+  return res.json();
+}
+
+/** PATCH: only what is sent changes. `currentPassword` is required to change your own. */
+export async function updateUser(id, patch) {
+  const res = await authFetch(`${BASE}/api/users/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error(await userError(res, 'Could not save that change'));
+  return res.json();
+}
+
+export async function deleteUser(id) {
+  const res = await authFetch(`${BASE}/api/users/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(await userError(res, 'Could not delete that account'));
 }
 
 export async function getCapabilities() {
+
   const res = await authFetch(`${BASE}/api/capabilities`);
   if (!res.ok) throw new Error(`Failed to fetch capabilities: ${res.status}`);
   return res.json();

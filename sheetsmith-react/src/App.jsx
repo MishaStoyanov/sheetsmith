@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { themes } from './theme.js';
 import AppShell from './AppShell.jsx';
 import ImproveScreen from './ImproveScreen.jsx';
+import UsersScreen from './UsersScreen.jsx';
 import HistoryScreen from './HistoryScreen.jsx';
 import LoginScreen from './LoginScreen.jsx';
 import NotFound from './NotFound.jsx';
@@ -82,11 +83,17 @@ export default function App() {
   const tabs = [
     { route: 'improve', label: 'Improve', icon: '▦' },
     { route: 'history', label: 'History', icon: '⧗' },
+    // Only where there are accounts to manage. Hiding it with CSS would leave a route that
+    // answers nothing.
+    ...(capabilities.authEnabled ? [{ route: 'users', label: 'Users', icon: '◍' }] : []),
   ];
 
   const screens = {
     improve: <ImproveScreen theme={theme} capabilities={capabilities} providerMode={providerMode} onOpenSettings={() => setSettingsOpen(true)} />,
     history: <HistoryScreen authEnabled={capabilities.authEnabled} />,
+    ...(capabilities.authEnabled
+      ? { users: <UsersScreen currentUser={user} onSelfRenamed={name => setUser(u => ({ ...u, name }))} /> }
+      : {}),
   };
 
   return (

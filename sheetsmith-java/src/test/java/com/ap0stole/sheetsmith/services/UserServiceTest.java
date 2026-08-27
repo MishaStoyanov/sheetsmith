@@ -162,6 +162,27 @@ class UserServiceTest {
     }
 
     @Test
+    @DisplayName("changing a password ends every session that account had")
+    void changingAPasswordEndsTheSessions() {
+        // A password is changed when the old one is thought to be known to somebody else. Leaving
+        // the sessions alive would give the owner a new password and take nothing away from anyone
+        // already holding a token, which is the opposite of the point.
+        service.update(dana.getId(), new PatchUserRequest(null, "reset-by-admin", null), defaultAdmin.getId());
+
+        verify(refreshTokens).revokeAllForUser(dana.getId());
+    }
+
+    @Test
+    @DisplayName("renaming somebody does not end their sessions")
+    void renamingLeavesSessionsAlone() {
+        // The token names them by id, so a rename is not a credential change and signing them out
+        // over it would be gratuitous.
+        service.update(dana.getId(), new PatchUserRequest("dana-renamed", null, null), defaultAdmin.getId());
+
+        verify(refreshTokens, never()).revokeAllForUser(any());
+    }
+
+    @Test
     @DisplayName("two people cannot share a name, and keeping your own is not a clash")
     void namesStayUnique() {
         assertThatThrownBy(() -> service.create(new CreateUserRequest("dana", "pw")))

@@ -15,8 +15,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByName(String name);
 
-    /** A null keyword means everyone, so the caller does not need two methods for one screen. */
-    @Query("select u from User u where :keyword is null or lower(u.name) like lower(concat('%', :keyword, '%'))")
+    /**
+     * Names matching a fragment; an empty keyword matches everyone, so one screen needs one method.
+     * <p>
+     * The keyword is never null. It used to be, with an {@code :keyword is null or ...} guard, and
+     * that fails at runtime on PostgreSQL: a null parameter arrives untyped, the driver infers
+     * {@code bytea}, and {@code lower(bytea)} does not exist. Nothing caught it because the service
+     * test mocks this repository, so the query was never executed — it took loading the screen.
+     * Passing an empty string instead makes the pattern {@code %%}, which matches every row.
+     */
+    @Query("select u from User u where lower(u.name) like lower(concat('%', :keyword, '%'))")
     Page<User> search(@Param("keyword") String keyword, Pageable pageable);
 
     /**

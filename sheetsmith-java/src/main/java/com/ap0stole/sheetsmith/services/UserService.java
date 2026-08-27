@@ -39,7 +39,10 @@ public class UserService {
 
     public Page<UserDto> search(UserSearchRequest request) {
         Long first = firstUserId();
-        return users.search(blankToNull(request.keyword()), pageable(request))
+        // Never null: a null string parameter reaches PostgreSQL untyped and the driver guesses
+        // bytea, which lower() has no overload for. An empty keyword makes the pattern %% instead,
+        // which matches everyone — the same intent, expressed in something the database can type.
+        return users.search(trimmed(request.keyword()), pageable(request))
                 .map(user -> UserDto.from(user, user.getId().equals(first)));
     }
 
@@ -130,10 +133,20 @@ public class UserService {
         return id.equals(firstUserId());
     }
 
+    /**
+     * Sets a password and ends every session that account had.
+     * <p>
+     * Changing a password is what somebody does when they think the old one is known to someone
+     * else. Leaving the existing sessions alive would hand the new password to the owner and take
+     * nothing away from anybody already holding a token — which is the opposite of the point. It
+     * signs the owner out too, on every device including this one; five seconds of inconvenience is
+     * the right price for the guarantee.
+     */
     private void setPassword(User user, String password) {
         user.setPasswordHash(passwordEncoder.encode(password));
         // Whatever the flag was for, it has been answered: the password is no longer the seeded one.
         user.setMustChangePassword(false);
+        refreshTokens.revokeAllForUser(user.getId());
     }
 
     private void requireNameFree(String name, Long selfId) {
@@ -166,7 +179,7 @@ public class UserService {
         return PageRequest.of(page, size, Sort.by(direction, field));
     }
 
-    private static String blankToNull(String value) {
-        return (value == null || value.isBlank()) ? null : value.trim();
+    private static String trimmed(String value) {
+        return value == null ? "" : value.trim();
     }
 }

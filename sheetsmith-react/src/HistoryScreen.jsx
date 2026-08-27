@@ -94,7 +94,7 @@ export default function HistoryScreen({ authEnabled }) {
   useEffect(() => {
     // The owner filter only exists where runs can have owners.
     if (!authEnabled) return;
-    searchUsers(null).then(setPeople).catch(() => {});
+    searchUsers(null).then(page => setPeople(page.content)).catch(() => {});
   }, [authEnabled]);
 
   const expand = async (run) => {
