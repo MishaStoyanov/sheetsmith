@@ -89,15 +89,21 @@ does report — measured 17/2/19 on a one-word prompt — so a null column means
 silent, not that the model was local. Chat turns are outside this: they write `chat_steps`, not job
 records.
 
-**Which engine answered** rides along the same way (`LlmEngine`, V5): `provider_mode` and `model`,
-read from the settings the call is *about* to use rather than from the settings as they stand now —
-a user may switch providers between two runs, or between `/plan` and `/apply` of one run. Tokens
-without this cannot be priced: the same count is a rounding error locally and a bill in the cloud,
-and a price list is keyed on the model name. When a `fixPlan` retry genuinely lands on another model,
-the run stays attributed to the model that **planned** it and the mismatch is logged — one column
-cannot hold two answers, and silently overwriting the attribution would be the wrong one. The
-provider (`OPENAI`, `GEMINI`, …) is not a third column: pricing is per model, so grouping by vendor
-reads it off the model name.
+**Which engine answered** rides along the same way (`LlmEngine`, V5 and V6): `provider_mode`
+(`LOCAL`/`CLOUD`), `provider` (`OLLAMA`, `OPENAI`, `GEMINI`, …) and `model`, read from the settings
+the call is *about* to use rather than from the settings as they stand now — a user may switch
+providers between two runs, or between `/plan` and `/apply` of one run. Tokens without this cannot
+be priced: the same count is a rounding error locally and a bill in the cloud, and a price list is
+keyed on the model name.
+
+The vendor is its own column rather than something read off the model name, because "gemini-3.7-flash"
+implies Google only by convention and a spend-by-vendor chart built on that convention breaks
+silently at the next rename. A local run records `OLLAMA` rather than null, so the column answers for
+every row and the chart gets a labelled slice for local work instead of a gap.
+
+When a `fixPlan` retry genuinely lands on another model, the run stays attributed to the model that
+**planned** it and the mismatch is logged — one column cannot hold two answers, and silently
+overwriting the attribution would be the wrong one.
 
 ### Request flow — the scripting entry points
 

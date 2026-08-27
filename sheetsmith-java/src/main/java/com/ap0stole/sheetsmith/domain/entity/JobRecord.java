@@ -57,12 +57,16 @@ public class JobRecord {
     private Long totalTokens;
 
     /**
-     * Which engine answered: {@code LOCAL} or {@code CLOUD}, and the model that actually ran.
+     * Which engine answered: {@code LOCAL} or {@code CLOUD}, the vendor behind it
+     * ({@code OLLAMA}, {@code OPENAI}, {@code GEMINI}, …), and the model that actually ran.
      * Null for runs made before this was recorded — never backfilled, because today's settings are
      * no evidence of what last week's run used.
      */
     @Column(name = "provider_mode")
     private String providerMode;
+
+    @Column(name = "provider")
+    private String provider;
 
     @Column(name = "model")
     private String model;

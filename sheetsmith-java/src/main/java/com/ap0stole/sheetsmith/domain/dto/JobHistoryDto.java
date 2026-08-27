@@ -24,8 +24,9 @@ public class JobHistoryDto {
     private final Long completionTokens;
     private final Long totalTokens;
 
-    /** {@code LOCAL} or {@code CLOUD}, and the model that ran; null for runs made before V5. */
+    /** Mode, vendor and model; null for runs made before the columns existed. */
     private final String providerMode;
+    private final String provider;
     private final String model;
 
     private JobHistoryDto(Long id, LocalDateTime createdAt, JobStatus status,
@@ -42,6 +43,7 @@ public class JobHistoryDto {
         this.completionTokens = job.getCompletionTokens();
         this.totalTokens = job.getTotalTokens();
         this.providerMode = job.getProviderMode();
+        this.provider = job.getProvider();
         this.model = job.getModel();
     }
 

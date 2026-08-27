@@ -267,12 +267,14 @@ class JobServiceSessionTest {
     void engineReachesTheJobRecord() throws Exception {
         DocumentSession session = openSession();
         when(planningService.generatePlan(anyString(), anyString()))
-                .thenReturn(planWith("ADD_SHEET", TokenUsage.NONE, new LlmEngine("CLOUD", "gemini-3.7-flash")));
+                .thenReturn(planWith("ADD_SHEET", TokenUsage.NONE,
+                        new LlmEngine("CLOUD", "GEMINI", "gemini-3.7-flash")));
 
         Long jobId = runImprove(session, "add a summary sheet");
 
         JobRecord job = jobs.get(jobId);
         assertThat(job.getProviderMode()).isEqualTo("CLOUD");
+        assertThat(job.getProvider()).isEqualTo("GEMINI");
         assertThat(job.getModel()).isEqualTo("gemini-3.7-flash");
     }
 
@@ -284,15 +286,17 @@ class JobServiceSessionTest {
         // land on different models. One column cannot hold two answers; the planning call — the one
         // that did the thinking and spent most of the tokens — is the one it holds.
         when(planningService.generatePlan(anyString(), anyString()))
-                .thenReturn(planWith("ADD_SHEET", TokenUsage.NONE, new LlmEngine("CLOUD", "gpt-4o")));
+                .thenReturn(planWith("ADD_SHEET", TokenUsage.NONE, new LlmEngine("CLOUD", "OPENAI", "gpt-4o")));
         when(planningService.fixPlan(anyString(), anyString(), anyString()))
-                .thenReturn(planWith("ADD_SHEET", TokenUsage.NONE, new LlmEngine("LOCAL", "gemma4:12b")));
+                .thenReturn(planWith("ADD_SHEET", TokenUsage.NONE,
+                        new LlmEngine("LOCAL", "OLLAMA", "gemma4:12b")));
         failFirstAttempt.set(true);
 
         Long jobId = runImprove(session, "add a summary sheet");
 
         JobRecord job = jobs.get(jobId);
         assertThat(job.getProviderMode()).isEqualTo("CLOUD");
+        assertThat(job.getProvider()).isEqualTo("OPENAI");
         assertThat(job.getModel()).isEqualTo("gpt-4o");
     }
 

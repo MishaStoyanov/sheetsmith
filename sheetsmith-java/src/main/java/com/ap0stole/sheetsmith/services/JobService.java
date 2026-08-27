@@ -392,8 +392,9 @@ public class JobService {
         if (engine == null || !engine.isKnown()) {
             return;
         }
-        if (job.getProviderMode() == null && job.getModel() == null) {
+        if (job.getProviderMode() == null && job.getProvider() == null && job.getModel() == null) {
             job.setProviderMode(engine.providerMode());
+            job.setProvider(engine.provider());
             job.setModel(engine.model());
             return;
         }

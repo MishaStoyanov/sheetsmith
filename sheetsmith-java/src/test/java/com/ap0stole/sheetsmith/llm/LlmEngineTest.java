@@ -20,6 +20,9 @@ class LlmEngineTest {
         LlmEngine engine = LlmEngine.of(LlmSettingsDto.defaults("http://localhost:11434", "gemma4:12b"));
 
         assertThat(engine.providerMode()).isEqualTo("LOCAL");
+        // The vendor of a local run is its runtime, so a spend chart gets a named slice for local
+        // work instead of an unlabelled gap.
+        assertThat(engine.provider()).isEqualTo("OLLAMA");
         assertThat(engine.model()).isEqualTo("gemma4:12b");
     }
 
@@ -35,6 +38,7 @@ class LlmEngineTest {
         LlmEngine engine = LlmEngine.of(settings);
 
         assertThat(engine.providerMode()).isEqualTo("CLOUD");
+        assertThat(engine.provider()).isEqualTo("GEMINI");
         assertThat(engine.model()).isEqualTo("gemini-3.7-flash");
     }
 
@@ -49,6 +53,7 @@ class LlmEngineTest {
         LlmEngine engine = LlmEngine.of(settings);
 
         assertThat(engine.providerMode()).isEqualTo("CLOUD");
+        assertThat(engine.provider()).isEqualTo("DEEPSEEK");
         assertThat(engine.model()).isNull();
         assertThat(engine.isKnown()).isTrue();
     }
