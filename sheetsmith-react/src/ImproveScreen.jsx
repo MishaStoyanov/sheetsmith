@@ -3,7 +3,8 @@ import Button from './components/Button.jsx';
 import SheetGrid from './SheetGrid.jsx';
 import SuggestionsPanel from './SuggestionsPanel.jsx';
 import ChatPanel, { useChatPanelLayout } from './ChatPanel.jsx';
-import { generatePlan, applyPlan, describeSteps, getJobStatus, suggestPlan } from './api.js';
+import PromptRecall from './components/PromptRecall.jsx';
+import { generatePlan, applyPlan, describeSteps, getFrequentPrompts, getJobStatus, suggestPlan } from './api.js';
 import { createChatSession, deleteChatSession, getChatFile, getChatSession, revertChatSession, saveChatEdits } from './chatApi.js';
 import { parseWorkbook, applyEditsToBuffer } from './parseSheet.js';
 
@@ -16,6 +17,7 @@ export default function ImproveScreen({ theme, capabilities, providerMode, onOpe
 
   const [file, setFile] = useState(null);
   const [prompt, setPrompt] = useState('');
+  const [pastPrompts, setPastPrompts] = useState([]);
   const [stage, setStage] = useState('upload');
   const [dragging, setDragging] = useState(false);
 
@@ -40,6 +42,19 @@ export default function ImproveScreen({ theme, capabilities, providerMode, onOpe
   const [error, setError] = useState(null);
   const fileRef = useRef();
   const pollRef = useRef(null);
+  const promptField = useRef(null);
+
+  // Loaded on arrival and again whenever the screen comes back to a clean slate, so a phrasing that
+  // has just become a habit turns up without a reload. A failure here is swallowed on purpose: this
+  // is a convenience, and an error banner over it would be louder than the feature.
+  useEffect(() => {
+    if (stage !== 'upload') return undefined;
+    let live = true;
+    getFrequentPrompts('IMPROVE', 5)
+      .then(list => { if (live) setPastPrompts(list); })
+      .catch(() => { if (live) setPastPrompts([]); });
+    return () => { live = false; };
+  }, [stage]);
 
   // ── Session — the single home of the sheet, required by BOTH flows ─────────
   const chatLayout = useChatPanelLayout();
@@ -468,12 +483,26 @@ export default function ImproveScreen({ theme, capabilities, providerMode, onOpe
             <div style={{ padding: '16px 18px 12px' }}>
               <textarea
                 placeholder={!file ? 'Drop a file first, then describe what to improve…' : 'Describe what to improve — e.g. fix broken formulas, add quarterly totals, format as currency, add a bar chart…'}
+                ref={promptField}
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
                 disabled={!file || stage === 'analysing'}
                 rows={3}
                 style={{ width: '100%', resize: 'vertical', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 14, color: 'var(--text)', lineHeight: 1.6, opacity: !file ? 0.35 : 1, minHeight: 72, boxSizing: 'border-box' }}
               />
+              {/*
+                Shown with the field it fills, not before it. Offering the chips over a disabled
+                textarea put a row of dead buttons on the first screen anybody sees, and a control
+                that cannot be pressed teaches people not to press it.
+              */}
+              {stage === 'upload' && file && (
+                <div style={{ marginTop: 10 }}>
+                  <PromptRecall
+                    prompts={pastPrompts}
+                    onPick={text => { setPrompt(text); promptField.current?.focus(); }}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Footer */}

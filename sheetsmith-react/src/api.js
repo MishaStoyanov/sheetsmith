@@ -107,6 +107,18 @@ export async function getAnalyticsSummary(query) {
   return res.json();
 }
 
+/**
+ * Phrasings the caller has used more than once.
+ *
+ * There is no parameter for whose — the endpoint answers for the caller and nobody else, which is
+ * the whole design: a prompt is somebody describing their own data in their own words.
+ */
+export async function getFrequentPrompts(kind = 'IMPROVE', limit = 5) {
+  const res = await authFetch(`${BASE}/api/prompts/frequent?kind=${kind}&limit=${limit}`);
+  if (!res.ok) throw new Error(await readErrorMessage(res, `Could not read past prompts: ${res.status}`));
+  return res.json();
+}
+
 export async function getJobStatus(jobId) {
   const res = await authFetch(`${BASE}/api/history/${jobId}`);
   if (!res.ok) throw new Error(await readErrorMessage(res, `Status check failed: ${res.status}`));
