@@ -91,13 +91,55 @@ Note that `mvn package` alone builds a jar **without** the UI in it — the fron
 project. Run `npm run build` in `sheetsmith-react/` first if you want a self-contained jar; the
 release workflow and the Docker image both do this for you.
 
+## Accounts
+
+Off by default. Solo on your own machine a login screen is a cost with no matching risk, so nothing
+changes unless you ask for it:
+
+```bash
+SHEETSMITH_AUTH_ENABLED=true
+```
+
+The first account comes from a migration: **`admin` / `admin`**. That is written here rather than
+generated because a password you can look up beats one nobody can find — and the app nags in the
+interface until it is changed. Change it first.
+
+Everyone signed in can manage everyone else: create accounts, rename them, reset passwords. There
+are no roles yet. The default account cannot be deleted and you cannot delete the account you are
+signed in with, so an instance cannot be locked out of itself.
+
+**Forgot the password?** There is no email recovery — a self-hosted instance has no mail server, and
+nobody else can reach your database. Two ways back in:
+
+```bash
+# Set it, start once, then remove the variable.
+SHEETSMITH_ADMIN_PASSWORD_RESET=whatever-you-want
+```
+
+or, if you can reach the database but not the environment, put the default password back by hand —
+this is the bcrypt hash of the word `admin`:
+
+```sql
+update users
+set password_hash = '$2a$10$VXN.dor9JKKtAZ7xjhernu5kcCmarsDg1L7s.yN5z37tUP/rmWMGu',
+    must_change_password = true
+where id = (select min(id) from users);
+delete from refresh_tokens;
+```
+
+This is not a hole. Anyone who can run that already has your database, and with it every session
+and every stored API key.
+
 ## Status
 
 Working and in use, being prepared for a wider audience. Known gaps, so nobody has to discover them
 the hard way:
 
-- there is no authentication — this is designed to be run on a machine you control, and the CORS
-  allowlist is the only thing standing between a browser and the API;
+- authentication is **off by default** — run that way, the app is designed for a machine you
+  control, and the CORS allowlist is the only thing between a browser and the API. Set
+  `SHEETSMITH_AUTH_ENABLED=true` for a login screen and accounts (see below);
+- with accounts on, **there are no roles yet**: every account can manage every other one. That suits
+  a small team and does not suit handing an account to someone you would not make an administrator;
 - the database is still called `xlsxai` by default, from before the app was called SheetSmith —
   deliberately, because changing that default would point an existing install at an empty database.
   Everything else has been renamed: settings are `sheetsmith.*` and environment variables

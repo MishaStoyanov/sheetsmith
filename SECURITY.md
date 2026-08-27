@@ -2,20 +2,56 @@
 
 ## What this application assumes
 
-SheetSmith is **self-hosted and unauthenticated by design**. It assumes it is running on a machine
-you control, reachable only by you — a laptop, or a host behind something that already decides who
-gets in.
+SheetSmith is self-hosted, and it runs in one of **two modes**. Which one you are in is decided by
+`SHEETSMITH_AUTH_ENABLED`, and everything below depends on the answer.
+
+### Without authentication — the default
+
+`SHEETSMITH_AUTH_ENABLED=false` (or unset) assumes the instance is running on a machine you control,
+reachable only by you — a laptop, or a host behind something that already decides who gets in.
 
 Anyone who can reach the port can upload a spreadsheet, read every session on the instance, and
 change the stored settings, including the cloud API keys. That is the intended shape of a personal
-tool, and it is stated plainly so nobody deploys it expecting otherwise.
+tool, and it is stated plainly so nobody deploys it expecting otherwise. Runs are recorded with no
+owner, because there is nobody to name.
 
-**Do not put it on the open internet.** If it has to be reachable from outside, put a reverse proxy
-with authentication in front of it, and do not rely on the guards below to stand in for that.
+### With authentication
 
-The database has a `users` table, and it does not change any of the above. Nothing authenticates
-against it yet — it exists so that a job can record who ran it once there is a login to record. Read
-"unauthenticated by design" as still true until this paragraph says otherwise.
+`SHEETSMITH_AUTH_ENABLED=true` puts a login in front of `/api/**`. The first account is created by a
+migration and its password is **`admin` / `admin`** — published here on purpose, because a known
+first password with a nag attached is more honest than a generated one nobody can find. Change it;
+the interface says so until you do.
+
+Two things to understand before relying on it:
+
+**There are no roles.** Every account can do everything, including creating accounts, deleting other
+accounts and resetting the password of anyone else without knowing the old one. For a small team that is
+the intended shape — a permission system nobody needs is a permission system nobody maintains — but
+it means every account you hand out is effectively an administrator. Roles are planned; they are not
+here.
+
+The default account cannot be deleted, and nobody can delete the account they are signed in with.
+That is not a permission rule, it is a lock against locking yourself out.
+
+**A login is not a substitute for a boundary.** Sessions rest on a two-hour access token and a
+rotating refresh token in an httpOnly `SameSite=Strict` cookie; the cookie is deliberately not
+`Secure`, because the app is normally reached over plain http on a local network and a secure cookie
+would simply never be sent. Over the open internet that reasoning stops holding.
+
+**Do not put it on the open internet** in either mode. If it has to be reachable from outside, put a
+reverse proxy with TLS and its own authentication in front of it, and do not rely on the guards
+below to stand in for that.
+
+### If the password is lost
+
+There is no email recovery and there will not be: a self-hosted instance has no mail server, and
+nobody but you can reach your database — which is the point, not a gap. Set
+`SHEETSMITH_ADMIN_PASSWORD_RESET` to a new password, start the instance once, then remove the
+variable. It resets the default account and ends every session it had. While the variable is set,
+every restart resets the password again and it sits in plain text in your environment.
+
+Failing that, the password column is a bcrypt hash and you have SQL access — the README has the
+statement that returns the default account to `admin`.
 
 ## What the guards actually do
 
@@ -58,5 +94,7 @@ that is not exposed on purpose — please report it privately rather than openin
 Please include what you did, what happened, and what you expected. There is no bounty; there is a
 maintainer who will read it and fix it.
 
-Reports about the absence of authentication, or about what an authenticated local user can do to
-their own instance, are not vulnerabilities — they are the design, described above.
+Reports about the absence of authentication in the default mode, about the absence of roles when it
+is on, or about what a signed-in user can do to their own instance, are not vulnerabilities — they
+are the design, described above. Anything that lets one account act **as another**, read
+another account's sessions, or get past the login when it is enabled, is.
