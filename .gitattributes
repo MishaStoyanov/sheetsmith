@@ -1,2 +1,25 @@
+# Line endings, decided once here instead of by whatever each contributor's Git happens to be set
+# to. Without this file the answer depends on core.autocrlf on the machine doing the commit, which
+# is how a one-line change arrives as a diff touching every line of the file.
+#
+# LF everywhere, in the repository and in the working tree. The two Windows-only scripts are the
+# exception, because cmd.exe genuinely needs CRLF.
+
+* text=auto eol=lf
+
 /mvnw text eol=lf
 *.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Never touched: converting line endings inside these corrupts them.
+*.xlsx binary
+*.xls  binary
+*.jpg  binary
+*.jpeg binary
+*.png  binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.jar  binary
+*.woff binary
+*.woff2 binary
