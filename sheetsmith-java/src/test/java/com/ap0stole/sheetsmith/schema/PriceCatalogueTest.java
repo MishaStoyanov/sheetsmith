@@ -40,8 +40,8 @@ class PriceCatalogueTest {
     /** What the outside world says, fixed. */
     static final List<CatalogueEntry> PUBLISHED = List.of(
             new CatalogueEntry("OPENAI", "gpt-4o", new BigDecimal("2.5000"), new BigDecimal("10.0000")),
-            new CatalogueEntry("ANTHROPIC", "claude-sonnet-4", new BigDecimal("3.0000"), new BigDecimal("15.0000")),
-            new CatalogueEntry("ANTHROPIC", "claude-sonnet-4-5", new BigDecimal("4.0000"), new BigDecimal("20.0000")),
+            new CatalogueEntry("CLAUDE", "claude-sonnet-4", new BigDecimal("3.0000"), new BigDecimal("15.0000")),
+            new CatalogueEntry("CLAUDE", "claude-sonnet-4-5", new BigDecimal("4.0000"), new BigDecimal("20.0000")),
             new CatalogueEntry("GEMINI", "gemini-3.7-flash", new BigDecimal("0.3000"), new BigDecimal("2.5000")));
 
     @Autowired
@@ -114,7 +114,7 @@ class PriceCatalogueTest {
     @DisplayName("a dated model snapshot matches the model it is a snapshot of")
     void datedSnapshotsMatchByPrefix() {
         // Anthropic answers as claude-sonnet-4-20250514 while catalogues list claude-sonnet-4.
-        called("ANTHROPIC", "claude-sonnet-4-20250514");
+        called("CLAUDE", "claude-sonnet-4-20250514");
 
         PriceProposalDto.Proposal proposal = find("claude-sonnet-4-20250514");
 
@@ -128,7 +128,7 @@ class PriceCatalogueTest {
     @Test
     @DisplayName("the longest matching name wins, so a newer model is not priced as an older one")
     void longestPrefixWins() {
-        called("ANTHROPIC", "claude-sonnet-4-5-20260101");
+        called("CLAUDE", "claude-sonnet-4-5-20260101");
 
         assertThat(find("claude-sonnet-4-5-20260101").proposedInputPerMillion())
                 .as("claude-sonnet-4 must not swallow claude-sonnet-4-5")
@@ -138,7 +138,7 @@ class PriceCatalogueTest {
     @Test
     @DisplayName("an exact name is never overridden by a prefix")
     void exactBeatsPrefix() {
-        called("ANTHROPIC", "claude-sonnet-4");
+        called("CLAUDE", "claude-sonnet-4");
 
         assertThat(find("claude-sonnet-4").proposedInputPerMillion()).isEqualByComparingTo("3.0000");
     }

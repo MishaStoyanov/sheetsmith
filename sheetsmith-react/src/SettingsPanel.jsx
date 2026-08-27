@@ -3,12 +3,7 @@ import { getSettings, updateSettings, getOllamaModels } from './settingsApi.js';
 
 const mono = "'JetBrains Mono', monospace";
 
-const CLOUD_PROVIDERS = [
-  { key: 'OPENAI', label: 'OpenAI (GPT)' },
-  { key: 'GEMINI', label: 'Google Gemini' },
-  { key: 'CLAUDE', label: 'Anthropic Claude' },
-  { key: 'DEEPSEEK', label: 'DeepSeek' },
-];
+import { CLOUD_PROVIDERS } from './providers.js';
 
 const MODELS_CACHE_KEY = 'ss-ollama-models-cache';
 

@@ -38,16 +38,26 @@ public class OpenRouterCatalogue implements ModelCatalogue {
     private static final String URL = "https://openrouter.ai/api/v1/models";
 
     /**
-     * Catalogue vendor prefixes mapped to the provider names this instance records.
+     * Catalogue vendor prefixes mapped to the provider names <em>this instance records</em>.
      * <p>
-     * Deliberately not everything the catalogue carries: a price is only useful here for a provider
-     * this application can actually call, and the rest would be several hundred rows of noise in a
-     * list somebody has to read before confirming.
+     * The right-hand side is not a tidy vendor name of our choosing: it is the key of the vendor's
+     * slot in the settings, because that is the string a run writes into the audit and therefore
+     * the string a price has to carry to ever match one.
+     * <p>
+     * <strong>Anthropic is recorded as {@code CLAUDE}</strong>, which this map got wrong on the
+     * first pass — it said {@code ANTHROPIC}, a name nothing here has ever written. The result would
+     * have been silent: a proposed price nobody could see was unmatchable, applying cleanly and then
+     * never appearing in the money column for a single call.
+     * <p>
+     * Deliberately not everything the catalogue carries: a price is only useful for a provider this
+     * application can actually call, and the rest would be several hundred rows of noise in a list
+     * somebody has to read before confirming.
      */
     private static final Map<String, String> VENDORS = Map.of(
             "openai", "OPENAI",
-            "anthropic", "ANTHROPIC",
-            "google", "GEMINI");
+            "anthropic", "CLAUDE",
+            "google", "GEMINI",
+            "deepseek", "DEEPSEEK");
 
     /** Prices arrive per token, and per token they are unreadable — six decimal places of zero. */
     private static final BigDecimal MILLION = new BigDecimal("1000000");
@@ -106,7 +116,7 @@ public class OpenRouterCatalogue implements ModelCatalogue {
             return null;
         }
 
-        String provider = VENDORS.get(id.substring(0, id.indexOf('/')).toLowerCase());
+        String provider = providerFor(id);
         if (provider == null) {
             return null;
         }
@@ -119,6 +129,21 @@ public class OpenRouterCatalogue implements ModelCatalogue {
         }
 
         return new CatalogueEntry(provider, id.substring(id.indexOf('/') + 1), input, output);
+    }
+
+    /**
+     * The provider name this instance would record for a catalogue id, or null for a vendor it
+     * cannot call.
+     * <p>
+     * Package-private so it can be tested directly. It is worth testing directly: the stubbed
+     * catalogue the comparison tests use hands over provider names already correct, so a mistake
+     * here is invisible to every one of them — which is exactly how {@code ANTHROPIC} survived.
+     */
+    static String providerFor(String catalogueId) {
+        if (catalogueId == null || !catalogueId.contains("/")) {
+            return null;
+        }
+        return VENDORS.get(catalogueId.substring(0, catalogueId.indexOf('/')).toLowerCase());
     }
 
     /**

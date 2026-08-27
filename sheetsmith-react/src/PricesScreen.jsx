@@ -7,7 +7,9 @@ import Modal from './components/Modal.jsx';
 import Note from './components/Note.jsx';
 import Pagination from './components/Pagination.jsx';
 import CatalogueDialog from './components/CatalogueDialog.jsx';
+import Select from './components/Select.jsx';
 import { age } from './components/priceAge.js';
+import { cloudProviderOptions } from './providers.js';
 import { applyCatalogue, deletePrice, patchPrice, previewCatalogue, putPrice, searchPrices } from './pricesApi.js';
 
 const mono = "'JetBrains Mono', monospace";
@@ -289,7 +291,9 @@ export default function PricesScreen() {
  */
 function PriceDialog({ target, onClose, onSubmit }) {
   const editing = !!target?.id;
-  const [provider, setProvider] = useState(target?.provider ?? '');
+  // Defaulted to the first option rather than empty: a dropdown shows its first entry whatever the
+  // state says, and starting blank means an untouched field looks chosen and submits nothing.
+  const [provider, setProvider] = useState(target?.provider ?? cloudProviderOptions()[0].value);
   const [model, setModel] = useState(target?.model ?? '');
   const [input, setInput] = useState(target?.inputPerMillion == null ? '' : String(target.inputPerMillion));
   const [output, setOutput] = useState(target?.outputPerMillion == null ? '' : String(target.outputPerMillion));
@@ -329,13 +333,19 @@ function PriceDialog({ target, onClose, onSubmit }) {
     >
       {!editing && (
         <>
-          <Field
+          {/* Chosen, not typed. The provider is half the key a recorded call is matched on, so a
+              spelling nobody can see is wrong — ANTHROPIC where the audit writes CLAUDE — produces
+              a price that silently never applies to anything. The list is the same one the settings
+              screen uses, from the same file, so the two cannot drift apart.
+
+              Local models are absent on purpose rather than by oversight: they charge nothing, and
+              the note above this table says so. */}
+          <Select
             label="Provider"
             value={provider}
             onChange={e => setProvider(e.target.value)}
-            placeholder="OPENAI"
-            monospace
-            hint="Written as the audit records it — OPENAI, ANTHROPIC, GEMINI, OLLAMA."
+            options={cloudProviderOptions()}
+            style={{ marginBottom: 14 }}
           />
           <Field
             label="Model"
