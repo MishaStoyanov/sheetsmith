@@ -50,6 +50,29 @@ export async function patchPrice(id, patch) {
 }
 
 /**
+ * What a published catalogue would change here.
+ *
+ * A POST despite being a read: it reaches outside this machine, which is not something to leave
+ * behind a URL a browser may prefetch or a proxy may cache. Nothing is written by calling it.
+ */
+export async function previewCatalogue() {
+  const res = await authFetch(`${BASE}/api/prices/catalogue/preview`, { method: 'POST' });
+  if (!res.ok) throw new Error(await priceError(res, 'Could not read published prices'));
+  return res.json();
+}
+
+/** Saves the proposals that were ticked, and only those. */
+export async function applyCatalogue(accepted) {
+  const res = await authFetch(`${BASE}/api/prices/catalogue/apply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(accepted),
+  });
+  if (!res.ok) throw new Error(await priceError(res, 'Could not save those prices'));
+  return res.json();
+}
+
+/**
  * Removes a price.
  *
  * `confirm` is the server's guard, not the screen's: without it a price that recorded calls depend

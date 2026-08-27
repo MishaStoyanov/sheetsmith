@@ -6,7 +6,8 @@ import Field from './components/Field.jsx';
 import Modal from './components/Modal.jsx';
 import Note from './components/Note.jsx';
 import Pagination from './components/Pagination.jsx';
-import { deletePrice, patchPrice, putPrice, searchPrices } from './pricesApi.js';
+import CatalogueDialog from './components/CatalogueDialog.jsx';
+import { applyCatalogue, deletePrice, patchPrice, previewCatalogue, putPrice, searchPrices } from './pricesApi.js';
 
 const mono = "'JetBrains Mono', monospace";
 
@@ -41,6 +42,7 @@ export default function PricesScreen() {
 
   const [editing, setEditing] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [catalogue, setCatalogue] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -126,7 +128,10 @@ export default function PricesScreen() {
             listed here.
           </p>
         </div>
-        <Button variant="primary" onClick={() => setEditing({})}>Add price</Button>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <Button onClick={() => setCatalogue(true)}>Update from catalogue</Button>
+          <Button variant="primary" onClick={() => setEditing({})}>Add price</Button>
+        </div>
       </div>
 
       <div style={{ margin: '22px 0 18px' }}>
@@ -186,6 +191,13 @@ export default function PricesScreen() {
           }
           return after(() => putPrice(form));
         }}
+      />
+
+      <CatalogueDialog
+        open={catalogue}
+        onClose={() => setCatalogue(false)}
+        onLoad={previewCatalogue}
+        onApply={rows => after(() => applyCatalogue(rows))}
       />
 
       <Modal

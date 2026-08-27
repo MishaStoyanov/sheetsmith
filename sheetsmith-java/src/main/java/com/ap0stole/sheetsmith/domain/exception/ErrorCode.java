@@ -22,7 +22,10 @@ public enum ErrorCode {
     PRICE_NOT_FOUND(404),
     // 409, not 400: the request is well formed and the refusal is about the state of the data,
     // which is exactly what a conflict means — and the message carries the number to confirm.
-    PRICE_IN_USE(409);
+    PRICE_IN_USE(409),
+    // 502, like the Ollama one above: the failure is somewhere else, and this instance is only
+    // reporting it. A retry may well work, which a 500 would not suggest.
+    CATALOGUE_UNREACHABLE(502);
 
     private final int httpStatus;
 
