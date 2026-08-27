@@ -84,6 +84,14 @@ sheetsmith:
     # false — the default — is the solo case: no login screen, no owner on a run, no user list.
     # There is no XLSXAI_ fallback here because this setting never had an old name.
     enabled: ${SHEETSMITH_AUTH_ENABLED:false}
+    # Short, because nothing can withdraw an access token early: this number is the whole
+    # ceiling on how long a stolen one keeps working.
+    access-token-ttl: ${SHEETSMITH_ACCESS_TOKEN_TTL:2h}
+    refresh-token-ttl: ${SHEETSMITH_REFRESH_TOKEN_TTL:1d}
+    remember-me-ttl: ${SHEETSMITH_REMEMBER_ME_TTL:30d}
+    # Empty means the instance generates one and keeps it. Set this only when more than one
+    # instance shares a database, since only then do they have to agree on tokens.
+    jwt-secret: ${SHEETSMITH_JWT_SECRET:}
   chat:
     # false turns this into an improve-only instance: no chat, no data-grounded suggestions, and
     # nothing but the sheet's structure reaches the model.

@@ -7,8 +7,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Duration;
+
 /**
- * Whether this instance asks who you are.
+ * Whether this instance asks who you are, and for how long it remembers the answer.
  * <p>
  * Off by default, and that is the point rather than a shortcut: someone running this alone on their
  * own machine gains nothing from a login screen, and making them pass one would be a cost with no
@@ -29,15 +31,28 @@ public class AuthConfig {
     /** Off: no login screen, no owner on a run, no user management. Exactly today's behaviour. */
     private boolean enabled = false;
 
+    /**
+     * How long an access token is good for. Short because it cannot be withdrawn — the ceiling on
+     * how long a stolen one keeps working is this number and nothing else.
+     */
+    private Duration accessTokenTtl = Duration.ofHours(2);
+
+    /** How long a session survives without "remember me". */
+    private Duration refreshTokenTtl = Duration.ofDays(1);
+
+    /** How long it survives with it. Renewed on every use, so a daily user is never signed out. */
+    private Duration rememberMeTtl = Duration.ofDays(30);
+
+    /**
+     * The key access tokens are signed with. Left empty, the instance generates one and keeps it —
+     * see {@code JwtSecretProvider}. Supply it to run more than one instance against one database.
+     */
+    private String jwtSecret = "";
+
     @PostConstruct
     public void announce() {
         if (enabled) {
             log.info("Authentication ENABLED: /api/** requires a token, and every run records who asked for it");
-            // Removed by the commit that adds POST /api/auth/login. Until then, turning this on
-            // locks the instance rather than protecting it, and saying so at startup is cheaper
-            // than letting someone discover it from a screen full of 401s.
-            log.warn("...but this build has no login endpoint yet, so /api/** will refuse every "
-                    + "request. Set SHEETSMITH_AUTH_ENABLED=false unless you are working on it.");
         } else {
             log.info("Authentication is off — anyone who can reach this instance can drive it. "
                     + "Set SHEETSMITH_AUTH_ENABLED=true if more than one person uses it.");

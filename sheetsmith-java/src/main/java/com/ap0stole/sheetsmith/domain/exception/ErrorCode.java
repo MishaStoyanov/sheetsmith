@@ -12,7 +12,13 @@ public enum ErrorCode {
     PATH_TRAVERSAL(400),
     PATH_ENDPOINT_DISABLED(403),
     PATH_ENDPOINT_MISCONFIGURED(500),
-    OLLAMA_UNREACHABLE(502);
+    OLLAMA_UNREACHABLE(502),
+    // 401 means "try again with a fresh token"; the browser's silent refresh keys off it.
+    UNAUTHORIZED(401),
+    // 403 is the opposite: known, and still not allowed. A retry cannot fix it.
+    FORBIDDEN(403),
+    USER_NOT_FOUND(404),
+    USERNAME_TAKEN(409);
 
     private final int httpStatus;
 
