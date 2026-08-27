@@ -83,6 +83,10 @@ export default function App() {
 
   // Built from what the instance has rather than hidden with CSS: an entry that leads somewhere
   // refusing to answer is worse than no entry at all.
+  // What this person may do to other accounts. Absent means no accounts exist, which is its own
+  // answer: with authentication off there is nobody to manage.
+  const manages = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
+
   const tabs = [
     { route: 'improve', label: 'Improve', icon: <SheetIcon /> },
     { route: 'history', label: 'History', icon: <ClockIcon /> },
@@ -90,9 +94,10 @@ export default function App() {
     // Beside analytics rather than inside settings: settings are about which model this instance
     // talks to now, prices are a reference table that outlives the choice.
     { route: 'prices', label: 'Prices', icon: <TagIcon /> },
-    // Only where there are accounts to manage. Hiding it with CSS would leave a route that
-    // answers nothing.
-    ...(capabilities.authEnabled ? [{ route: 'users', label: 'Users', icon: <UsersIcon /> }] : []),
+    // Only where there are accounts to manage, and only for somebody who may manage them. Hidden
+    // is all it is, though: the refusal lives in the method guard on the server and holds for a
+    // request that never opened this menu.
+    ...(capabilities.authEnabled && manages ? [{ route: 'users', label: 'Users', icon: <UsersIcon /> }] : []),
   ];
 
   const screens = {
@@ -100,7 +105,7 @@ export default function App() {
     history: <HistoryScreen authEnabled={capabilities.authEnabled} />,
     analytics: <AnalyticsScreen theme={theme} user={user} />,
     prices: <PricesScreen />,
-    ...(capabilities.authEnabled
+    ...(capabilities.authEnabled && manages
       ? { users: <UsersScreen currentUser={user} onSelfRenamed={name => setUser(u => ({ ...u, name }))} /> }
       : {}),
   };

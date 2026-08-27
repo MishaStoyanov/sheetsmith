@@ -67,6 +67,22 @@ export async function createUser(name, password) {
   return res.json();
 }
 
+/**
+ * Changes what somebody may do.
+ *
+ * Its own call rather than a field on the patch, matching the endpoint: a role arriving as one
+ * optional field among several is a role that can be changed by accident.
+ */
+export async function changeUserRole(id, role) {
+  const res = await authFetch(`${BASE}/api/users/${id}/role`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role }),
+  });
+  if (!res.ok) throw new Error(await userError(res, 'Could not change that role'));
+  return res.json();
+}
+
 /** PATCH: only what is sent changes. `currentPassword` is required to change your own. */
 export async function updateUser(id, patch) {
   const res = await authFetch(`${BASE}/api/users/${id}`, {

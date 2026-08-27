@@ -5,11 +5,25 @@ import DataTable from './components/DataTable.jsx';
 import Field from './components/Field.jsx';
 import Modal from './components/Modal.jsx';
 import Pagination from './components/Pagination.jsx';
-import { createUser, deleteUser, searchUsers, updateUser } from './settingsApi.js';
+import { changeUserRole, createUser, deleteUser, searchUsers, updateUser } from './settingsApi.js';
 
 const mono = "'JetBrains Mono', monospace";
 
-/** Accounts on this instance. Every account can manage every other — there are no roles yet. */
+/** How a role reads to a person, rather than how it is stored. */
+const ROLE_LABEL = {
+  USER: 'user',
+  ADMIN: 'admin',
+  SUPERADMIN: 'superadmin',
+};
+
+/**
+ * Accounts on this instance.
+ *
+ * Only administrators get here at all, and what they see depends on which kind they are: handing
+ * out access is open to any of them, taking it back is not. The screen shows that difference by
+ * offering the button or not — but the rule itself lives on the server, and a request that skips
+ * this screen meets it just the same.
+ */
 export default function UsersScreen({ currentUser, onSelfRenamed }) {
   const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(0);
@@ -21,6 +35,7 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
   const [renaming, setRenaming] = useState(null);
   const [repassword, setRepassword] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [roleChange, setRoleChange] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -48,6 +63,8 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
     }
   };
 
+  const iAmSuperadmin = currentUser?.role === 'SUPERADMIN';
+
   const columns = [
     {
       key: 'name',
@@ -63,11 +80,33 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
       ),
     },
     {
+      key: 'role',
+      header: 'Role',
+      render: user => (
+        <Badge tone={user.role === 'USER' ? 'neutral' : 'good'}>{ROLE_LABEL[user.role] ?? user.role}</Badge>
+      ),
+    },
+    {
       key: 'actions',
       header: '',
       align: 'right',
       render: user => (
         <span style={{ display: 'inline-flex', gap: 6, whiteSpace: 'nowrap' }}>
+          {/*
+            The one-way door, drawn. Any administrator may hand out access; only the seeded account
+            can take it back, so everyone else simply is not offered the second button. Your own row
+            has neither — a role you can change yourself is a role that means nothing.
+          */}
+          {user.role === 'USER' && user.id !== currentUser?.id && (
+            <Button size="sm" variant="ghost" onClick={() => setRoleChange({ user, to: 'ADMIN' })}>
+              Make admin
+            </Button>
+          )}
+          {user.role === 'ADMIN' && user.id !== currentUser?.id && iAmSuperadmin && (
+            <Button size="sm" variant="ghost" onClick={() => setRoleChange({ user, to: 'USER' })}>
+              Remove admin
+            </Button>
+          )}
           <Button size="sm" variant="ghost" onClick={() => setRenaming({ id: user.id, name: user.name })}>
             Rename
           </Button>
@@ -87,12 +126,12 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
   ];
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', padding: '40px 28px 100px' }}>
+    <div style={{ maxWidth: 1040, margin: '0 auto', padding: '40px 28px 100px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 6 }}>
         <div style={{ flex: 1 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em', margin: '0 0 6px' }}>Users</h1>
           <p style={{ fontSize: 14, color: 'var(--text-dim)', margin: 0 }}>
-            Everyone who can sign in. There are no roles yet, so every account can manage every other.
+            Everyone who can sign in. Admins manage accounts; everybody else just uses the app.
           </p>
         </div>
         <Button variant="primary" onClick={() => setCreating(true)}>Add user</Button>
@@ -147,6 +186,40 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
         onSubmit={(password, currentPassword) =>
           after(() => updateUser(repassword.id, { password, currentPassword }))}
       />
+
+      <Modal
+        open={!!roleChange}
+        title={roleChange?.to === 'ADMIN' ? `Make ${roleChange?.user.name} an admin?` : `Remove ${roleChange?.user.name}'s admin?`}
+        onClose={() => setRoleChange(null)}
+        footer={
+          <>
+            <Button onClick={() => setRoleChange(null)}>Cancel</Button>
+            <Button
+              variant="primary"
+              onClick={async () => {
+                if (await after(() => changeUserRole(roleChange.user.id, roleChange.to))) setRoleChange(null);
+              }}
+            >
+              {roleChange?.to === 'ADMIN' ? 'Make admin' : 'Remove admin'}
+            </Button>
+          </>
+        }
+      >
+        <p style={{ fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.6, margin: 0 }}>
+          {roleChange?.to === 'ADMIN' ? (
+            <>
+              They will be able to add, rename and remove accounts, and to make other people admins
+              too. <strong>You will not be able to undo this</strong> — only the default account can
+              take admin back, which is what stops two admins removing each other.
+            </>
+          ) : (
+            <>
+              They keep their account and everything they have done; they simply stop being able to
+              manage other people.
+            </>
+          )}
+        </p>
+      </Modal>
 
       <Modal
         open={!!confirmDelete}

@@ -54,6 +54,19 @@ public class UserController {
         return userService.update(id, request, currentUser.id().orElse(null));
     }
 
+    /**
+     * Changes what somebody may do.
+     * <p>
+     * Its own endpoint rather than another field on the PATCH, because it is a different kind of
+     * decision from a rename and carries different rules — and a role arriving as one optional
+     * field among several is a role that can be changed by accident.
+     */
+    @PatchMapping("/{id}/role")
+    public UserDto changeRole(@PathVariable Long id, @RequestBody @Valid ChangeRoleRequest request) {
+        requireAccounts();
+        return userService.changeRole(id, request.role(), currentUser.id().orElse(null));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         requireAccounts();

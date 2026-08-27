@@ -1,7 +1,10 @@
 package com.ap0stole.sheetsmith.domain.entity;
 
+import com.ap0stole.sheetsmith.domain.enums.Role;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -43,10 +46,20 @@ public class User {
     @Column(nullable = false)
     private boolean mustChangePassword;
 
+    /**
+     * Stored as its name rather than its position, so reordering the enum cannot silently promote
+     * everybody. New accounts start as {@code USER}; the migration is what decides that accounts
+     * which already existed keep the authority they had.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    private Role role = Role.USER;
+
     public static User of(String name, String passwordHash) {
         User user = new User();
         user.name = name;
         user.passwordHash = passwordHash;
+        user.role = Role.USER;
         return user;
     }
 }

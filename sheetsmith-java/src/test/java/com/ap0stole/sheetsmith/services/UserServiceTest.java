@@ -65,7 +65,15 @@ class UserServiceTest {
         doDelete(users);
 
         refreshTokens = mock(RefreshTokenService.class);
-        service = new UserService(users, encoder, refreshTokens);
+
+        // These cases are about the rules that hold whoever is asking — a name already taken, the
+        // seeded account, your own password. Authorisation has its own test against a real security
+        // context, so here the caller is simply allowed.
+        com.ap0stole.sheetsmith.auth.Authz authz = mock(com.ap0stole.sheetsmith.auth.Authz.class);
+        when(authz.admin()).thenReturn(true);
+        when(authz.superadmin()).thenReturn(true);
+
+        service = new UserService(users, encoder, refreshTokens, authz);
 
         defaultAdmin = persist("admin", "admin");
         dana = persist("dana", "correct-horse");
