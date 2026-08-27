@@ -33,6 +33,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,6 +42,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -105,6 +107,29 @@ class AuthControllerTest {
         assertThat(cookie)
                 .as("scoped to the auth path: no other endpoint has any use for it")
                 .contains("Path=/api/auth");
+    }
+
+    @Test
+    @DisplayName("remember me is the difference between a day and a month, on the cookie itself")
+    void rememberMeLengthensTheSession() throws Exception {
+        // The flag travels from a checkbox through two services to a Max-Age, and every step of
+        // that was tested except the one the browser actually obeys.
+        int aDay = maxAgeAfterLogin(false);
+        int aMonth = maxAgeAfterLogin(true);
+
+        assertThat(aDay).isCloseTo((int) Duration.ofDays(1).toSeconds(), within(120));
+        assertThat(aMonth).isCloseTo((int) Duration.ofDays(30).toSeconds(), within(120));
+    }
+
+    private int maxAgeAfterLogin(boolean rememberMe) throws Exception {
+        String body = """
+                {"name":"dana","password":"correct-horse","rememberMe":%s}""".formatted(rememberMe);
+
+        return mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk())
+                .andReturn().getResponse()
+                .getCookie("sheetsmith_refresh")
+                .getMaxAge();
     }
 
     @Test
