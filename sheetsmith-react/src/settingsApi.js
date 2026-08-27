@@ -33,6 +33,17 @@ export async function getOllamaModels(baseUrl) {
  * would fail — and, more to the point, because their absence is the guarantee such an instance
  * exists for.
  */
+/** The people who could own a run. Only reachable on an instance with accounts. */
+export async function searchUsers(keyword) {
+  const res = await authFetch(`${BASE}/api/users/search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ keyword, size: 200, sort: 'name' }),
+  });
+  if (!res.ok) throw new Error(`Failed to load users: ${res.status}`);
+  return (await res.json()).content;
+}
+
 export async function getCapabilities() {
   const res = await authFetch(`${BASE}/api/capabilities`);
   if (!res.ok) throw new Error(`Failed to fetch capabilities: ${res.status}`);

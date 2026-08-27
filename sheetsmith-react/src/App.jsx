@@ -86,7 +86,7 @@ export default function App() {
 
   const screens = {
     improve: <ImproveScreen theme={theme} capabilities={capabilities} providerMode={providerMode} onOpenSettings={() => setSettingsOpen(true)} />,
-    history: <HistoryScreen onOpenRun={() => go('improve')} />,
+    history: <HistoryScreen authEnabled={capabilities.authEnabled} />,
   };
 
   return (

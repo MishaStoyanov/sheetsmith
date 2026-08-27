@@ -33,6 +33,14 @@ public class JobHistoryDto {
     private final Long startedByUserId;
     private final String startedByName;
 
+    /**
+     * When the work actually ran, which is not when the record was created: a job waits for a slot.
+     * The screen subtracts them rather than being handed a duration, so it can also say "still
+     * going" when the second is missing.
+     */
+    private final LocalDateTime processingStartedAt;
+    private final LocalDateTime processingFinishedAt;
+
     private JobHistoryDto(Long id, LocalDateTime createdAt, JobStatus status,
                           String instruction, String inputFilename, List<AppliedActionDto> appliedActions,
                           String errorMessage, JobRecord job) {
@@ -51,6 +59,8 @@ public class JobHistoryDto {
         this.model = job.getModel();
         this.startedByUserId = job.getStartedBy() == null ? null : job.getStartedBy().getId();
         this.startedByName = job.getStartedBy() == null ? null : job.getStartedBy().getName();
+        this.processingStartedAt = job.getProcessingStartedAt();
+        this.processingFinishedAt = job.getProcessingFinishedAt();
     }
 
     // For paginated list — does NOT access lazy actions collection

@@ -73,6 +73,29 @@ export async function getHistory(page = 0, size = 20) {
   return res.json();
 }
 
+/** The filtered history. Filters travel as a body — see the note on the endpoint. */
+export async function searchHistory(filters) {
+  const res = await authFetch(`${BASE}/api/history/search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filters),
+  });
+  if (!res.ok) throw new Error(await readErrorMessage(res, `History failed: ${res.status}`));
+  return res.json();
+}
+
+/** One run with its steps; the list view leaves them out. */
+export async function getJobDetail(jobId) {
+  const res = await authFetch(`${BASE}/api/history/${jobId}`);
+  if (!res.ok) throw new Error(await readErrorMessage(res, `Could not load run ${jobId}`));
+  return res.json();
+}
+
+export async function deleteJob(jobId) {
+  const res = await authFetch(`${BASE}/api/history/${jobId}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(await readErrorMessage(res, `Could not delete run ${jobId}`));
+}
+
 export async function getJobStatus(jobId) {
   const res = await authFetch(`${BASE}/api/history/${jobId}`);
   if (!res.ok) throw new Error(await readErrorMessage(res, `Status check failed: ${res.status}`));
