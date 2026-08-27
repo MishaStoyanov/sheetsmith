@@ -85,6 +85,7 @@ public class AnalyticsService {
                 overTime(timeRows, priceList),
                 overTimeByUser(timeRows, priceList, names),
                 runs(query),
+                oldestPriceCheck(),
                 neverUsed(),
                 costKnown,
                 List.copyOf(unpriced));
@@ -253,6 +254,17 @@ public class AnalyticsService {
         Map<Long, String> names = new HashMap<>();
         jdbc.query("select id, name from users", rs -> { names.put(rs.getLong("id"), rs.getString("name")); });
         return names;
+    }
+
+    /**
+     * The least recently confirmed price, or null where none are stored.
+     * <p>
+     * The minimum rather than the maximum: one price checked this morning says nothing about the
+     * other six, and the honest answer to "how current are these figures" is the age of the oldest
+     * one they rest on.
+     */
+    private java.time.LocalDateTime oldestPriceCheck() {
+        return jdbc.queryForObject("select min(updated_at) from model_prices", java.time.LocalDateTime.class);
     }
 
     /**

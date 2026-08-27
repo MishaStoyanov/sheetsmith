@@ -12,6 +12,10 @@ import java.util.List;
  *
  * @param costKnown       whether any of this can be expressed in money at all — false when no price
  *                        has been entered, which is how the instance starts
+ * @param pricesCheckedAt when the least recently confirmed price was last looked at, or null where
+ *                        there are none. Carried so the money view can say its figures rest on
+ *                        something old — the person reading a spend chart is exactly who should
+ *                        know that, and they would otherwise have to go and check the price list
  * @param neverUsed       nothing has ever been recorded here, filters ignored. Answered by the
  *                        server because the screen cannot work it out: an empty result under a date
  *                        range means either "nothing yet" or "nothing in these dates", and telling
@@ -27,6 +31,7 @@ public record AnalyticsSummaryDto(
         List<Bucket> overTime,
         List<UserBucket> overTimeByUser,
         Runs runs,
+        java.time.LocalDateTime pricesCheckedAt,
         boolean neverUsed,
         boolean costKnown,
         List<String> unpricedModels) {

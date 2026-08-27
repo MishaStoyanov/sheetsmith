@@ -22,6 +22,9 @@ const GRANULARITIES = [
 
 const EMPTY = { from: '', to: '' };
 
+/** The same three months the price list uses to decide a figure is worth re-checking. */
+const STALE_AFTER_DAYS = 90;
+
 function tokens(value, short = false) {
   if (value == null) return '—';
   if (short) {
@@ -70,6 +73,7 @@ export default function AnalyticsScreen({ theme, user }) {
   const [measure, setMeasure] = useState('tokens');
 
   const [data, setData] = useState(null);
+  const [loadedAt, setLoadedAt] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -80,7 +84,9 @@ export default function AnalyticsScreen({ theme, user }) {
       to: filters.to ? `${filters.to}T23:59:59` : null,
       granularity,
     })
-      .then(result => { setData(result); setError(null); })
+      // The clock is read here rather than in render: "how old is this price" has to be answered
+      // against a fixed moment, or the answer changes every time the component happens to redraw.
+      .then(result => { setData(result); setLoadedAt(Date.now()); setError(null); })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, [filters, granularity]);
@@ -105,6 +111,11 @@ export default function AnalyticsScreen({ theme, user }) {
   // be told what to do; one with nothing between two dates needs to be told to look wider. Which of
   // the two it is comes from the server, because a filtered answer cannot tell them apart.
   const neverUsed = !!data?.neverUsed;
+
+  // Only in the money view, and only when the money is actually being read. In tokens the age of a
+  // price changes nothing, and saying it anyway would train people to skip the line.
+  const pricesAreOld = !!data?.pricesCheckedAt && loadedAt > 0
+    && (loadedAt - new Date(data.pricesCheckedAt).getTime()) / 86_400_000 >= STALE_AFTER_DAYS;
   const nothingHere = !!data && data.totals.calls === 0 && data.runs.total === 0;
 
   // Your own share, taken out of the same answer as everything else rather than asked for
@@ -211,6 +222,14 @@ export default function AnalyticsScreen({ theme, user }) {
         </Note>
       )}
       {data?.costKnown && !nothingHere && <UnpricedModelsNote models={data.unpricedModels} />}
+
+      {asMoney && pricesAreOld && !nothingHere && (
+        <Note>
+          These totals rest on prices that have not been checked in months.{' '}
+          <a href="#/prices" style={{ color: 'var(--accent-text)' }}>Prices</a> can compare them
+          against published figures.
+        </Note>
+      )}
 
       {nothingHere ? (
         <NothingYet

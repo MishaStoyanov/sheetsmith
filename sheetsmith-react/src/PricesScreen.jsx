@@ -7,6 +7,7 @@ import Modal from './components/Modal.jsx';
 import Note from './components/Note.jsx';
 import Pagination from './components/Pagination.jsx';
 import CatalogueDialog from './components/CatalogueDialog.jsx';
+import { age } from './components/priceAge.js';
 import { applyCatalogue, deletePrice, patchPrice, previewCatalogue, putPrice, searchPrices } from './pricesApi.js';
 
 const mono = "'JetBrains Mono', monospace";
@@ -15,11 +16,6 @@ const mono = "'JetBrains Mono', monospace";
 function rate(value) {
   const n = Number(value);
   return `$${n.toFixed(n < 1 ? 4 : 2)}`;
-}
-
-function when(value) {
-  if (!value) return '—';
-  return new Date(value).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 /**
@@ -37,6 +33,7 @@ export default function PricesScreen() {
   const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(0);
   const [data, setData] = useState(null);
+  const [loadedAt, setLoadedAt] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -47,7 +44,9 @@ export default function PricesScreen() {
   const load = useCallback(() => {
     setLoading(true);
     return searchPrices(keyword || null, page)
-      .then(result => { setData(result); setError(null); })
+      // Read here, not in render: an age measured against a moving clock is an age that changes
+      // whenever the component redraws.
+      .then(result => { setData(result); setLoadedAt(Date.now()); setError(null); })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, [keyword, page]);
@@ -70,15 +69,24 @@ export default function PricesScreen() {
     }
   };
 
+  const staleCount = loadedAt === 0
+    ? 0
+    : (data?.content ?? []).filter(price => age(price.updatedAt, loadedAt).stale).length;
+
   const columns = [
     {
       key: 'model',
       header: 'Model',
+      width: '38%',
       render: price => (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontFamily: mono, fontSize: 12.5, color: 'var(--text-dim)' }}>{price.provider}</span>
-          <span style={{ color: 'var(--text-faint)' }}>/</span>
-          <span style={{ fontFamily: mono, fontSize: 12.5 }}>{price.model}</span>
+        // Wrapping is allowed between the name and the badge but never inside the name: a model
+        // broken across three lines is what pushed this table into a sideways scroll.
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontFamily: mono, fontSize: 12.5, whiteSpace: 'nowrap' }}>
+            <span style={{ color: 'var(--text-dim)' }}>{price.provider}</span>
+            <span style={{ color: 'var(--text-faint)' }}> / </span>
+            {price.model}
+          </span>
           {price.usedByCalls > 0 && (
             <Badge>{price.usedByCalls === 1 ? '1 call' : `${price.usedByCalls} calls`}</Badge>
           )}
@@ -99,9 +107,24 @@ export default function PricesScreen() {
     },
     {
       key: 'updated',
-      header: 'Updated',
+      header: 'Checked',
       align: 'right',
-      render: price => <span style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>{when(price.updatedAt)}</span>,
+      render: price => {
+        const { text, stale } = age(price.updatedAt, loadedAt);
+        return (
+          <span
+            title={stale ? 'Last confirmed a while ago — providers change their prices.' : undefined}
+            style={{
+              fontSize: 12.5, whiteSpace: 'nowrap',
+              color: stale ? 'var(--warn)' : 'var(--text-faint)',
+              textDecoration: stale ? 'underline dotted' : 'none',
+              textUnderlineOffset: 3,
+            }}
+          >
+            {text}
+          </span>
+        );
+      },
     },
     {
       key: 'actions',
@@ -155,6 +178,16 @@ export default function PricesScreen() {
         <Note>
           Models you run locally do not belong here — they cost no money to call, so analytics counts
           them in tokens and leaves them out of spend.
+        </Note>
+      )}
+
+      {/* The underline on a row says "this one"; this says "and here is what to do about it".
+          Checking against the catalogue clears the mark even when nothing has changed. */}
+      {staleCount > 0 && (
+        <Note>
+          {staleCount === 1 ? 'One price has' : `${staleCount} prices have`} not been checked in
+          months, and providers move theirs. <strong>Update from catalogue</strong> compares them
+          against published figures — confirming one that has not changed is enough to clear this.
         </Note>
       )}
 

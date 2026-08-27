@@ -16,12 +16,22 @@ const TONE = {
 const LABEL = {
   NEW: 'new',
   CHANGED: 'changed',
-  UNCHANGED: 'already correct',
+  UNCHANGED: 'still correct',
   NOT_IN_CATALOGUE: 'not listed',
 };
 
-/** Rows that can actually be saved. The other two statuses are shown but have nothing to apply. */
-const ACTIONABLE = ['NEW', 'CHANGED'];
+/**
+ * Rows a person can act on.
+ *
+ * `UNCHANGED` is in here, which looks odd until you ask what the Prices screen needs. It marks a
+ * price as stale by how long ago it was last checked, and a price the catalogue has just confirmed
+ * *has* been checked — even though the number did not move. Saving it writes the same figures back
+ * and refreshes the date, which is exactly the record that ought to exist.
+ *
+ * `NOT_IN_CATALOGUE` is not here: there is nothing to compare it against, so there is nothing to
+ * confirm either.
+ */
+const ACTIONABLE = ['NEW', 'CHANGED', 'UNCHANGED'];
 
 function rate(value) {
   if (value == null) return '—';
@@ -75,6 +85,11 @@ export default function CatalogueDialog({ open, onClose, onLoad, onApply }) {
   const actionable = proposals.filter(p => ACTIONABLE.includes(p.status));
   const picked = actionable.filter(p => chosen.has(rowKey(p)));
 
+  // What the button is about to do, which is not always "save a price". Confirming a set of rows
+  // that all already agree changes no figure at all — it records that they were checked — and a
+  // button reading "Save 4 prices" for that would be describing something else.
+  const onlyConfirming = picked.length > 0 && picked.every(p => p.status === 'UNCHANGED');
+
   const toggle = (proposal) => {
     setChosen(previous => {
       const next = new Set(previous);
@@ -110,7 +125,11 @@ export default function CatalogueDialog({ open, onClose, onLoad, onApply }) {
             disabled={busy || state.status !== 'ready' || picked.length === 0}
             onClick={apply}
           >
-            {busy ? 'Saving…' : picked.length === 1 ? 'Save 1 price' : `Save ${picked.length} prices`}
+            {busy
+              ? 'Saving…'
+              : onlyConfirming
+                ? (picked.length === 1 ? 'Confirm 1 price' : `Confirm ${picked.length} prices`)
+                : (picked.length === 1 ? 'Save 1 price' : `Save ${picked.length} prices`)}
           </Button>
         </>
       }
@@ -130,7 +149,8 @@ export default function CatalogueDialog({ open, onClose, onLoad, onApply }) {
           {/* The host is named, because this is the one action here that leaves the machine. */}
           <p style={{ fontSize: 12.5, color: 'var(--text-faint)', lineHeight: 1.55, margin: '0 0 14px' }}>
             Read from <span style={{ fontFamily: mono }}>{state.data.source}</span>. Nothing is saved
-            until you choose it.
+            until you choose it. Confirming a price that has not changed records that it was checked
+            today, which is what clears the stale mark on the list.
           </p>
 
           {proposals.length === 0 && (
