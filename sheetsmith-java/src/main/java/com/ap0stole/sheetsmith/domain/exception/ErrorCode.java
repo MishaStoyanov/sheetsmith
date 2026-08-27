@@ -18,7 +18,11 @@ public enum ErrorCode {
     // 403 is the opposite: known, and still not allowed. A retry cannot fix it.
     FORBIDDEN(403),
     USER_NOT_FOUND(404),
-    USERNAME_TAKEN(409);
+    USERNAME_TAKEN(409),
+    PRICE_NOT_FOUND(404),
+    // 409, not 400: the request is well formed and the refusal is about the state of the data,
+    // which is exactly what a conflict means — and the message carries the number to confirm.
+    PRICE_IN_USE(409);
 
     private final int httpStatus;
 
