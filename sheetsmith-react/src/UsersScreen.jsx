@@ -6,7 +6,16 @@ import DataTable from './components/DataTable.jsx';
 import Field from './components/Field.jsx';
 import Modal from './components/Modal.jsx';
 import Pagination from './components/Pagination.jsx';
-import { changeUserRole, createUser, deleteUser, searchUsers, setUserBudget, updateUser } from './settingsApi.js';
+import {
+  changeUserRole,
+  createUser,
+  decideBudgetRequest,
+  deleteUser,
+  getPendingBudgetRequests,
+  searchUsers,
+  setUserBudget,
+  updateUser,
+} from './settingsApi.js';
 
 const mono = "'JetBrains Mono', monospace";
 
@@ -17,7 +26,7 @@ const mono = "'JetBrains Mono', monospace";
  * "Remove admin" is the widest thing that ever appears in the first slot, so that column is sized
  * for it and does not resize when the row underneath says "Make admin" instead.
  */
-const ACTION_COLUMNS = '104px 52px 66px 78px 58px';
+const ACTION_COLUMNS = '100px 48px 62px 74px 54px';
 
 /** One action's place, kept whether or not this row has an action to put in it. */
 function Slot({ children }) {
@@ -51,6 +60,14 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [roleChange, setRoleChange] = useState(null);
   const [budgetFor, setBudgetFor] = useState(null);
+  const [pendingRequests, setPendingRequests] = useState([]);
+
+  // Alongside the list rather than on a screen of its own: a request is about a person, and the
+  // answer is the same figure the Limit dialog already sets. The server has already narrowed this
+  // to the people this caller may see.
+  const loadRequests = useCallback(() => {
+    getPendingBudgetRequests().then(setPendingRequests).catch(() => setPendingRequests([]));
+  }, []);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -66,11 +83,14 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
     load();
   }, [load]);
 
+  useEffect(() => { loadRequests(); }, [loadRequests]);
+
   const after = async (work) => {
     try {
       await work();
       setError(null);
       await load();
+      loadRequests();
       return true;
     } catch (e) {
       setError(e.message);
@@ -91,6 +111,9 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
           {/* Named as what it is rather than as "admin": the account can be renamed. */}
           {user.protectedAccount && <Badge>default account</Badge>}
           {user.mustChangePassword && <Badge tone="warn">default password</Badge>}
+          {pendingRequests.some(r => r.userId === user.id) && (
+            <Badge tone="warn">wants more</Badge>
+          )}
         </span>
       ),
     },
@@ -143,10 +166,12 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
           </Slot>
 
           {/* Beside the other things about this account rather than on a screen of its own: a
-              spend limit is a property of a person, like their name. Not on your own row, for the
-              same reason as the role — a limit you can lift is not a limit. */}
+              spend limit is a property of a person, like their name.
+              Not on your own row — a limit you can lift is not a limit — except for the superadmin,
+              who has nobody above them to set one. Without that exception a ceiling on that account
+              would be permanent. */}
           <Slot>
-            {user.id !== currentUser?.id && (
+            {(user.id !== currentUser?.id || iAmSuperadmin) && (
               <Button size="sm" variant="ghost" onClick={() => setBudgetFor(user)}>Limit</Button>
             )}
           </Slot>
@@ -178,7 +203,7 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
   ];
 
   return (
-    <div style={{ maxWidth: 1180, margin: '0 auto', padding: '40px 28px 100px' }}>
+    <div style={{ maxWidth: 1240, margin: '0 auto', padding: '40px 28px 100px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 6 }}>
         <div style={{ flex: 1 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em', margin: '0 0 6px' }}>Users</h1>
@@ -243,7 +268,10 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
         key={budgetFor?.id ?? 'closed'}
         target={budgetFor}
         onClose={() => setBudgetFor(null)}
+        request={pendingRequests.find(r => r.userId === budgetFor?.id) ?? null}
         onSubmit={value => after(() => setUserBudget(budgetFor.id, value))}
+        onDecide={(approve, newLimit) => after(() =>
+          decideBudgetRequest(pendingRequests.find(r => r.userId === budgetFor.id).id, approve, newLimit))}
       />
 
       <Modal
@@ -460,7 +488,7 @@ function PasswordDialog({ target, isSelf, onClose, onSubmit }) {
  * an unknown amount, so neither counts towards it. A limit that quietly missed half the spending
  * would be worse than none, so the dialog says what it covers.
  */
-function BudgetDialog({ target, onClose, onSubmit }) {
+function BudgetDialog({ target, request, onClose, onSubmit, onDecide }) {
   const [value, setValue] = useState(target?.monthlyBudget == null ? '' : String(target.monthlyBudget));
   const [busy, setBusy] = useState(false);
 
@@ -470,10 +498,27 @@ function BudgetDialog({ target, onClose, onSubmit }) {
 
   const submit = async () => {
     setBusy(true);
-    const ok = await onSubmit(amount);
+    // Answering a waiting request rather than editing quietly: the person asked, so they are told
+    // what was decided. Setting the same figure without answering would leave them waiting on a
+    // reply that had already happened.
+    const ok = request
+      ? await onDecide(true, amount)
+      : await onSubmit(amount);
     setBusy(false);
     if (ok) onClose();
   };
+
+  const decline = async () => {
+    setBusy(true);
+    const ok = await onDecide(false, null);
+    setBusy(false);
+    if (ok) onClose();
+  };
+
+  // Approving is what raises the limit, so a figure that is not higher is not an approval. The
+  // button says so rather than the server having to.
+  const raises = request && amount != null && target?.monthlyBudget != null
+    && amount > Number(target.monthlyBudget);
 
   return (
     <Modal
@@ -484,12 +529,32 @@ function BudgetDialog({ target, onClose, onSubmit }) {
       footer={
         <>
           <Button onClick={onClose}>Cancel</Button>
-          <Button variant="primary" disabled={busy || !wellFormed} onClick={submit}>
-            {busy ? 'Saving…' : amount === null ? 'Remove the limit' : 'Save limit'}
+          {request && (
+            <Button variant="danger" disabled={busy} onClick={decline}>Decline</Button>
+          )}
+          <Button
+            variant="primary"
+            disabled={busy || !wellFormed || (request && !raises)}
+            onClick={submit}
+          >
+            {busy ? 'Saving…'
+              : request ? 'Approve'
+              : amount === null ? 'Remove the limit' : 'Save limit'}
           </Button>
         </>
       }
     >
+      {request && (
+        <p style={{
+          padding: '9px 12px', borderRadius: 8, marginBottom: 14,
+          background: 'var(--warn-bg)', color: 'var(--warn)', fontSize: 13, lineHeight: 1.5,
+        }}>
+          They have asked for a higher limit. <strong>Approving raises it</strong>, so enter a
+          figure above their current one — declining leaves it where it is. Either way they are
+          told.
+        </p>
+      )}
+
       <Field
         label="US dollars per calendar month"
         value={value}

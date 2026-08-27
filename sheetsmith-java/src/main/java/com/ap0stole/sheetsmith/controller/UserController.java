@@ -13,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * Five endpoints rather than four, because creating and searching are two different meanings and
  * one URL cannot hold both: they would be told apart only by the shape of the request body.
@@ -25,6 +27,7 @@ public class UserController {
     private final AuthConfig authConfig;
     private final UserService userService;
     private final CurrentUser currentUser;
+    private final com.ap0stole.sheetsmith.services.BudgetRequestService budgetRequests;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -64,6 +67,39 @@ public class UserController {
     public SpendDto mySpend() {
         requireAccounts();
         return userService.mySpend(currentUser.id().orElse(null));
+    }
+
+    /**
+     * Asks for a bigger ceiling. No body: the request is "more, please" — how much more is the
+     * decision of whoever answers, and asking somebody to name a figure invites them to name the
+     * one they think will be granted rather than the one they need.
+     */
+    @PostMapping("/me/budget-request")
+    public BudgetRequestDto askForMore() {
+        requireAccounts();
+        return BudgetRequestDto.from(budgetRequests.ask(currentUser.id().orElse(null)));
+    }
+
+    /** Marks the outcome as read, which is what makes the notification happen once. */
+    @PostMapping("/me/budget-request/seen")
+    public ResponseEntity<Void> markDecisionSeen() {
+        requireAccounts();
+        budgetRequests.markSeen(currentUser.id().orElse(null));
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Everything still waiting on an answer, filtered to the ones this caller may answer. */
+    @GetMapping("/budget-requests")
+    public List<BudgetRequestDto> pendingRequests() {
+        requireAccounts();
+        return budgetRequests.pendingVisibleTo();
+    }
+
+    @PostMapping("/budget-requests/{id}/decide")
+    public BudgetRequestDto decide(@PathVariable Long id, @RequestBody @Valid DecideBudgetRequest request) {
+        requireAccounts();
+        return BudgetRequestDto.from(budgetRequests.decide(id, request.approve(), request.newLimit(),
+                currentUser.id().orElse(null)));
     }
 
     /**

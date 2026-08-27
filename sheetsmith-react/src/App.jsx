@@ -13,7 +13,7 @@ import SettingsPanel from './SettingsPanel.jsx';
 import { useHashRoute } from './useHashRoute.js';
 import { getCapabilities, getSettings } from './settingsApi.js';
 import { configureAuth, getCurrentUser, logout, restoreSession } from './authApi.js';
-import { getMySpend } from './settingsApi.js';
+import { askForMoreBudget, getMySpend, markBudgetDecisionSeen } from './settingsApi.js';
 
 /**
  * The root: what this instance is, who is looking at it, and which screen that means. Everything
@@ -75,6 +75,26 @@ export default function App() {
     return () => { live = false; };
   }, [capabilities.authEnabled, user, route]);
 
+  // Both of these re-read afterwards rather than guessing at the new state: what the button did is
+  // the server's answer, not this component's assumption about it.
+  const refreshSpend = () => getMySpend().then(setSpend).catch(() => {});
+
+  const handleAskForBudget = async () => {
+    try {
+      await askForMoreBudget();
+    } finally {
+      await refreshSpend();
+    }
+  };
+
+  const handleDismissBudgetDecision = async () => {
+    try {
+      await markBudgetDecisionSeen();
+    } finally {
+      await refreshSpend();
+    }
+  };
+
   const handleCloseSettings = () => {
     setSettingsOpen(false);
     getSettings().then(s => setProviderMode(s.providerMode)).catch(() => {});
@@ -132,6 +152,8 @@ export default function App() {
     <div style={{ ...themes[theme], height: '100vh', boxSizing: 'border-box', fontFamily: "'Instrument Sans', system-ui, sans-serif", color: 'var(--text)' }}>
       <AppShell
         spend={user ? spend : null}
+        onAskForBudget={handleAskForBudget}
+        onDismissBudgetDecision={handleDismissBudgetDecision}
         theme={theme}
         onToggleTheme={() => setThemeAndSave(theme === 'light' ? 'dark' : 'light')}
         providerMode={providerMode}

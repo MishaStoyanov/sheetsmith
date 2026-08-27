@@ -202,16 +202,6 @@ class SpendLimitTest {
     }
 
     @Test
-    @DisplayName("nobody sets their own limit")
-    void noSelfRaising() {
-        as(seededId, "admin");
-
-        assertThatThrownBy(() -> userService.setMonthlyBudget(seededId, new BigDecimal("99.00"), seededId))
-                .isInstanceOf(ApiException.class)
-                .hasMessageContaining("your own spend limit");
-    }
-
-    @Test
     @DisplayName("a plain user cannot set anybody's limit, including through the service directly")
     void plainUsersCannotSetLimits() {
         as(danaId, "budget-dana");
@@ -356,6 +346,34 @@ class SpendLimitTest {
         assertThat(mine.spentThisMonth())
                 .as("\"no limit\" is not the same as \"nothing spent\"")
                 .isEqualByComparingTo("2.0000");
+    }
+
+    @Test
+    @DisplayName("the superadmin sets their own limit, because there is nobody above them to do it")
+    void theSuperadminIsTheOneExceptionToTheHierarchy() {
+        // Found by putting a limit on that account and looking for the way back: nobody sets their
+        // own, and only a superadmin may raise another. Without this the ceiling would be permanent
+        // — on the one account that exists to put an instance right.
+        as(seededId, "admin");
+
+        assertThatCode(() -> userService.setMonthlyBudget(seededId, new BigDecimal("5.00"), seededId))
+                .doesNotThrowAnyException();
+        assertThatCode(() -> userService.setMonthlyBudget(seededId, new BigDecimal("50.00"), seededId))
+                .as("and can raise it again, which is the whole point")
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("an administrator still cannot set their own — the hierarchy holds everywhere else")
+    void administratorsAreNotTheException() {
+        jdbc.update("insert into users (name, password_hash, must_change_password, role) "
+                + "values ('budget-boss-two', 'x', false, 'ADMIN')");
+        Long boss = jdbc.queryForObject("select id from users where name = 'budget-boss-two'", Long.class);
+        as(boss, "budget-boss-two");
+
+        assertThatThrownBy(() -> userService.setMonthlyBudget(boss, new BigDecimal("99.00"), boss))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("your own spend limit");
     }
 
     static boolean dockerAvailable() {

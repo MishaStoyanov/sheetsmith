@@ -79,6 +79,37 @@ export async function getMySpend() {
   return res.json();
 }
 
+/** Asks for a bigger ceiling. No amount: how much more is the decision of whoever answers. */
+export async function askForMoreBudget() {
+  const res = await authFetch(`${BASE}/api/users/me/budget-request`, { method: 'POST' });
+  if (!res.ok) throw new Error(await userError(res, 'Could not send that request'));
+  return res.json();
+}
+
+/** Marks the answer as read, which is what makes the notification happen once. */
+export async function markBudgetDecisionSeen() {
+  const res = await authFetch(`${BASE}/api/users/me/budget-request/seen`, { method: 'POST' });
+  if (!res.ok) throw new Error(await userError(res, 'Could not dismiss that'));
+}
+
+/** Requests still waiting, already narrowed to the ones this caller may answer. */
+export async function getPendingBudgetRequests() {
+  const res = await authFetch(`${BASE}/api/users/budget-requests`);
+  if (!res.ok) throw new Error(await userError(res, 'Could not load requests'));
+  return res.json();
+}
+
+/** Answers one. `newLimit` is required to approve, because approving is what raises the limit. */
+export async function decideBudgetRequest(id, approve, newLimit) {
+  const res = await authFetch(`${BASE}/api/users/budget-requests/${id}/decide`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ approve, newLimit }),
+  });
+  if (!res.ok) throw new Error(await userError(res, 'Could not answer that request'));
+  return res.json();
+}
+
 /**
  * Sets or clears a monthly spend limit. Null is a real value — "no limit" — which is why this is a
  * PUT of its own rather than a field on the patch, where null already means "leave this alone".

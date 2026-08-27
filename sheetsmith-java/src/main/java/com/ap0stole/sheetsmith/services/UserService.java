@@ -41,6 +41,7 @@ public class UserService {
     private final RefreshTokenService refreshTokens;
     private final Authz authz;
     private final BudgetService budgets;
+    private final BudgetRequestService budgetRequests;
 
     /**
      * Deliberately open to anyone signed in, unlike everything else here.
@@ -205,7 +206,15 @@ public class UserService {
             return SpendDto.hidden();
         }
         return users.findById(callerId)
-                .map(user -> new SpendDto(user.getMonthlyBudget(), budgets.spentThisMonth(callerId), true))
+                .map(user -> new SpendDto(
+                        user.getMonthlyBudget(),
+                        budgets.spentThisMonth(callerId),
+                        true,
+                        budgetRequests.mayAsk(callerId),
+                        budgetRequests.pendingFor(callerId).isPresent(),
+                        budgetRequests.undeliveredDecisionFor(callerId)
+                                .map(com.ap0stole.sheetsmith.domain.dto.user.BudgetRequestDto::from)
+                                .orElse(null)))
                 .orElseGet(SpendDto::hidden);
     }
 
@@ -224,7 +233,11 @@ public class UserService {
     public UserDto setMonthlyBudget(Long id, java.math.BigDecimal budget, Long callerId) {
         User user = require(id);
 
-        if (id.equals(callerId)) {
+        // A strict hierarchy: your limit is set by somebody above you, never by you. The superadmin
+        // is the exception because there is nobody above them — without it, a ceiling on that
+        // account would be one nobody in the application could ever lift, on the very account that
+        // exists to put things right.
+        if (id.equals(callerId) && !authz.superadmin()) {
             throw new ApiException(ErrorCode.FORBIDDEN,
                     "You cannot set your own spend limit — a limit you can lift is not a limit.",
                     "monthlyBudget");

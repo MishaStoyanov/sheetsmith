@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Button from './components/Button.jsx';
 import DefaultPasswordNotice from './components/DefaultPasswordNotice.jsx';
 import BudgetBar from './components/BudgetBar.jsx';
+import BudgetDecisionNotice from './components/BudgetDecisionNotice.jsx';
 import { ChevronIcon, SettingsIcon } from './components/NavIcons.jsx';
 
 /**
@@ -20,6 +21,8 @@ import { ChevronIcon, SettingsIcon } from './components/NavIcons.jsx';
  */
 export default function AppShell({
   spend,
+  onAskForBudget,
+  onDismissBudgetDecision,
   theme,
   onToggleTheme,
   providerMode,
@@ -106,8 +109,20 @@ export default function AppShell({
             finding out too late. Absent entirely where there is no limit: a gauge with no maximum
             is furniture. */}
         {spend?.monthlyBudget != null && (
-          <span style={{ marginLeft: 18, marginRight: 4 }} title="Your spend this calendar month">
+          <span style={{ marginLeft: 18, marginRight: 4, display: 'flex', alignItems: 'center', gap: 10 }}
+                title="Your spend this calendar month">
             <BudgetBar spent={spend.spentThisMonth} limit={spend.monthlyBudget} compact />
+
+            {/* Only in the last stretch of the limit, and absent rather than disabled below it: a
+                control that refuses is one people stop pressing. Once asked it says so instead of
+                offering a second request nobody would answer twice. */}
+            {spend.pending ? (
+              <span style={{ fontSize: 11.5, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>
+                request sent
+              </span>
+            ) : spend.mayAsk && (
+              <Button size="sm" onClick={onAskForBudget}>Ask for more</Button>
+            )}
           </span>
         )}
         <Button onClick={onToggleTheme} style={{ marginLeft: 8 }}>
@@ -125,6 +140,7 @@ export default function AppShell({
           caller. */}
       <div style={{ flexShrink: 0 }}>
         <DefaultPasswordNotice user={user} onOpenSettings={onOpenSettings} />
+        <BudgetDecisionNotice decision={spend?.decision} onDismiss={onDismissBudgetDecision} />
       </div>
 
       {/* min-height: 0 is what lets the panes below scroll instead of stretching the row. */}

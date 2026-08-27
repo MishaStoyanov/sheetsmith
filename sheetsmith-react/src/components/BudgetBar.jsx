@@ -26,11 +26,16 @@ const money = (value) => {
  * track would be drawing a proportion of nothing, and 140% is the fact worth reading anyway.
  */
 export default function BudgetBar({ spent, limit, compact = false }) {
-  // No ceiling is a real state, not a missing one. Saying what has gone is still worth doing.
+  // No ceiling is a real state, not a missing one.
+  //
+  // The figure appears only where it was actually measured. The accounts list does not work out
+  // spend for somebody with no limit — there is nothing to compare it against and it would be a
+  // query per row — so `spent` arrives null there, and printing money(null) rendered "$0.00 · no
+  // limit" beside an account that had plainly spent something.
   if (limit == null) {
     return (
       <span style={{ fontFamily: mono, fontSize: compact ? 12 : 12.5, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>
-        {money(spent)} · no limit
+        {spent == null ? 'no limit' : `${money(spent)} · no limit`}
       </span>
     );
   }
@@ -44,7 +49,11 @@ export default function BudgetBar({ spent, limit, compact = false }) {
   const tone = percent >= 100 ? 'var(--del)' : percent >= 80 ? 'var(--warn)' : 'var(--accent)';
 
   return (
-    <span style={{ display: 'inline-block', minWidth: compact ? 120 : 170, textAlign: 'left' }}>
+    // A fixed width, not a minimum. With a minimum the track stretched to whatever the figures
+    // above it happened to measure, so a limit written as 22.00 drew a shorter bar than one
+    // written as 0.0500 — two gauges of different lengths, which is the one thing a gauge must
+    // not be.
+    <span style={{ display: 'inline-block', width: compact ? 150 : 200, textAlign: 'left' }}>
       <span style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 4 }}>
         <span style={{ fontFamily: mono, fontSize: compact ? 11.5 : 12.5, color: 'var(--text)' }}>
           {money(used)}
