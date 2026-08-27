@@ -59,7 +59,7 @@ POST /api/excel/plan  {sessionId, instruction}
   → JobService.generatePlan()
       → reads the session's CURRENT revision (no lock: revisions are immutable once written)
       → SchemaExtractorService.extract() → AiPlanningService.generatePlan()
-      → parks a PendingPlan (sessionId, filename, instruction) under a planToken
+      → parks a PendingPlan (sessionId, filename, instruction, usage) under a planToken
   ← { planToken, steps[] }              — steps carry an imperative description for the review cards
 
 POST /api/excel/apply {planToken, steps}
@@ -78,6 +78,16 @@ POST /api/excel/apply {planToken, steps}
 `JobRecord.inputFilePath` / `resultFilePath` are those two revision files, so job history and
 `GET /api/history/{id}/download` work unchanged — but the files are owned by the session (see
 *History & file lifecycle*).
+
+**What a run cost.** The planning call is paid for in `/plan`, minutes before `/apply` creates the
+record it belongs to, so the cost rides along in the parked `PendingPlan` and is written the moment
+the record exists. A `fixPlan` retry spends again during apply and is added, not substituted —
+`recordUsage()` saves after each call rather than at the end, so a run that spent tokens and then
+threw still says so. `TokenUsage` reads Spring AI's `EmptyUsage` (three zeros) as *not reported*
+and stores null: a local model that bills nothing must not read as a run that cost nothing. Ollama
+does report — measured 17/2/19 on a one-word prompt — so a null column means the provider stayed
+silent, not that the model was local. Chat turns are outside this: they write `chat_steps`, not job
+records.
 
 ### Request flow — the scripting entry points
 

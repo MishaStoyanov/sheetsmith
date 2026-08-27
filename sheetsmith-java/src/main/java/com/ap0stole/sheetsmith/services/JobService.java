@@ -8,6 +8,8 @@ import com.ap0stole.sheetsmith.domain.enums.JobStatus;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
 import com.ap0stole.sheetsmith.llm.AiPlanningService;
+import com.ap0stole.sheetsmith.llm.PlanningResult;
+import com.ap0stole.sheetsmith.llm.TokenUsage;
 import com.ap0stole.sheetsmith.repository.ActionResultRepository;
 import com.ap0stole.sheetsmith.repository.JobRepository;
 import com.ap0stole.sheetsmith.requests.ActionStep;
@@ -62,7 +64,11 @@ public class JobService {
 
     private final ConcurrentHashMap<String, PendingPlan> pendingPlans = new ConcurrentHashMap<>();
 
-    private record PendingPlan(String sessionId, String filename, String instruction) {}
+    /**
+     * Carries {@code usage} because the planning call is paid for here, minutes before the user
+     * approves the plan and a {@link JobRecord} exists to record it against.
+     */
+    private record PendingPlan(String sessionId, String filename, String instruction, TokenUsage usage) {}
 
     // ── Plan-then-apply flow (session-backed) ─────────────────────────────────
 
@@ -74,7 +80,8 @@ public class JobService {
         DocumentSession session = documentSessionService.require(request.sessionId());
 
         ExcelSchemaDto schema = documentSessionService.schema(session);
-        AutomationRequest plan = aiPlanningService.generatePlan(request.instruction(), schema.toPromptString());
+        PlanningResult planned = aiPlanningService.generatePlan(request.instruction(), schema.toPromptString());
+        AutomationRequest plan = planned.plan();
 
         // A model that answers in prose instead of JSON parses down to zero steps, and a plan of
         // zero steps renders as an empty screen that explains nothing — indistinguishable from a
@@ -110,7 +117,8 @@ public class JobService {
         }
 
         String token = UUID.randomUUID().toString();
-        pendingPlans.put(token, new PendingPlan(session.getId(), session.getOriginalFilename(), request.instruction()));
+        pendingPlans.put(token, new PendingPlan(session.getId(), session.getOriginalFilename(),
+                request.instruction(), planned.usage()));
 
         List<PlanStepDto> steps = new ArrayList<>();
         List<ActionStep> actions = plan.getActions();
@@ -162,6 +170,7 @@ public class JobService {
         // session lock, since a chat turn may commit before the job gets its slot.
         JobRecord job = JobRecord.create(pending.instruction(), pending.filename(),
                 documentSessionService.currentPath(session).toString());
+        addUsage(job, pending.usage());
         jobRepository.save(job);
 
         Long jobId = job.getId();
@@ -332,20 +341,51 @@ public class JobService {
     private List<ActionResult> runPlan(JobRecord job, String inputPath, String resultPath,
                                        String instruction, AutomationRequest prePlan) {
         ExcelSchemaDto schema = schemaExtractorService.extract(inputPath);
-        AutomationRequest plan = (prePlan != null)
-                ? prePlan
-                : aiPlanningService.generatePlan(instruction, schema.toPromptString());
+        AutomationRequest plan;
+        if (prePlan != null) {
+            plan = prePlan;
+        } else {
+            PlanningResult planned = aiPlanningService.generatePlan(instruction, schema.toPromptString());
+            plan = planned.plan();
+            recordUsage(job, planned.usage());
+        }
 
         List<ActionResult> results = excelAutomationService.applyChanges(inputPath, resultPath, plan, job);
 
         if (shouldRetry(results, plan)) {
             log.info("Job {} triggering retry via fixPlan", job.getId());
-            AutomationRequest fixedPlan = aiPlanningService.fixPlan(
+            PlanningResult repaired = aiPlanningService.fixPlan(
                     instruction, buildErrorSummary(results), schema.toPromptString());
-            results = excelAutomationService.applyChanges(inputPath, resultPath, fixedPlan, job);
+            recordUsage(job, repaired.usage());
+            results = excelAutomationService.applyChanges(inputPath, resultPath, repaired.plan(), job);
         }
 
         return results;
+    }
+
+    /**
+     * Written the moment it is known rather than at the end: a run that spent tokens and then threw
+     * takes the failure path, which reloads the record — and an audit that forgets what a failed
+     * run cost is exactly the audit nobody needs.
+     */
+    private void recordUsage(JobRecord job, TokenUsage usage) {
+        if (usage == null || usage.isEmpty()) {
+            return;
+        }
+        addUsage(job, usage);
+        jobRepository.save(job);
+    }
+
+    /** Adds one call's cost to whatever the record already carries; null stays null. */
+    private static void addUsage(JobRecord job, TokenUsage usage) {
+        if (usage == null || usage.isEmpty()) {
+            return;
+        }
+        TokenUsage total = new TokenUsage(job.getPromptTokens(), job.getCompletionTokens(), job.getTotalTokens())
+                .plus(usage);
+        job.setPromptTokens(total.promptTokens());
+        job.setCompletionTokens(total.completionTokens());
+        job.setTotalTokens(total.totalTokens());
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

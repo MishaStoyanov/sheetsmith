@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -62,12 +63,12 @@ public class AiPlanningService {
                 + PROMPT_RULES;
     }
 
-    public AutomationRequest generatePlan(String instruction, String tableContext) {
+    public PlanningResult generatePlan(String instruction, String tableContext) {
         String userMessage = "Table Context:\n" + tableContext + "\n\nUser Request: " + instruction;
         return callAndParse(userMessage);
     }
 
-    public AutomationRequest fixPlan(String instruction, String errors, String tableContext) {
+    public PlanningResult fixPlan(String instruction, String errors, String tableContext) {
         String userMessage = """
                 Table Context:
                 %s
@@ -82,35 +83,48 @@ public class AiPlanningService {
         return callAndParse(userMessage);
     }
 
-    private AutomationRequest callAndParse(String userMessage) {
+    /**
+     * Asks for the whole response rather than just its text: the token count lives in the response
+     * metadata, and a plan whose cost was thrown away here cannot be attributed to the run later.
+     */
+    private PlanningResult callAndParse(String userMessage) {
         LlmSettingsDto settings = llmSettingsService.getSettings();
         ChatModel chatModel = llmClientFactory.getChatModel(settings);
         ChatClient chatClient = ChatClient.builder(chatModel).defaultSystem(systemPrompt).build();
 
-        String raw;
+        ChatResponse response;
         try {
-            raw = chatClient.prompt()
+            response = chatClient.prompt()
                     .user(userMessage)
                     .call()
-                    .content();
+                    .chatResponse();
         } catch (Exception e) {
             log.error("LLM call failed", e);
             throw new ApiException(ErrorCode.LLM_FAILURE, LlmFailures.humanize(e));
         }
 
+        String raw = textOf(response);
         if (raw == null || raw.isBlank()) {
             log.warn("LLM returned empty response");
             throw new ApiException(ErrorCode.LLM_FAILURE, "The AI returned an empty response — try again");
         }
 
+        TokenUsage usage = TokenUsage.from(response);
         try {
             String cleaned = extractJson(raw);
             log.debug("Parsed LLM JSON: {}", cleaned);
-            return objectMapper.readValue(cleaned, AutomationRequest.class);
+            return new PlanningResult(objectMapper.readValue(cleaned, AutomationRequest.class), usage);
         } catch (Exception e) {
             log.error("Failed to parse LLM response as JSON: {}", raw, e);
             throw new ApiException(ErrorCode.LLM_FAILURE, "The AI returned an invalid response — try rephrasing your instruction");
         }
+    }
+
+    private static String textOf(ChatResponse response) {
+        if (response == null || response.getResult() == null || response.getResult().getOutput() == null) {
+            return null;
+        }
+        return response.getResult().getOutput().getText();
     }
 
     private String extractJson(String raw) {

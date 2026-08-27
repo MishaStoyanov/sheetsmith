@@ -47,7 +47,8 @@ public class JobRecord {
 
     /**
      * What the run cost, kept apart because providers price reading and writing differently.
-     * Null where the provider reported no usage — nothing fills these in yet.
+     * Filled from the planning call and from the repair attempt, if there was one. Null means the
+     * provider reported nothing — common with a local model — and never that the run was free.
      */
     private Long promptTokens;
 

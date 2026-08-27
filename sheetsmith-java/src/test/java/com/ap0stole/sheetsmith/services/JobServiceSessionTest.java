@@ -11,6 +11,8 @@ import com.ap0stole.sheetsmith.domain.entity.JobRecord;
 import com.ap0stole.sheetsmith.domain.enums.JobStatus;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.llm.AiPlanningService;
+import com.ap0stole.sheetsmith.llm.PlanningResult;
+import com.ap0stole.sheetsmith.llm.TokenUsage;
 import com.ap0stole.sheetsmith.repository.ActionResultRepository;
 import com.ap0stole.sheetsmith.repository.ChatMessageRepository;
 import com.ap0stole.sheetsmith.repository.DocumentSessionRepository;
@@ -40,6 +42,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 
@@ -62,6 +65,9 @@ class JobServiceSessionTest {
     private final Map<Long, JobRecord> jobs = new ConcurrentHashMap<>();
     private final Map<String, DocumentSession> sessions = new ConcurrentHashMap<>();
     private final AtomicLong jobIds = new AtomicLong();
+
+    /** Flipped on by the one test that wants the first apply to fail and the repair path to run. */
+    private final AtomicBoolean failFirstAttempt = new AtomicBoolean(false);
 
     private Path uploadDir;
     private Path resultDir;
@@ -114,7 +120,9 @@ class JobServiceSessionTest {
 
         ExcelAutomationService automationService = mock(ExcelAutomationService.class);
         when(automationService.applyChanges(anyString(), anyString(), any(), any()))
-                .thenAnswer(call -> applySheet(call.getArgument(0), call.getArgument(1), call.getArgument(3)));
+                .thenAnswer(call -> failFirstAttempt.getAndSet(false)
+                        ? List.of(ActionResult.failure(call.getArgument(3), "ADD_SHEET", 0, "sheet already exists"))
+                        : applySheet(call.getArgument(0), call.getArgument(1), call.getArgument(3)));
 
         sessionService = new DocumentSessionService(storageConfig, sessionRepository, messageRepository,
                 mock(ChatStepRepository.class), new SessionSchemaCache(new SchemaExtractorService(new ChatConfig())));
@@ -175,7 +183,8 @@ class JobServiceSessionTest {
         DocumentSession session = openSession();
         // What a model does when the catalog has nothing for the instruction: it answers in prose,
         // which parses down to zero actions.
-        when(planningService.generatePlan(anyString(), anyString())).thenReturn(new AutomationRequest());
+        when(planningService.generatePlan(anyString(), anyString()))
+                .thenReturn(new PlanningResult(new AutomationRequest(), TokenUsage.NONE));
 
         assertThatThrownBy(() -> jobService.generatePlan(new PlanRequest(session.getId(), "make it nicer")))
                 .isInstanceOf(ApiException.class)
@@ -208,10 +217,63 @@ class JobServiceSessionTest {
         bad.getProperties().put("stepName", "Do something clever");
         AutomationRequest plan = new AutomationRequest();
         plan.setActions(List.of(good, bad));
-        when(planningService.generatePlan(anyString(), anyString())).thenReturn(plan);
+        when(planningService.generatePlan(anyString(), anyString()))
+                .thenReturn(new PlanningResult(plan, TokenUsage.NONE));
 
         assertThat(jobService.generatePlan(new PlanRequest(session.getId(), "tidy it")).steps())
                 .hasSize(2);
+    }
+
+    @Test
+    @DisplayName("what the planning call cost survives the wait for the user to approve the plan")
+    void planningCostReachesTheJobRecord() throws Exception {
+        DocumentSession session = openSession();
+        // The awkward part of the audit: the spend happens in generatePlan, and the record it
+        // belongs to is only created once the user presses Apply.
+        when(planningService.generatePlan(anyString(), anyString()))
+                .thenReturn(planWith("ADD_SHEET", new TokenUsage(1200L, 300L, 1500L)));
+
+        Long jobId = runImprove(session, "add a summary sheet");
+
+        JobRecord job = jobs.get(jobId);
+        assertThat(job.getPromptTokens()).isEqualTo(1200L);
+        assertThat(job.getCompletionTokens()).isEqualTo(300L);
+        assertThat(job.getTotalTokens()).isEqualTo(1500L);
+    }
+
+    @Test
+    @DisplayName("a repair attempt adds its own spend to the plan's, rather than replacing it")
+    void repairCostIsAddedToTheRun() throws Exception {
+        DocumentSession session = openSession();
+        when(planningService.generatePlan(anyString(), anyString()))
+                .thenReturn(planWith("ADD_SHEET", new TokenUsage(1000L, 200L, 1200L)));
+        when(planningService.fixPlan(anyString(), anyString(), anyString()))
+                .thenReturn(planWith("ADD_SHEET", new TokenUsage(400L, 100L, 500L)));
+        failFirstAttempt.set(true);
+
+        Long jobId = runImprove(session, "add a summary sheet");
+
+        // The second call happens during apply, long after the plan was priced — a run that
+        // reported only the cheaper half would understate every repaired run in the audit.
+        JobRecord job = jobs.get(jobId);
+        assertThat(job.getPromptTokens()).isEqualTo(1400L);
+        assertThat(job.getCompletionTokens()).isEqualTo(300L);
+        assertThat(job.getTotalTokens()).isEqualTo(1700L);
+    }
+
+    @Test
+    @DisplayName("a provider that reports nothing leaves the columns empty, not zeroed")
+    void silentProviderLeavesTheColumnsNull() throws Exception {
+        DocumentSession session = openSession();
+        when(planningService.generatePlan(anyString(), anyString()))
+                .thenReturn(planWith("ADD_SHEET", TokenUsage.NONE));
+
+        Long jobId = runImprove(session, "add a summary sheet");
+
+        JobRecord job = jobs.get(jobId);
+        assertThat(job.getPromptTokens()).isNull();
+        assertThat(job.getCompletionTokens()).isNull();
+        assertThat(job.getTotalTokens()).isNull();
     }
 
     @Test
@@ -274,13 +336,17 @@ class JobServiceSessionTest {
         }
     }
 
-    private AutomationRequest planWith(String type) {
+    private PlanningResult planWith(String type) {
+        return planWith(type, TokenUsage.NONE);
+    }
+
+    private PlanningResult planWith(String type, TokenUsage usage) {
         ActionStep step = new ActionStep();
         step.setType(type);
         step.getProperties().put("sheetName", "Summary");
         AutomationRequest plan = new AutomationRequest();
         plan.setActions(List.of(step));
-        return plan;
+        return new PlanningResult(plan, usage);
     }
 
     private MockMultipartFile upload() throws Exception {

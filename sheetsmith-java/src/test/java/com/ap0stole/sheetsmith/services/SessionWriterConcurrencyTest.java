@@ -11,6 +11,8 @@ import com.ap0stole.sheetsmith.domain.entity.JobRecord;
 import com.ap0stole.sheetsmith.domain.enums.JobStatus;
 import com.ap0stole.sheetsmith.llm.AgentDecision;
 import com.ap0stole.sheetsmith.llm.AiPlanningService;
+import com.ap0stole.sheetsmith.llm.PlanningResult;
+import com.ap0stole.sheetsmith.llm.TokenUsage;
 import com.ap0stole.sheetsmith.llm.ChatLlmService;
 import com.ap0stole.sheetsmith.repository.ActionResultRepository;
 import com.ap0stole.sheetsmith.repository.ChatMessageRepository;
@@ -212,13 +214,13 @@ class SessionWriterConcurrencyTest {
         return sessions.get(sessionService.create(upload()).sessionId());
     }
 
-    private AutomationRequest planWithAddSheet() {
+    private PlanningResult planWithAddSheet() {
         ActionStep step = new ActionStep();
         step.setType("ADD_SHEET");
         step.getProperties().put("sheetName", "Summary");
         AutomationRequest plan = new AutomationRequest();
         plan.setActions(List.of(step));
-        return plan;
+        return new PlanningResult(plan, TokenUsage.NONE);
     }
 
     private MockMultipartFile upload() throws Exception {

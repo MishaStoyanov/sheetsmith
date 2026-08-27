@@ -19,9 +19,14 @@ public class JobHistoryDto {
     private final List<AppliedActionDto> appliedActions; // empty in list view, populated in detail view
     private final String errorMessage;
 
+    /** Null rather than zero when the provider reported no usage — see {@link JobRecord}. */
+    private final Long promptTokens;
+    private final Long completionTokens;
+    private final Long totalTokens;
+
     private JobHistoryDto(Long id, LocalDateTime createdAt, JobStatus status,
                           String instruction, String inputFilename, List<AppliedActionDto> appliedActions,
-                          String errorMessage) {
+                          String errorMessage, JobRecord job) {
         this.id = id;
         this.createdAt = createdAt;
         this.status = status;
@@ -29,12 +34,15 @@ public class JobHistoryDto {
         this.inputFilename = inputFilename;
         this.appliedActions = appliedActions;
         this.errorMessage = errorMessage;
+        this.promptTokens = job.getPromptTokens();
+        this.completionTokens = job.getCompletionTokens();
+        this.totalTokens = job.getTotalTokens();
     }
 
     // For paginated list — does NOT access lazy actions collection
     public static JobHistoryDto from(JobRecord job) {
         return new JobHistoryDto(job.getId(), job.getCreatedAt(), job.getStatus(),
-                truncate(job.getInstruction()), job.getInputFilename(), List.of(), job.getErrorMessage());
+                truncate(job.getInstruction()), job.getInputFilename(), List.of(), job.getErrorMessage(), job);
     }
 
     // For single job detail — accesses actions (requires open session)
@@ -43,7 +51,7 @@ public class JobHistoryDto {
                 .map(AppliedActionDto::from)
                 .collect(Collectors.toList());
         return new JobHistoryDto(job.getId(), job.getCreatedAt(), job.getStatus(),
-                truncate(job.getInstruction()), job.getInputFilename(), actions, job.getErrorMessage());
+                truncate(job.getInstruction()), job.getInputFilename(), actions, job.getErrorMessage(), job);
     }
 
     private static String truncate(String s) {
