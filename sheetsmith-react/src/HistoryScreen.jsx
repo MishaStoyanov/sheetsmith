@@ -41,6 +41,7 @@ export default function HistoryScreen({ authEnabled }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [people, setPeople] = useState([]);
+  const [peopleError, setPeopleError] = useState(null);
 
   const [openRun, setOpenRun] = useState(null);
   const [detail, setDetail] = useState(null);
@@ -94,7 +95,12 @@ export default function HistoryScreen({ authEnabled }) {
   useEffect(() => {
     // The owner filter only exists where runs can have owners.
     if (!authEnabled) return;
-    searchUsers(null).then(page => setPeople(page.content)).catch(() => {});
+    // The failure used to be swallowed, which left an empty "started by" filter and no way to tell
+    // that from an instance where nobody has run anything. It is still not worth a banner over the
+    // whole page — the rest of the history works — so it is said where the missing control is.
+    searchUsers(null)
+      .then(page => { setPeople(page.content); setPeopleError(null); })
+      .catch(e => setPeopleError(e.message));
   }, [authEnabled]);
 
   const expand = async (run) => {
@@ -215,12 +221,22 @@ export default function HistoryScreen({ authEnabled }) {
         {/* Only where runs can have an owner at all. */}
         {authEnabled && (
           <>
-            <MultiSelect
-              label="Started by"
-              options={people.map(p => ({ value: p.id, label: p.name }))}
-              value={filters.owners}
-              onChange={owners => set({ owners })}
-            />
+            <div>
+              <MultiSelect
+                label="Started by"
+                options={people.map(p => ({ value: p.id, label: p.name }))}
+                value={filters.owners}
+                onChange={owners => set({ owners })}
+              />
+              {/* Said next to the control it belongs to rather than over the whole page: the rest
+                  of the history is fine, and an empty list that never explains itself is
+                  indistinguishable from an instance where nobody has run anything. */}
+              {peopleError && (
+                <span style={{ display: 'block', fontSize: 11.5, color: 'var(--del)', marginTop: 4, maxWidth: 200 }}>
+                  Could not load the list of people — {peopleError}
+                </span>
+              )}
+            </div>
             {/* Runs made before accounts existed have no id to be named by. */}
             <Checkbox
               checked={filters.includeUnowned}

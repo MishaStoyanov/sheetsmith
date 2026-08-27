@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import Button from './components/Button.jsx';
 import SheetGrid from './SheetGrid.jsx';
 import SuggestionsPanel from './SuggestionsPanel.jsx';
-import ChatPanel, { useChatPanelLayout } from './ChatPanel.jsx';
+import ChatPanel from './ChatPanel.jsx';
+import { useChatPanelLayout } from './chatPanelLayout.js';
 import PromptRecall from './components/PromptRecall.jsx';
 import { generatePlan, applyPlan, describeSteps, getFrequentPrompts, getJobStatus, suggestPlan } from './api.js';
 import { createChatSession, deleteChatSession, getChatFile, getChatSession, revertChatSession, saveChatEdits } from './chatApi.js';
@@ -270,6 +271,11 @@ export default function ImproveScreen({ theme, capabilities, providerMode, onOpe
     }, 3000);
 
     return () => clearInterval(pollRef.current);
+    // refreshFromSession is deliberately absent from the dependencies. It is rebuilt on every
+    // render, so listing it would tear this three-second poll down and start it again each time
+    // anything else on the screen changed — every keystroke in the prompt field included. What the
+    // poll's identity actually belongs to is the job it is watching, which is what these two say.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId, stage]);
 
   // ── Reset ─────────────────────────────────────────────────────────────────

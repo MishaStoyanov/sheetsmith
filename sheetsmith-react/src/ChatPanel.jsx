@@ -1,4 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { CHAT_WIDTH } from './chatPanelLayout.js';
+import PromptRecall from './components/PromptRecall.jsx';
+import { getFrequentPrompts } from './api.js';
 import {
   getChatMessages,
   revertChatSession,
@@ -9,37 +12,7 @@ import {
 
 const mono = "'JetBrains Mono', monospace";
 
-export const CHAT_WIDTH = 380;
-export const CHAT_BREAKPOINT = 1100;
-const OPEN_KEY = 'ss-chat-open';
-
 const PRIVACY_LINE = 'The model never sees your sheet — only the result of each step it runs.';
-
-/**
- * Owns the collapsed/expanded state (persisted like the theme) and the narrow-screen
- * breakpoint, so App can shrink the page by `pageOffset` while the panel is docked.
- */
-export function useChatPanelLayout() {
-  const [open, setOpenState] = useState(() => {
-    const stored = localStorage.getItem(OPEN_KEY);
-    if (stored === null) return window.innerWidth >= CHAT_BREAKPOINT;
-    return stored === 'true';
-  });
-  const [narrow, setNarrow] = useState(() => window.innerWidth < CHAT_BREAKPOINT);
-
-  useEffect(() => {
-    const onResize = () => setNarrow(window.innerWidth < CHAT_BREAKPOINT);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-
-  const setOpen = useCallback((next) => {
-    setOpenState(next);
-    localStorage.setItem(OPEN_KEY, String(next));
-  }, []);
-
-  return { open, setOpen, narrow, pageOffset: open && !narrow ? CHAT_WIDTH : 0 };
-}
 
 // ── Panel ───────────────────────────────────────────────────────────────────
 
@@ -56,6 +29,7 @@ export default function ChatPanel({
 }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
+  const [pastPrompts, setPastPrompts] = useState([]);
   const [sending, setSending] = useState(false);
   const [liveSteps, setLiveSteps] = useState([]);
   const [turnError, setTurnError] = useState(null);
@@ -81,6 +55,18 @@ export default function ChatPanel({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
   }, [messages.length, sending, liveSteps.length]);
+
+  // Re-read after each turn, so a phrasing that has just become a habit turns up straight away.
+  // Swallowed on failure like the improve side: this is a convenience, and an error over it would
+  // be louder than the feature.
+  useEffect(() => {
+    if (!sessionId) return undefined;
+    let live = true;
+    getFrequentPrompts('CHAT', 4)
+      .then(list => { if (live) setPastPrompts(list); })
+      .catch(() => { if (live) setPastPrompts([]); });
+    return () => { live = false; };
+  }, [sessionId, messages.length]);
 
   const handleSend = async () => {
     const text = input.trim();
@@ -193,6 +179,15 @@ export default function ChatPanel({
 
           <div ref={bottomRef} />
         </div>
+
+        {/* The same phrasings the improve field offers, asked of the chat side of the record.
+            Only above an empty composer: once somebody is typing, a row of alternatives is
+            something to dismiss rather than something to use. */}
+        {sessionId && !input && pastPrompts.length > 0 && (
+          <div style={{ padding: '0 14px 8px' }}>
+            <PromptRecall prompts={pastPrompts} onPick={setInput} disabled={composerDisabled} />
+          </div>
+        )}
 
         <Composer
           value={input}
