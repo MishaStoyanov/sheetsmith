@@ -96,6 +96,17 @@ export async function deleteJob(jobId) {
   if (!res.ok) throw new Error(await readErrorMessage(res, `Could not delete run ${jobId}`));
 }
 
+/** Everything the analytics screen shows, in one answer — see the note on the endpoint. */
+export async function getAnalyticsSummary(query) {
+  const res = await authFetch(`${BASE}/api/analytics/summary`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(query),
+  });
+  if (!res.ok) throw new Error(await readErrorMessage(res, `Analytics failed: ${res.status}`));
+  return res.json();
+}
+
 export async function getJobStatus(jobId) {
   const res = await authFetch(`${BASE}/api/history/${jobId}`);
   if (!res.ok) throw new Error(await readErrorMessage(res, `Status check failed: ${res.status}`));
