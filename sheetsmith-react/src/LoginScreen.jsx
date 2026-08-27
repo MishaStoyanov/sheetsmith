@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { themes } from './theme.js';
 import Button from './components/Button.jsx';
+import Checkbox from './components/Checkbox.jsx';
 import Field from './components/Field.jsx';
 import { login } from './authApi.js';
 
@@ -67,10 +68,12 @@ export default function LoginScreen({ theme, onSignedIn }) {
           monospace
         />
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-dim)', marginBottom: 18, cursor: 'pointer' }}>
-          <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} />
-          Remember me for 30 days
-        </label>
+        <Checkbox
+          checked={rememberMe}
+          onChange={setRememberMe}
+          label="Remember me for 30 days"
+          style={{ marginBottom: 18 }}
+        />
 
         {error && (
           <div style={{

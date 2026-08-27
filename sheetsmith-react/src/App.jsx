@@ -90,7 +90,10 @@ export default function App() {
   };
 
   return (
-    <div style={{ ...themes[theme], minHeight: '100vh', boxSizing: 'border-box' }}>
+    // The font and the text colour belong on the themed root, not only inside AppShell:
+    // the settings panel is a sibling of the shell, and without them here it fell back to
+    // the browser's default face and black text on the dark theme.
+    <div style={{ ...themes[theme], height: '100vh', boxSizing: 'border-box', fontFamily: "'Instrument Sans', system-ui, sans-serif", color: 'var(--text)' }}>
       <AppShell
         theme={theme}
         onToggleTheme={() => setThemeAndSave(theme === 'light' ? 'dark' : 'light')}

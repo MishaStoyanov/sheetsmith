@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import Checkbox from './Checkbox.jsx';
 
 const mono = "'JetBrains Mono', monospace";
 
@@ -66,13 +67,13 @@ export default function MultiSelect({ label, options, value = [], onChange, plac
             <div style={{ padding: '10px 12px', fontSize: 12.5, color: 'var(--text-faint)' }}>Nothing to choose</div>
           )}
           {options.map(option => (
-            <label
+            <Checkbox
               key={option.value}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}
-            >
-              <input type="checkbox" checked={value.includes(option.value)} onChange={() => toggle(option.value)} />
-              <span style={{ fontFamily: option.mono ? mono : 'inherit' }}>{option.label}</span>
-            </label>
+              checked={value.includes(option.value)}
+              onChange={() => toggle(option.value)}
+              label={<span style={{ fontFamily: option.mono ? mono : 'inherit' }}>{option.label}</span>}
+              style={{ display: 'flex', padding: '7px 10px', borderRadius: 6, whiteSpace: 'nowrap' }}
+            />
           ))}
         </div>
       )}

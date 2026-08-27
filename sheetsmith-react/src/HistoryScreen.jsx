@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Badge from './components/Badge.jsx';
 import Button from './components/Button.jsx';
+import Checkbox from './components/Checkbox.jsx';
 import DataTable from './components/DataTable.jsx';
 import DateRange from './components/DateRange.jsx';
 import FilterBar from './components/FilterBar.jsx';
@@ -220,15 +221,13 @@ export default function HistoryScreen({ authEnabled }) {
               value={filters.owners}
               onChange={owners => set({ owners })}
             />
-            <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'var(--text-dim)', height: 34, cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={filters.includeUnowned}
-                onChange={e => set({ includeUnowned: e.target.checked })}
-              />
-              {/* Runs made before accounts existed have no id to be named by. */}
-              Include runs with no owner
-            </label>
+            {/* Runs made before accounts existed have no id to be named by. */}
+            <Checkbox
+              checked={filters.includeUnowned}
+              onChange={includeUnowned => set({ includeUnowned })}
+              label="Include runs with no owner"
+              style={{ height: 34 }}
+            />
           </>
         )}
       </FilterBar>

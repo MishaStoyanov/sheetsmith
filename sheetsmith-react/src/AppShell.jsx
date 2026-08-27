@@ -1,11 +1,17 @@
 import { useState } from 'react';
 import Button from './components/Button.jsx';
-
-const mono = "'JetBrains Mono', monospace";
+import DefaultPasswordNotice from './components/DefaultPasswordNotice.jsx';
 
 /**
- * Everything around the page: the header that was already there, and a left column that collapses
- * to icons.
+ * Everything around the page: the header, and a left column that collapses to icons.
+ *
+ * The layout is a fixed-height column rather than a document that scrolls as a whole. That is not a
+ * preference: the nav used to be as tall as the page, so on a long screen the collapse control sat
+ * below the fold and had to be scrolled to — a control belonging to the frame, hidden by the
+ * contents. Now the frame stays put and only the content pane scrolls.
+ *
+ * Hover and active states live in a `<style>` block rather than in inline props, because `:hover`
+ * has no inline equivalent and tracking it in React state would mean a re-render per pointer move.
  *
  * The tabs are built from what the instance actually has rather than hidden with CSS — a menu entry
  * that leads somewhere refusing to answer is worse than no entry at all.
@@ -33,13 +39,57 @@ export default function AppShell({
     });
   };
 
-  const width = expanded ? 188 : 56;
-
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--canvas)', fontFamily: "'Instrument Sans', system-ui, sans-serif", color: 'var(--text)', boxSizing: 'border-box' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--canvas)', color: 'var(--text)', boxSizing: 'border-box' }}>
+      <style>{`
+        .ss-nav-item {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          height: 36px;
+          padding: 0 10px;
+          border: none;
+          border-radius: 9px;
+          background: transparent;
+          color: var(--text-dim);
+          font-family: inherit;
+          font-size: 13.5px;
+          font-weight: 500;
+          text-align: left;
+          cursor: pointer;
+          overflow: hidden;
+          white-space: nowrap;
+          transition: background 0.13s ease, color 0.13s ease;
+        }
+        .ss-nav-item:hover { background: var(--surface-2); color: var(--text); }
+        .ss-nav-item[data-active="true"] {
+          background: var(--accent-soft);
+          color: var(--accent-text);
+          font-weight: 600;
+        }
+        /* A short bar rather than a full-height edge: it marks the row without boxing it in. */
+        .ss-nav-item[data-active="true"]::before {
+          content: "";
+          position: absolute;
+          left: 0;
+          top: 8px;
+          bottom: 8px;
+          width: 2.5px;
+          border-radius: 0 2px 2px 0;
+          background: var(--accent);
+        }
+        .ss-nav-icon {
+          width: 18px;
+          flex-shrink: 0;
+          text-align: center;
+          font-size: 14px;
+          line-height: 1;
+        }
+      `}</style>
 
       {/* Header */}
-      <div style={{ height: 54, display: 'flex', alignItems: 'center', gap: 12, padding: '0 28px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', position: 'relative', zIndex: 2 }}>
+      <div style={{ flexShrink: 0, height: 54, display: 'flex', alignItems: 'center', gap: 12, padding: '0 28px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', zIndex: 2 }}>
         <div style={{ width: 22, height: 22, borderRadius: 6, background: 'var(--accent)', flexShrink: 0 }} />
         <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em' }}>SheetSmith</span>
         <div style={{ flex: 1 }} />
@@ -59,60 +109,67 @@ export default function AppShell({
       {/* Shown to the person who has signed in, never to a stranger through /api/capabilities:
           "this instance still has its default password" is not a sentence to hand an anonymous
           caller. */}
-      {user?.mustChangePassword && (
-        <div style={{ padding: '10px 28px', background: 'var(--warn-bg)', color: 'var(--warn)', fontSize: 13, borderBottom: '1px solid var(--border)' }}>
-          This account still has its default password. Change it before anyone else uses this instance.
-        </div>
-      )}
+      <div style={{ flexShrink: 0 }}>
+        <DefaultPasswordNotice user={user} onOpenSettings={onOpenSettings} />
+      </div>
 
-      <div style={{ display: 'flex', alignItems: 'stretch' }}>
+      {/* min-height: 0 is what lets the panes below scroll instead of stretching the row. */}
+      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
 
-        {/* Left menu */}
-        <nav style={{ width, flexShrink: 0, borderRight: '1px solid var(--border)', background: 'var(--surface)', transition: 'width 0.15s ease', display: 'flex', flexDirection: 'column', padding: '10px 8px', gap: 2, position: 'sticky', top: 0, alignSelf: 'flex-start', minHeight: 'calc(100vh - 54px)' }}>
-          {tabs.map(tab => {
-            const active = tab.route === route;
-            return (
-              <button
-                key={tab.route}
-                onClick={() => onNavigate(tab.route)}
-                title={expanded ? undefined : tab.label}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10, height: 36, padding: '0 10px',
-                  borderRadius: 8, border: 'none', cursor: 'pointer', textAlign: 'left',
-                  background: active ? 'var(--accent-soft)' : 'transparent',
-                  color: active ? 'var(--accent-text)' : 'var(--text-dim)',
-                  fontFamily: 'inherit', fontSize: 13.5, fontWeight: active ? 600 : 500,
-                  overflow: 'hidden', whiteSpace: 'nowrap',
-                }}
-              >
-                <span style={{ fontSize: 15, width: 18, flexShrink: 0, textAlign: 'center' }}>{tab.icon}</span>
-                {expanded && tab.label}
-              </button>
-            );
-          })}
+        <nav style={{
+          width: expanded ? 190 : 58,
+          flexShrink: 0,
+          borderRight: '1px solid var(--border)',
+          background: 'var(--surface)',
+          transition: 'width 0.16s ease',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '12px 9px',
+          gap: 3,
+          overflow: 'hidden',
+        }}>
+          {tabs.map(tab => (
+            <button
+              key={tab.route}
+              className="ss-nav-item"
+              data-active={tab.route === route}
+              onClick={() => onNavigate(tab.route)}
+              title={expanded ? undefined : tab.label}
+            >
+              <span className="ss-nav-icon">{tab.icon}</span>
+              {expanded && tab.label}
+            </button>
+          ))}
 
           <div style={{ flex: 1 }} />
 
+          <div style={{ height: 1, background: 'var(--border)', margin: '6px 2px 7px' }} />
+
           <button
+            className="ss-nav-item"
             onClick={onOpenSettings}
             title={expanded ? undefined : 'Settings'}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, height: 36, padding: '0 10px', borderRadius: 8, border: 'none', background: 'transparent', color: 'var(--text-dim)', fontFamily: 'inherit', fontSize: 13.5, fontWeight: 500, cursor: 'pointer', textAlign: 'left', overflow: 'hidden', whiteSpace: 'nowrap' }}
           >
-            <span style={{ fontSize: 15, width: 18, flexShrink: 0, textAlign: 'center' }}>⚙</span>
+            <span className="ss-nav-icon">⚙</span>
             {expanded && 'Settings'}
           </button>
 
+          {/* Always in view, because the frame's own control must not be hidden by the contents. */}
           <button
+            className="ss-nav-item"
             onClick={toggleNav}
-            title={expanded ? 'Collapse' : 'Expand'}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, height: 32, padding: '0 10px', borderRadius: 8, border: 'none', background: 'transparent', color: 'var(--text-faint)', fontFamily: mono, fontSize: 12, cursor: 'pointer', textAlign: 'left', overflow: 'hidden', whiteSpace: 'nowrap' }}
+            title={expanded ? 'Collapse the menu' : 'Expand the menu'}
+            style={{ height: 32, color: 'var(--text-faint)', fontSize: 12.5 }}
           >
-            <span style={{ fontSize: 13, width: 18, flexShrink: 0, textAlign: 'center' }}>{expanded ? '‹' : '›'}</span>
+            <span className="ss-nav-icon" style={{ fontSize: 13 }}>{expanded ? '⟨' : '⟩'}</span>
             {expanded && 'Collapse'}
           </button>
         </nav>
 
-        <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
+        {/* The content pane is what scrolls now, so the frame around it stays where it is. */}
+        <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+          {children}
+        </div>
       </div>
     </div>
   );
