@@ -1,0 +1,87 @@
+name: CI
+
+# Every push and every pull request. Until now the only thing running these tests was whoever
+# happened to remember, which for a project taking outside contributions is the same as nothing:
+# the first patch that breaks something would be found by a user rather than by a check.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# A second push to the same branch makes the first run pointless. Cancel it rather than paying for
+# it — except on the default branch, where every commit's result is worth keeping.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+jobs:
+
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    # The suite starts real PostgreSQL containers; on a cold cache that is most of the time.
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      # Testcontainers needs a Docker daemon, and ubuntu-latest has one. That is the half of this
+      # suite worth paying for: the tests that talk to real PostgreSQL are the ones that caught a
+      # lower(bytea) failure and a lazy-loading bug that mocked repositories had happily passed.
+      - name: Check Docker is available to Testcontainers
+        run: docker version --format '{{.Server.Version}}'
+
+      - name: Test
+        working-directory: sheetsmith-java
+        run: mvn -B -ntp test
+
+      # Uploaded on failure only: a green run's reports are noise, a red one's are the first thing
+      # anybody opens.
+      - name: Upload surefire reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: sheetsmith-java/target/surefire-reports/
+          retention-days: 7
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: sheetsmith-react/package-lock.json
+
+      - name: Install
+        working-directory: sheetsmith-react
+        run: npm ci
+
+      # Separate steps rather than one `npm run lint && npm test`, so a red build says which of the
+      # two it was without anybody opening the log.
+      - name: Lint
+        working-directory: sheetsmith-react
+        run: npm run lint
+
+      - name: Test
+        working-directory: sheetsmith-react
+        run: npx vitest run
+
+      # The UI has shipped broken before by building fine locally and not in a clean checkout.
+      - name: Build
+        working-directory: sheetsmith-react
+        run: npm run build
