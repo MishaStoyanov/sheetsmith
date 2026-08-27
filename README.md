@@ -70,7 +70,7 @@ exactly what is removed.
 
 | Directory | What |
 |---|---|
-| `sheetsmith-java/` | Spring Boot 3 / Java 21 backend and the action engine. Start here — its [README](sheetsmith-java/README.md) covers configuration, the API and every action. |
+| `sheetsmith-java/` | Spring Boot 3 / Java 25 backend and the action engine. Start here — its [README](sheetsmith-java/README.md) covers configuration, the API and every action. |
 | `sheetsmith-react/` | The Vite + React UI. Built into the backend jar; served on the same origin as the API. |
 
 The engine has **41 actions** — formatting, number formats, borders, alignment, charts, formulas,
@@ -80,7 +80,7 @@ bulk column rewrites. Both halves are tested: the backend with JUnit, the UI wit
 
 ## Running without Docker
 
-Java 21, Maven 3.9+, PostgreSQL 14+, and an Ollama you already run:
+Java 25, Maven 3.9+, PostgreSQL 14+, and an Ollama you already run:
 
 ```bash
 cd sheetsmith-java && mvn spring-boot:run      # API on :8080

@@ -86,7 +86,7 @@ Only one provider profile should be active at a time.
 
 ## Manual Setup (no Docker)
 
-**Prerequisites:** Java 21, Maven 3.9+, PostgreSQL 14+, Ollama running locally
+**Prerequisites:** Java 25, Maven 3.9+, PostgreSQL 14+, Ollama running locally
 
 ```bash
 # 1. Pull a model in Ollama

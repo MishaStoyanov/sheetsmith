@@ -4,7 +4,7 @@ Issues and pull requests are welcome. This page is what the repository assumes y
 
 ## Running it
 
-You need Java 21, Maven 3.9+, Node 20+, PostgreSQL 14+, and something for the model to talk to —
+You need Java 25, Maven 3.9+, Node 20+, PostgreSQL 14+, and something for the model to talk to —
 a local [Ollama](https://ollama.com) by default.
 
 ```bash

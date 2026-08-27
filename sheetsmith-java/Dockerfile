@@ -15,7 +15,7 @@ COPY sheetsmith-react/ ./
 RUN npm run build
 
 # Stage 2: build fat JAR, with the UI baked in as Spring Boot static resources
-FROM maven:3.9-eclipse-temurin-21 AS build
+FROM maven:3.9-eclipse-temurin-25 AS build
 WORKDIR /build
 COPY sheetsmith-java/pom.xml .
 RUN mvn dependency:resolve -q -ntp 2>/dev/null; true
@@ -27,7 +27,7 @@ COPY --from=ui /repo/sheetsmith-java/src/main/resources/static ./src/main/resour
 RUN mvn package -DskipTests -q -ntp
 
 # Stage 3: minimal runtime
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 
 RUN addgroup -S xlsxai && adduser -S xlsxai -G xlsxai
