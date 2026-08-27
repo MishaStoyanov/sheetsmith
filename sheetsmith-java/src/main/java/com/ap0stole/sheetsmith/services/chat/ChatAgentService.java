@@ -61,6 +61,7 @@ public class ChatAgentService {
     private final ObjectMapper objectMapper;
     private final SessionLockRegistry sessionLocks;
     private final UsageRecorder usageRecorder;
+    private final com.ap0stole.sheetsmith.services.BudgetService budgets;
 
     /** The lock is shared with the improve job, which also appends revisions to this session. */
     public ChatTurnDto send(String sessionId, String text) {
@@ -69,6 +70,9 @@ public class ChatAgentService {
 
     /** Same turn, narrated: the listener hears each tool call as it lands. Used by the SSE endpoint. */
     public ChatTurnDto send(String sessionId, String text, TurnListener listener) {
+        // Checked before the session lock is taken. A refusal that first queued behind whoever else
+        // is editing the document would make being over budget look like the application hanging.
+        budgets.requireHeadroom();
         return sessionLocks.withSession(sessionId, () -> runTurn(sessionId, text, false, listener));
     }
 
@@ -77,6 +81,9 @@ public class ChatAgentService {
      * the model decides — the suggestion pass inspects the data before proposing anything.
      */
     public ChatTurnDto inspect(String sessionId, String text) {
+        // A look costs a call like any other. "What would you improve?" spends real tokens, and a
+        // budget that only counted the edits would be a budget with a hole in it.
+        budgets.requireHeadroom();
         return sessionLocks.withSession(sessionId, () -> runTurn(sessionId, text, true, TurnListener.NOOP));
     }
 

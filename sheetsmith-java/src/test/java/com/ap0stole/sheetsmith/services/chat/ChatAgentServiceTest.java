@@ -82,7 +82,8 @@ class ChatAgentServiceTest {
         when(chatLlmService.renderResult(any())).thenReturn("{\"value\":1240}");
 
         agent = new ChatAgentService(sessionService, toolRegistry, chatLlmService, chatConfig,
-                errorScanner, new ObjectMapper(), new SessionLockRegistry(), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class));
+                errorScanner, new ObjectMapper(), new SessionLockRegistry(), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class),
+                mock(com.ap0stole.sheetsmith.services.BudgetService.class));
     }
 
     @Test

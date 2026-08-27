@@ -25,7 +25,11 @@ public enum ErrorCode {
     PRICE_IN_USE(409),
     // 502, like the Ollama one above: the failure is somewhere else, and this instance is only
     // reporting it. A retry may well work, which a 500 would not suggest.
-    CATALOGUE_UNREACHABLE(502);
+    CATALOGUE_UNREACHABLE(502),
+    // 402 Payment Required, which is exactly what this is: the request is well formed, the caller
+    // is who they say they are, and the refusal is about money. A 403 would say "you may never",
+    // where this one lifts on its own at the start of next month.
+    BUDGET_EXHAUSTED(402);
 
     private final int httpStatus;
 

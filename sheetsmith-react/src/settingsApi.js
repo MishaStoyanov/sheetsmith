@@ -68,6 +68,20 @@ export async function createUser(name, password) {
 }
 
 /**
+ * Sets or clears a monthly spend limit. Null is a real value — "no limit" — which is why this is a
+ * PUT of its own rather than a field on the patch, where null already means "leave this alone".
+ */
+export async function setUserBudget(id, monthlyBudget) {
+  const res = await authFetch(`${BASE}/api/users/${id}/budget`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ monthlyBudget }),
+  });
+  if (!res.ok) throw new Error(await userError(res, 'Could not set that spend limit'));
+  return res.json();
+}
+
+/**
  * Changes what somebody may do.
  *
  * Its own call rather than a field on the patch, matching the endpoint: a role arriving as one

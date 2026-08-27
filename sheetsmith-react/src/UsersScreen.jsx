@@ -5,7 +5,7 @@ import DataTable from './components/DataTable.jsx';
 import Field from './components/Field.jsx';
 import Modal from './components/Modal.jsx';
 import Pagination from './components/Pagination.jsx';
-import { changeUserRole, createUser, deleteUser, searchUsers, updateUser } from './settingsApi.js';
+import { changeUserRole, createUser, deleteUser, searchUsers, setUserBudget, updateUser } from './settingsApi.js';
 
 const mono = "'JetBrains Mono', monospace";
 
@@ -36,6 +36,7 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
   const [repassword, setRepassword] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [roleChange, setRoleChange] = useState(null);
+  const [budgetFor, setBudgetFor] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -87,6 +88,26 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
       ),
     },
     {
+      key: 'budget',
+      header: 'This month',
+      align: 'right',
+      render: user => {
+        if (user.monthlyBudget == null) {
+          return <span style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>no limit</span>;
+        }
+        // Spent and allowed together. A ceiling on its own is a number nobody can act on, and the
+        // question anybody actually has is how close somebody is to it.
+        const spent = Number(user.spentThisMonth ?? 0);
+        const limit = Number(user.monthlyBudget);
+        const spentUp = limit > 0 && spent >= limit;
+        return (
+          <span style={{ fontFamily: mono, fontSize: 12, whiteSpace: 'nowrap', color: spentUp ? 'var(--del)' : 'var(--text-dim)' }}>
+            ${spent.toFixed(2)} / ${limit.toFixed(2)}
+          </span>
+        );
+      },
+    },
+    {
       key: 'actions',
       header: '',
       align: 'right',
@@ -107,6 +128,12 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
               Remove admin
             </Button>
           )}
+          {/* Beside the other things about this account rather than on a screen of its own: a
+              spend limit is a property of a person, like their name. Not on your own row, for the
+              same reason as the role — a limit you can lift is not a limit. */}
+          {user.id !== currentUser?.id && (
+            <Button size="sm" variant="ghost" onClick={() => setBudgetFor(user)}>Limit</Button>
+          )}
           <Button size="sm" variant="ghost" onClick={() => setRenaming({ id: user.id, name: user.name })}>
             Rename
           </Button>
@@ -126,7 +153,7 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
   ];
 
   return (
-    <div style={{ maxWidth: 1040, margin: '0 auto', padding: '40px 28px 100px' }}>
+    <div style={{ maxWidth: 1180, margin: '0 auto', padding: '40px 28px 100px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 6 }}>
         <div style={{ flex: 1 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em', margin: '0 0 6px' }}>Users</h1>
@@ -185,6 +212,13 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
         onClose={() => setRepassword(null)}
         onSubmit={(password, currentPassword) =>
           after(() => updateUser(repassword.id, { password, currentPassword }))}
+      />
+
+      <BudgetDialog
+        key={budgetFor?.id ?? 'closed'}
+        target={budgetFor}
+        onClose={() => setBudgetFor(null)}
+        onSubmit={value => after(() => setUserBudget(budgetFor.id, value))}
       />
 
       <Modal
@@ -387,6 +421,68 @@ function PasswordDialog({ target, isSelf, onClose, onSubmit }) {
         {isSelf
           ? 'You will be signed out everywhere, including here, and can sign back in with the new password.'
           : 'They will be signed out everywhere. Changing a password is what you do when the old one may be known to somebody else, so leaving their sessions running would defeat it.'}
+      </p>
+    </Modal>
+  );
+}
+
+/**
+ * A person's monthly ceiling, or none.
+ *
+ * Two things are said here rather than assumed. Empty means no limit, because a blank field is
+ * otherwise read as zero — which would mean the opposite of what somebody clearing it intended.
+ * And the limit only sees what has a price: a local model costs nothing and an unpriced one costs
+ * an unknown amount, so neither counts towards it. A limit that quietly missed half the spending
+ * would be worse than none, so the dialog says what it covers.
+ */
+function BudgetDialog({ target, onClose, onSubmit }) {
+  const [value, setValue] = useState(target?.monthlyBudget == null ? '' : String(target.monthlyBudget));
+  const [busy, setBusy] = useState(false);
+
+  const trimmed = value.trim();
+  const amount = trimmed === '' ? null : Number(trimmed);
+  const wellFormed = amount === null || (Number.isFinite(amount) && amount >= 0);
+
+  const submit = async () => {
+    setBusy(true);
+    const ok = await onSubmit(amount);
+    setBusy(false);
+    if (ok) onClose();
+  };
+
+  return (
+    <Modal
+      open={!!target}
+      title={`Spend limit for ${target?.name}`}
+      onClose={onClose}
+      width={440}
+      footer={
+        <>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button variant="primary" disabled={busy || !wellFormed} onClick={submit}>
+            {busy ? 'Saving…' : amount === null ? 'Remove the limit' : 'Save limit'}
+          </Button>
+        </>
+      }
+    >
+      <Field
+        label="US dollars per calendar month"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        placeholder="Leave empty for no limit"
+        inputMode="decimal"
+        monospace
+        hint={
+          target?.monthlyBudget != null
+            ? `Spent so far this month: $${Number(target.spentThisMonth ?? 0).toFixed(2)}`
+            : 'They have no limit at the moment.'
+        }
+      />
+
+      <p style={{ fontSize: 12.5, color: 'var(--text-faint)', lineHeight: 1.55, margin: '2px 0 0' }}>
+        Counted from the price list, so it covers cloud models that have a price and nothing else —
+        a model you run locally costs nothing, and one nobody has priced costs an unknown amount.
+        The month is the calendar month, and a run already under way is always allowed to finish.
       </p>
     </Modal>
   );

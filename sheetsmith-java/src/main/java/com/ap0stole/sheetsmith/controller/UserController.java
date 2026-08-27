@@ -55,6 +55,18 @@ public class UserController {
     }
 
     /**
+     * Sets or clears a monthly spend limit.
+     * <p>
+     * Its own endpoint for the same reason the role has one: null means "no limit" here, and on a
+     * PATCH null already means "leave this alone". One of those two meanings has to move.
+     */
+    @PutMapping("/{id}/budget")
+    public UserDto setBudget(@PathVariable Long id, @RequestBody @Valid SetBudgetRequest request) {
+        requireAccounts();
+        return userService.setMonthlyBudget(id, request.monthlyBudget(), currentUser.id().orElse(null));
+    }
+
+    /**
      * Changes what somebody may do.
      * <p>
      * Its own endpoint rather than another field on the PATCH, because it is a different kind of

@@ -147,12 +147,16 @@ class SessionWriterConcurrencyTest {
         sessionService = new DocumentSessionService(storageConfig, sessionRepository, messageRepository,
                 mock(ChatStepRepository.class), new SessionSchemaCache(schemaExtractor), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class));
         agentService = new ChatAgentService(sessionService, toolRegistry, chatLlmService, new ChatConfig(),
-                errorScanner, new ObjectMapper(), sessionLocks, mock(com.ap0stole.sheetsmith.services.UsageRecorder.class));
+                errorScanner, new ObjectMapper(), sessionLocks, mock(com.ap0stole.sheetsmith.services.UsageRecorder.class),
+                mock(com.ap0stole.sheetsmith.services.BudgetService.class));
         jobService = new JobService(jobRepository, actionResultRepository, new FileStorageService(storageConfig),
                 schemaExtractor, planningService, automationService, actionRegistry,
                 mock(PathGuard.class), new Semaphore(1), sessionService, sessionLocks,
                 new com.ap0stole.sheetsmith.auth.CurrentUser(),
-                mock(com.ap0stole.sheetsmith.repository.UserRepository.class), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class));
+                mock(com.ap0stole.sheetsmith.repository.UserRepository.class), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class),
+                // No budget in these: they are about the session chain, and a spend ceiling that
+                // never fires is the shape every one of them already assumes.
+                mock(com.ap0stole.sheetsmith.services.BudgetService.class));
     }
 
     @Test

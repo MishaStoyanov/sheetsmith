@@ -55,6 +55,14 @@ public class User {
     @Column(nullable = false, length = 16)
     private Role role = Role.USER;
 
+    /**
+     * What this person may spend in a calendar month, or null for no limit — which is what
+     * everybody starts with, existing accounts included. An instance that has never thought about
+     * budgets must not begin refusing work because a column appeared.
+     */
+    @Column(name = "monthly_budget", precision = 12, scale = 4)
+    private java.math.BigDecimal monthlyBudget;
+
     public static User of(String name, String passwordHash) {
         User user = new User();
         user.name = name;

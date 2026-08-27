@@ -40,6 +40,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokens;
     private final Authz authz;
+    private final BudgetService budgets;
 
     /**
      * Deliberately open to anyone signed in, unlike everything else here.
@@ -54,8 +55,12 @@ public class UserService {
         // Never null: a null string parameter reaches PostgreSQL untyped and the driver guesses
         // bytea, which lower() has no overload for. An empty keyword makes the pattern %% instead,
         // which matches everyone — the same intent, expressed in something the database can type.
+        // Spend comes along with the list rather than being fetched per row by the screen: a
+        // ceiling without the current height is a number nobody can act on, and one request that
+        // answers both cannot disagree with itself.
         return users.search(trimmed(request.keyword()), pageable(request))
-                .map(user -> UserDto.from(user, user.getId().equals(first)));
+                .map(user -> UserDto.from(user, user.getId().equals(first),
+                        user.getMonthlyBudget() == null ? null : budgets.spentThisMonth(user.getId())));
     }
 
     @PreAuthorize("@authz.admin()")
@@ -173,6 +178,38 @@ public class UserService {
         user.setRole(role);
         log.info("Changed role of user {} to {}", id, role);
         return UserDto.from(users.save(user), false);
+    }
+
+    /**
+     * Sets or clears what somebody may spend in a calendar month.
+     * <p>
+     * <strong>Not your own</strong>, exactly like a role: a limit the limited person can lift is
+     * not a limit. The seeded account is no exception — it is the way back into an instance, not a
+     * way around its budget.
+     * <p>
+     * Null clears it. That is a real value here rather than a missing one, which is why this is its
+     * own call and not a nullable field on the patch, where "leave it alone" already means null.
+     */
+    @PreAuthorize("@authz.admin()")
+    @Transactional
+    public UserDto setMonthlyBudget(Long id, java.math.BigDecimal budget, Long callerId) {
+        User user = require(id);
+
+        if (id.equals(callerId)) {
+            throw new ApiException(ErrorCode.FORBIDDEN,
+                    "You cannot set your own spend limit — a limit you can lift is not a limit.",
+                    "monthlyBudget");
+        }
+        if (budget != null && budget.signum() < 0) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "A spend limit cannot be negative",
+                    "monthlyBudget");
+        }
+
+        user.setMonthlyBudget(budget);
+        log.info("Set monthly budget of user {} to {}", id, budget);
+        User saved = users.save(user);
+        return UserDto.from(saved, isFirstUser(id),
+                budget == null ? null : budgets.spentThisMonth(id));
     }
 
     /** The half of a check that could not live on the method, because the other caller is yourself. */

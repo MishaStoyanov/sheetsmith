@@ -73,7 +73,7 @@ class UserServiceTest {
         when(authz.admin()).thenReturn(true);
         when(authz.superadmin()).thenReturn(true);
 
-        service = new UserService(users, encoder, refreshTokens, authz);
+        service = new UserService(users, encoder, refreshTokens, authz, mock(com.ap0stole.sheetsmith.services.BudgetService.class));
 
         defaultAdmin = persist("admin", "admin");
         dana = persist("dana", "correct-horse");

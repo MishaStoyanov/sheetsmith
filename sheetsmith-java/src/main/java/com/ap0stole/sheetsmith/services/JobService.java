@@ -68,6 +68,7 @@ public class JobService {
     private final CurrentUser currentUser;
     private final UserRepository users;
     private final UsageRecorder usageRecorder;
+    private final BudgetService budgets;
 
     private final ConcurrentHashMap<String, PendingPlan> pendingPlans = new ConcurrentHashMap<>();
 
@@ -85,6 +86,10 @@ public class JobService {
      * so reading one while another writer appends the next is safe — and this call waits on the LLM.
      */
     public PlanResponseDto generatePlan(PlanRequest request) {
+        // Before the model is asked, not after it has answered: a person over their limit should be
+        // stopped at the door rather than billed and then told.
+        budgets.requireHeadroom();
+
         DocumentSession session = documentSessionService.require(request.sessionId());
 
         ExcelSchemaDto schema = documentSessionService.schema(session);
