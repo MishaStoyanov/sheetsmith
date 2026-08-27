@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import Badge from './components/Badge.jsx';
+import BudgetBar from './components/BudgetBar.jsx';
 import Button from './components/Button.jsx';
 import DataTable from './components/DataTable.jsx';
 import Field from './components/Field.jsx';
@@ -10,6 +11,19 @@ import { changeUserRole, createUser, deleteUser, searchUsers, setUserBudget, upd
 const mono = "'JetBrains Mono', monospace";
 
 /** How a role reads to a person, rather than how it is stored. */
+/**
+ * One column per action, in a fixed order, wide enough for the longest label each can carry.
+ *
+ * "Remove admin" is the widest thing that ever appears in the first slot, so that column is sized
+ * for it and does not resize when the row underneath says "Make admin" instead.
+ */
+const ACTION_COLUMNS = '104px 52px 66px 78px 58px';
+
+/** One action's place, kept whether or not this row has an action to put in it. */
+function Slot({ children }) {
+  return <span style={{ display: 'inline-flex', justifyContent: 'flex-end' }}>{children}</span>;
+}
+
 const ROLE_LABEL = {
   USER: 'user',
   ADMIN: 'admin',
@@ -92,19 +106,12 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
       header: 'This month',
       align: 'right',
       render: user => {
-        if (user.monthlyBudget == null) {
-          return <span style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>no limit</span>;
+        // Not permitted is its own answer, and a different one from "no limit". Showing a dash for
+        // both would let a reader infer an unlimited peer from a hidden one.
+        if (!user.spendVisible) {
+          return <span style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>—</span>;
         }
-        // Spent and allowed together. A ceiling on its own is a number nobody can act on, and the
-        // question anybody actually has is how close somebody is to it.
-        const spent = Number(user.spentThisMonth ?? 0);
-        const limit = Number(user.monthlyBudget);
-        const spentUp = limit > 0 && spent >= limit;
-        return (
-          <span style={{ fontFamily: mono, fontSize: 12, whiteSpace: 'nowrap', color: spentUp ? 'var(--del)' : 'var(--text-dim)' }}>
-            ${spent.toFixed(2)} / ${limit.toFixed(2)}
-          </span>
-        );
+        return <BudgetBar spent={user.spentThisMonth} limit={user.monthlyBudget} compact />;
       },
     },
     {
@@ -112,41 +119,59 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
       header: '',
       align: 'right',
       render: user => (
-        <span style={{ display: 'inline-flex', gap: 6, whiteSpace: 'nowrap' }}>
+        // Fixed columns rather than a flow of whatever this row happens to offer. Right-aligning a
+        // variable number of buttons puts Rename under Password on the row above it, and the eye
+        // reads a column before it reads a label — so the wrong button is the easy one to hit.
+        // A slot with nothing in it stays empty and keeps its width.
+        <span style={{ display: 'grid', gridTemplateColumns: ACTION_COLUMNS, gap: 6, justifyItems: 'end', whiteSpace: 'nowrap' }}>
           {/*
             The one-way door, drawn. Any administrator may hand out access; only the seeded account
             can take it back, so everyone else simply is not offered the second button. Your own row
             has neither — a role you can change yourself is a role that means nothing.
           */}
-          {user.role === 'USER' && user.id !== currentUser?.id && (
-            <Button size="sm" variant="ghost" onClick={() => setRoleChange({ user, to: 'ADMIN' })}>
-              Make admin
-            </Button>
-          )}
-          {user.role === 'ADMIN' && user.id !== currentUser?.id && iAmSuperadmin && (
-            <Button size="sm" variant="ghost" onClick={() => setRoleChange({ user, to: 'USER' })}>
-              Remove admin
-            </Button>
-          )}
+          <Slot>
+            {user.role === 'USER' && user.id !== currentUser?.id && (
+              <Button size="sm" variant="ghost" onClick={() => setRoleChange({ user, to: 'ADMIN' })}>
+                Make admin
+              </Button>
+            )}
+            {user.role === 'ADMIN' && user.id !== currentUser?.id && iAmSuperadmin && (
+              <Button size="sm" variant="ghost" onClick={() => setRoleChange({ user, to: 'USER' })}>
+                Remove admin
+              </Button>
+            )}
+          </Slot>
+
           {/* Beside the other things about this account rather than on a screen of its own: a
               spend limit is a property of a person, like their name. Not on your own row, for the
               same reason as the role — a limit you can lift is not a limit. */}
-          {user.id !== currentUser?.id && (
-            <Button size="sm" variant="ghost" onClick={() => setBudgetFor(user)}>Limit</Button>
-          )}
-          <Button size="sm" variant="ghost" onClick={() => setRenaming({ id: user.id, name: user.name })}>
-            Rename
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setRepassword({ id: user.id, name: user.name })}>
-            Password
-          </Button>
+          <Slot>
+            {user.id !== currentUser?.id && (
+              <Button size="sm" variant="ghost" onClick={() => setBudgetFor(user)}>Limit</Button>
+            )}
+          </Slot>
+
+          <Slot>
+            <Button size="sm" variant="ghost" onClick={() => setRenaming({ id: user.id, name: user.name })}>
+              Rename
+            </Button>
+          </Slot>
+
+          <Slot>
+            <Button size="sm" variant="ghost" onClick={() => setRepassword({ id: user.id, name: user.name })}>
+              Password
+            </Button>
+          </Slot>
+
           {/* The two rules that stop an instance locking itself out are shown, not just enforced:
               a button that always refuses is worse than no button. */}
-          {!user.protectedAccount && user.id !== currentUser?.id && (
-            <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(user)} style={{ color: 'var(--del)' }}>
-              Delete
-            </Button>
-          )}
+          <Slot>
+            {!user.protectedAccount && user.id !== currentUser?.id && (
+              <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(user)} style={{ color: 'var(--del)' }}>
+                Delete
+              </Button>
+            )}
+          </Slot>
         </span>
       ),
     },

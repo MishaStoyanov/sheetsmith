@@ -53,6 +53,8 @@ class SpendLimitTest {
 
     private Long seededId;
     private Long danaId;
+    private Long bossId;
+    private Long peerId;
 
     @BeforeEach
     void seed() {
@@ -66,6 +68,11 @@ class SpendLimitTest {
         jdbc.update("insert into users (name, password_hash, must_change_password, role) "
                 + "values ('budget-dana', 'x', false, 'USER')");
         danaId = jdbc.queryForObject("select id from users where name = 'budget-dana'", Long.class);
+
+        jdbc.update("insert into users (name, password_hash, must_change_password, role) "
+                + "values ('budget-boss', 'x', false, 'ADMIN'), ('budget-peer', 'x', false, 'ADMIN')");
+        bossId = jdbc.queryForObject("select id from users where name = 'budget-boss'", Long.class);
+        peerId = jdbc.queryForObject("select id from users where name = 'budget-peer'", Long.class);
 
         prices.upsert(new UpsertPriceRequest("OPENAI", "gpt-4o",
                 new BigDecimal("2.00"), new BigDecimal("10.00")));
@@ -240,6 +247,115 @@ class SpendLimitTest {
 
         assertThat(dana.monthlyBudget()).isEqualByComparingTo("10.00");
         assertThat(dana.spentThisMonth()).isEqualByComparingTo("2.0000");
+    }
+
+    // ── Who may see whose money ───────────────────────────────────────────────
+
+    private java.util.Map<String, com.ap0stole.sheetsmith.domain.dto.user.UserDto> listed() {
+        return userService.search(new com.ap0stole.sheetsmith.domain.dto.user.UserSearchRequest(
+                        "budget-", null, null, null, null))
+                .getContent().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        com.ap0stole.sheetsmith.domain.dto.user.UserDto::name, u -> u));
+    }
+
+    @Test
+    @DisplayName("an administrator sees the ordinary users they look after")
+    void adminsSeeTheirUsers() {
+        limitFor(danaId, "10.00");
+        spent(danaId, "OPENAI", "gpt-4o", 1_000_000, thisMonth());
+        as(bossId, "budget-boss");
+
+        var dana = listed().get("budget-dana");
+
+        assertThat(dana.spendVisible()).isTrue();
+        assertThat(dana.monthlyBudget()).isEqualByComparingTo("10.00");
+        assertThat(dana.spentThisMonth()).isEqualByComparingTo("2.0000");
+    }
+
+    @Test
+    @DisplayName("an administrator does not see a peer administrator's money")
+    void adminsDoNotSeeTheirPeers() {
+        // "Manages accounts" was never meant to mean "reads the other administrators". The row is
+        // built without the figures rather than the screen being trusted to leave them out.
+        as(seededId, "admin");
+        userService.setMonthlyBudget(peerId, new BigDecimal("50.00"), seededId);
+        SecurityContextHolder.clearContext();
+
+        as(bossId, "budget-boss");
+        var peer = listed().get("budget-peer");
+
+        assertThat(peer.spendVisible()).isFalse();
+        assertThat(peer.monthlyBudget()).as("the ceiling is hidden with the spending").isNull();
+        assertThat(peer.spentThisMonth()).isNull();
+    }
+
+    @Test
+    @DisplayName("everybody sees their own, whatever their role")
+    void yourOwnIsAlwaysYours() {
+        as(seededId, "admin");
+        userService.setMonthlyBudget(bossId, new BigDecimal("20.00"), seededId);
+        SecurityContextHolder.clearContext();
+
+        as(bossId, "budget-boss");
+
+        assertThat(listed().get("budget-boss").spendVisible()).isTrue();
+        assertThat(userService.mySpend(bossId).monthlyBudget()).isEqualByComparingTo("20.00");
+    }
+
+    @Test
+    @DisplayName("the superadmin sees everyone, administrators included")
+    void theSuperadminSeesEverybody() {
+        as(seededId, "admin");
+        userService.setMonthlyBudget(peerId, new BigDecimal("50.00"), seededId);
+
+        var all = listed();
+
+        assertThat(all.get("budget-peer").spendVisible()).isTrue();
+        assertThat(all.get("budget-dana").spendVisible()).isTrue();
+    }
+
+    @Test
+    @DisplayName("a plain user sees nobody else, not even another plain user")
+    void plainUsersSeeOnlyThemselves() {
+        limitFor(danaId, "10.00");
+        as(danaId, "budget-dana");
+
+        var all = listed();
+
+        assertThat(all.get("budget-dana").spendVisible()).isTrue();
+        assertThat(all.get("budget-boss").spendVisible()).isFalse();
+    }
+
+    @Test
+    @DisplayName("your own figures are readable without reaching the accounts screen")
+    void mySpendAnswersTheOneWhoCannotSeeTheList() {
+        // The whole point of the separate call: a plain user has no business on the accounts screen,
+        // and telling somebody they have run out without ever showing them the gauge is a limit
+        // people resent rather than plan around.
+        limitFor(danaId, "10.00");
+        spent(danaId, "OPENAI", "gpt-4o", 2_000_000, thisMonth());
+        as(danaId, "budget-dana");
+
+        var mine = userService.mySpend(danaId);
+
+        assertThat(mine.visible()).isTrue();
+        assertThat(mine.monthlyBudget()).isEqualByComparingTo("10.00");
+        assertThat(mine.spentThisMonth()).isEqualByComparingTo("4.0000");
+    }
+
+    @Test
+    @DisplayName("no limit still reports what has been spent")
+    void spendingIsWorthKnowingWithoutACeiling() {
+        spent(danaId, "OPENAI", "gpt-4o", 1_000_000, thisMonth());
+        as(danaId, "budget-dana");
+
+        var mine = userService.mySpend(danaId);
+
+        assertThat(mine.monthlyBudget()).isNull();
+        assertThat(mine.spentThisMonth())
+                .as("\"no limit\" is not the same as \"nothing spent\"")
+                .isEqualByComparingTo("2.0000");
     }
 
     static boolean dockerAvailable() {

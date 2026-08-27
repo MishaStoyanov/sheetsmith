@@ -3,6 +3,8 @@ package com.ap0stole.sheetsmith.domain.dto.user;
 import com.ap0stole.sheetsmith.domain.entity.User;
 import com.ap0stole.sheetsmith.domain.enums.Role;
 
+import java.math.BigDecimal;
+
 /**
  * A user, as everyone else may see them. There is deliberately no password field of any kind — not
  * even the hash: a DTO that can carry one is a DTO that will eventually be logged.
@@ -11,21 +13,28 @@ import com.ap0stole.sheetsmith.domain.enums.Role;
  * @param role             what they may do to other accounts. Readable by anyone who can read the
  *                         list at all: it explains why a button is missing, and hiding it would only
  *                         make the interface look arbitrary
- * @param monthlyBudget    what they may spend in a calendar month, or null for no limit
- * @param spentThisMonth   what they have spent so far, as far as prices can tell — carried beside
- *                         the limit because a ceiling without the current height is a number nobody
- *                         can act on. Null where it was not asked for
+ * @param monthlyBudget    what they may spend in a calendar month, or null for no limit — and also
+ *                         null where the caller may not see it, which is why it travels with the
+ *                         flag below rather than alone
+ * @param spentThisMonth   what they have spent so far, as far as prices can tell
+ * @param spendVisible     whether the caller is allowed to see this person's money at all. A
+ *                         separate flag because null already means "no limit", and a screen has to
+ *                         tell "unlimited" from "not your business"
  */
 public record UserDto(Long id, String name, boolean mustChangePassword, boolean protectedAccount,
-                      Role role, java.math.BigDecimal monthlyBudget,
-                      java.math.BigDecimal spentThisMonth) {
+                      Role role, BigDecimal monthlyBudget, BigDecimal spentThisMonth,
+                      boolean spendVisible) {
 
     public static UserDto from(User user, boolean protectedAccount) {
-        return from(user, protectedAccount, null);
+        return from(user, protectedAccount, null, true);
     }
 
-    public static UserDto from(User user, boolean protectedAccount, java.math.BigDecimal spentThisMonth) {
+    public static UserDto from(User user, boolean protectedAccount,
+                               BigDecimal spentThisMonth, boolean spendVisible) {
         return new UserDto(user.getId(), user.getName(), user.isMustChangePassword(), protectedAccount,
-                user.getRole(), user.getMonthlyBudget(), spentThisMonth);
+                user.getRole(),
+                // The ceiling is hidden with the spending, or a reader works out one from the other.
+                spendVisible ? user.getMonthlyBudget() : null,
+                spentThisMonth, spendVisible);
     }
 }

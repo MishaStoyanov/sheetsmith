@@ -13,6 +13,7 @@ import SettingsPanel from './SettingsPanel.jsx';
 import { useHashRoute } from './useHashRoute.js';
 import { getCapabilities, getSettings } from './settingsApi.js';
 import { configureAuth, getCurrentUser, logout, restoreSession } from './authApi.js';
+import { getMySpend } from './settingsApi.js';
 
 /**
  * The root: what this instance is, who is looking at it, and which screen that means. Everything
@@ -26,6 +27,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [providerMode, setProviderMode] = useState('LOCAL');
   const [route, go] = useHashRoute('improve');
+  const [spend, setSpend] = useState(null);
 
   // An older build has no /api/capabilities; treating that as "chat on" keeps it working, and a
   // server that really has the chat off answers the question rather than staying silent.
@@ -59,6 +61,19 @@ export default function App() {
       .catch(() => {})
       .finally(() => setAuthChecked(true));
   }, []);
+
+  // Re-read whenever the screen changes, which is the cheapest honest approximation of "after
+  // something was spent": every flow that costs money ends with the person going somewhere. It
+  // asks for nothing when there is nobody to ask about, and a failure leaves the indicator absent
+  // rather than wrong — a stale ceiling is worse than none.
+  useEffect(() => {
+    if (!capabilities.authEnabled || !user) return undefined;
+    let live = true;
+    getMySpend()
+      .then(result => { if (live) setSpend(result); })
+      .catch(() => { if (live) setSpend(null); });
+    return () => { live = false; };
+  }, [capabilities.authEnabled, user, route]);
 
   const handleCloseSettings = () => {
     setSettingsOpen(false);
@@ -116,6 +131,7 @@ export default function App() {
     // the browser's default face and black text on the dark theme.
     <div style={{ ...themes[theme], height: '100vh', boxSizing: 'border-box', fontFamily: "'Instrument Sans', system-ui, sans-serif", color: 'var(--text)' }}>
       <AppShell
+        spend={user ? spend : null}
         theme={theme}
         onToggleTheme={() => setThemeAndSave(theme === 'light' ? 'dark' : 'light')}
         providerMode={providerMode}

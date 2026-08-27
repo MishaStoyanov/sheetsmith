@@ -44,6 +44,34 @@ public class Authz {
         return !authConfig.isEnabled() || currentUser.id().isPresent();
     }
 
+    /**
+     * Whether the caller may see what a particular person has spent.
+     * <p>
+     * Not the same shape as the other rules here, and deliberately so. Money spent is somebody's
+     * activity rather than a setting, so the ladder is: your own, always. A superadmin, everybody.
+     * An administrator, the ordinary users they are there to look after — <strong>but not their
+     * peers</strong>, because "manages accounts" was never meant to mean "reads the other
+     * administrators".
+     * <p>
+     * With authentication off there are no accounts and no privacy boundary to draw: the person at
+     * the keyboard is the only person there is.
+     */
+    public boolean maySeeSpendOf(Long targetId, Role targetRole) {
+        if (!authConfig.isEnabled()) {
+            return true;
+        }
+        Long caller = currentUser.id().orElse(null);
+        if (caller == null) {
+            return false;
+        }
+        if (caller.equals(targetId)) {
+            return true;
+        }
+        return role()
+                .map(mine -> mine == Role.SUPERADMIN || (mine == Role.ADMIN && targetRole == Role.USER))
+                .orElse(false);
+    }
+
     /** The caller's role, or empty where there is nobody to have one. */
     public java.util.Optional<Role> role() {
         return currentUser.id().flatMap(users::findById).map(com.ap0stole.sheetsmith.domain.entity.User::getRole);

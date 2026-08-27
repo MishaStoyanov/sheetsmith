@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Button from './components/Button.jsx';
 import DefaultPasswordNotice from './components/DefaultPasswordNotice.jsx';
+import BudgetBar from './components/BudgetBar.jsx';
 import { ChevronIcon, SettingsIcon } from './components/NavIcons.jsx';
 
 /**
@@ -18,6 +19,7 @@ import { ChevronIcon, SettingsIcon } from './components/NavIcons.jsx';
  * that leads somewhere refusing to answer is worse than no entry at all.
  */
 export default function AppShell({
+  spend,
   theme,
   onToggleTheme,
   providerMode,
@@ -98,6 +100,16 @@ export default function AppShell({
         <span style={{ fontSize: 12, color: 'var(--text-faint)', display: 'flex', alignItems: 'center', gap: 5 }}>
           <span style={{ color: 'var(--accent)' }}>⟡</span> {providerMode === 'CLOUD' ? 'Cloud mode' : 'Local mode'}
         </span>
+
+        {/* Here rather than on one screen, because a ceiling is only useful while you are working
+            towards it — finding out you are at 95% by visiting a page you had no reason to open is
+            finding out too late. Absent entirely where there is no limit: a gauge with no maximum
+            is furniture. */}
+        {spend?.monthlyBudget != null && (
+          <span style={{ marginLeft: 18, marginRight: 4 }} title="Your spend this calendar month">
+            <BudgetBar spent={spend.spentThisMonth} limit={spend.monthlyBudget} compact />
+          </span>
+        )}
         <Button onClick={onToggleTheme} style={{ marginLeft: 8 }}>
           {theme === 'light' ? 'Dark' : 'Light'}
         </Button>

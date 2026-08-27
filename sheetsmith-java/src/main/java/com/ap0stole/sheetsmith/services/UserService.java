@@ -58,9 +58,17 @@ public class UserService {
         // Spend comes along with the list rather than being fetched per row by the screen: a
         // ceiling without the current height is a number nobody can act on, and one request that
         // answers both cannot disagree with itself.
+        //
+        // Whose figures come back is a permission, not a display choice — an administrator does not
+        // see another administrator's spending — so the row is built without them rather than the
+        // screen being trusted to leave them out.
         return users.search(trimmed(request.keyword()), pageable(request))
-                .map(user -> UserDto.from(user, user.getId().equals(first),
-                        user.getMonthlyBudget() == null ? null : budgets.spentThisMonth(user.getId())));
+                .map(user -> {
+                    boolean visible = authz.maySeeSpendOf(user.getId(), user.getRole());
+                    return UserDto.from(user, user.getId().equals(first),
+                            visible && user.getMonthlyBudget() != null ? budgets.spentThisMonth(user.getId()) : null,
+                            visible);
+                });
     }
 
     @PreAuthorize("@authz.admin()")
@@ -181,6 +189,27 @@ public class UserService {
     }
 
     /**
+     * The caller's own ceiling and what they have spent against it.
+     * <p>
+     * Its own call because the people who most need it are the ones who cannot reach the accounts
+     * screen at all: a plain user has no business there, and telling them "you have run out"
+     * without ever showing them the gauge is the kind of limit people resent rather than plan
+     * around.
+     */
+    @PreAuthorize("@authz.signedIn()")
+    @Transactional(readOnly = true)
+    public SpendDto mySpend(Long callerId) {
+        if (callerId == null) {
+            // Nobody signed in, which happens only with authentication off. There is no person for
+            // a limit to be about, so there is nothing to report rather than a zero to misread.
+            return SpendDto.hidden();
+        }
+        return users.findById(callerId)
+                .map(user -> new SpendDto(user.getMonthlyBudget(), budgets.spentThisMonth(callerId), true))
+                .orElseGet(SpendDto::hidden);
+    }
+
+    /**
      * Sets or clears what somebody may spend in a calendar month.
      * <p>
      * <strong>Not your own</strong>, exactly like a role: a limit the limited person can lift is
@@ -208,8 +237,10 @@ public class UserService {
         user.setMonthlyBudget(budget);
         log.info("Set monthly budget of user {} to {}", id, budget);
         User saved = users.save(user);
+        // Visible by construction: the person who just set it is allowed to see it — an
+        // administrator setting a limit for a user, or the superadmin for anybody.
         return UserDto.from(saved, isFirstUser(id),
-                budget == null ? null : budgets.spentThisMonth(id));
+                budget == null ? null : budgets.spentThisMonth(id), true);
     }
 
     /** The half of a check that could not live on the method, because the other caller is yourself. */

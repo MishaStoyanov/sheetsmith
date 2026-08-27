@@ -68,6 +68,18 @@ export async function createUser(name, password) {
 }
 
 /**
+ * Your own limit and what you have spent against it.
+ *
+ * Its own call rather than a field on the session: the people who most need it are the ones who
+ * cannot reach the accounts screen at all, and it changes as they work while a session does not.
+ */
+export async function getMySpend() {
+  const res = await authFetch(`${BASE}/api/users/me/spend`);
+  if (!res.ok) throw new Error(await userError(res, 'Could not read your spend'));
+  return res.json();
+}
+
+/**
  * Sets or clears a monthly spend limit. Null is a real value — "no limit" — which is why this is a
  * PUT of its own rather than a field on the patch, where null already means "leave this alone".
  */

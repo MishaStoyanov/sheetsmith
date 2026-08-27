@@ -55,6 +55,18 @@ public class UserController {
     }
 
     /**
+     * Your own limit and what you have spent against it.
+     * <p>
+     * Before {@code /{id}} in the file and in the mapping order, because {@code me} would otherwise
+     * be read as an id.
+     */
+    @GetMapping("/me/spend")
+    public SpendDto mySpend() {
+        requireAccounts();
+        return userService.mySpend(currentUser.id().orElse(null));
+    }
+
+    /**
      * Sets or clears a monthly spend limit.
      * <p>
      * Its own endpoint for the same reason the role has one: null means "no limit" here, and on a
