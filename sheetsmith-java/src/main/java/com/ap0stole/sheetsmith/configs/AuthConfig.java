@@ -33,6 +33,11 @@ public class AuthConfig {
     public void announce() {
         if (enabled) {
             log.info("Authentication ENABLED: /api/** requires a token, and every run records who asked for it");
+            // Removed by the commit that adds POST /api/auth/login. Until then, turning this on
+            // locks the instance rather than protecting it, and saying so at startup is cheaper
+            // than letting someone discover it from a screen full of 401s.
+            log.warn("...but this build has no login endpoint yet, so /api/** will refuse every "
+                    + "request. Set SHEETSMITH_AUTH_ENABLED=false unless you are working on it.");
         } else {
             log.info("Authentication is off — anyone who can reach this instance can drive it. "
                     + "Set SHEETSMITH_AUTH_ENABLED=true if more than one person uses it.");

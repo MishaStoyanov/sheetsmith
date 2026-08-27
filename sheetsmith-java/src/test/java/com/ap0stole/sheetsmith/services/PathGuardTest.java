@@ -1,6 +1,6 @@
 package com.ap0stole.sheetsmith.services;
 
-import com.ap0stole.sheetsmith.configs.SecurityConfig;
+import com.ap0stole.sheetsmith.configs.SecurityProperties;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 class PathGuardTest {
 
     private PathGuard guard(boolean enabled, Path... roots) {
-        SecurityConfig config = new SecurityConfig();
+        SecurityProperties config = new SecurityProperties();
         config.setPathEndpointEnabled(enabled);
         config.setPathEndpointRoots(Arrays.stream(roots).map(Path::toString).toList());
         return new PathGuard(config);
@@ -154,7 +154,7 @@ class PathGuardTest {
     @DisplayName("enabled with no roots fails loudly instead of allowing everything")
     void enabledWithoutRootsFails(@TempDir Path tmp) throws IOException {
         Path input = file(tmp.resolve("data"), "book.xlsx");
-        SecurityConfig config = new SecurityConfig();
+        SecurityProperties config = new SecurityProperties();
         config.setPathEndpointEnabled(true);
         config.setPathEndpointRoots(List.of("   "));
 

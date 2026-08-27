@@ -1,7 +1,9 @@
 package com.ap0stole.sheetsmith.controller;
 
 import com.ap0stole.sheetsmith.configs.ChatConfig;
+import com.ap0stole.sheetsmith.configs.AuthConfig;
 import com.ap0stole.sheetsmith.configs.SecurityConfig;
+import com.ap0stole.sheetsmith.configs.SecurityProperties;
 import com.ap0stole.sheetsmith.domain.dto.chat.ChatMessageDto;
 import com.ap0stole.sheetsmith.domain.dto.chat.ChatStepDto;
 import com.ap0stole.sheetsmith.domain.dto.chat.ChatTurnDto;
@@ -46,7 +48,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * returns — the two must never drift into different answers.
  */
 @WebMvcTest(controllers = ChatMessageController.class)
-@Import({ChatConfig.class, SecurityConfig.class})
+// The real chain, not Spring Boot's default one: without it the slice gets CSRF protection this
+// app does not use, and every POST here answers 403 — a failure about the test's own wiring rather
+// than about the endpoint.
+@Import({ChatConfig.class, SecurityProperties.class, AuthConfig.class, SecurityConfig.class})
 class ChatStreamControllerTest {
 
     private static final String SESSION_ID = "session-1";

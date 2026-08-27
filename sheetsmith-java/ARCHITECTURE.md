@@ -306,12 +306,33 @@ a feature flag that looks settable invites a PUT that appears to turn the chat b
 
 ### Security posture
 
-No authentication, by design — this is self-hosted. Two guards carry that weight and must not be
-loosened casually:
+**Two shapes, one switch.** `sheetsmith.auth.enabled` (env `SHEETSMITH_AUTH_ENABLED`) defaults to
+**false**: solo on your own machine, a login screen is a cost with no matching risk, and an upgrade
+must not put one in front of an instance that never had one. On, `/api/**` needs a token. Both
+shapes are built in `configs/SecurityConfig.filterChain` rather than one being guards inside the
+other, so what is allowed through is readable in one place. The flag is reported by
+`/api/capabilities` — never by `/api/settings`, which is user-editable, and a security switch that
+looks settable invites a PUT that appears to turn it off.
 
-- `configs/SecurityConfig` + `WebConfig` — CORS is an allowlist (`sheetsmith.security.allowed-origins`),
-  not `*`. Without auth, `*` would let any site the user has open drive their instance, including
-  overwriting the stored cloud API keys via `PUT /api/settings`.
+`configs/SecurityProperties` is the `sheetsmith.security` properties holder (CORS allowlist, by-path
+endpoint); it was called `SecurityConfig` until the filter chain needed that name.
+
+Guards that stand whether or not anyone logs in, and must not be loosened casually:
+
+- **CORS is an allowlist** (`sheetsmith.security.allowed-origins`), not `*`. With authentication off,
+  `*` would let any site the user has open drive their instance, including overwriting the stored
+  cloud API keys via `PUT /api/settings`.
+
+  It is a `CorsConfigurationSource` bean read by the filter chain, **not** an MVC mapping. It was an
+  MVC mapping, and that stops working the moment a chain exists: MVC mappings are applied by the
+  dispatcher, which the chain sits in front of, and a preflight `OPTIONS` carries no credentials by
+  definition — so an authenticated instance would refuse the preflight and the browser would report
+  a CORS failure for a rule that is configured correctly. Nothing on the server looks wrong. Hence
+  `OPTIONS` is permitted explicitly and `SecurityChainTest` asserts preflight in both shapes.
+
+- **An unauthenticated call gets 401, not Spring's default 403** for an anonymous caller
+  (`HttpStatusEntryPoint`). The browser's silent refresh keys off 401: it means "try again with a
+  fresh token", where 403 means "you are known and still may not" and no retry can fix it.
 - `services/PathGuard` — `POST /api/excel/improve/path` is disabled by default; when enabled, both
   paths must resolve inside a configured root, with symlinks followed and `..` resolved rather than
   string-matched.

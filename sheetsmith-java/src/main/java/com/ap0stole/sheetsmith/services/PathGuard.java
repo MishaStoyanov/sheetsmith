@@ -1,6 +1,6 @@
 package com.ap0stole.sheetsmith.services;
 
-import com.ap0stole.sheetsmith.configs.SecurityConfig;
+import com.ap0stole.sheetsmith.configs.SecurityProperties;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +32,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PathGuard {
 
-    private final SecurityConfig securityConfig;
+    private final SecurityProperties securityProperties;
 
     /** Resolves an input path; it must exist as a regular file inside a root. */
     public Path resolveInput(String rawPath, String field) {
@@ -79,7 +79,7 @@ public class PathGuard {
     }
 
     private void requireEnabled() {
-        if (!securityConfig.isPathEndpointEnabled()) {
+        if (!securityProperties.isPathEndpointEnabled()) {
             throw new ApiException(ErrorCode.PATH_ENDPOINT_DISABLED,
                     "The by-path endpoint is disabled. Set SHEETSMITH_PATH_ENDPOINT_ENABLED=true and list "
                             + "the allowed directories in SHEETSMITH_PATH_ENDPOINT_ROOTS (comma-separated) "
@@ -89,7 +89,7 @@ public class PathGuard {
 
     private List<Path> resolvedRoots() {
         List<Path> roots = new ArrayList<>();
-        for (String configured : securityConfig.getPathEndpointRoots()) {
+        for (String configured : securityProperties.getPathEndpointRoots()) {
             if (configured == null || configured.isBlank()) {
                 continue;
             }
