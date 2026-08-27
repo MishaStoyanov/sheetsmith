@@ -12,11 +12,11 @@ docker compose up --build     # Postgres, Ollama, the model and the app
 
 Runs against a local Ollama by default; OpenAI and Anthropic are one profile switch away.
 
-![The plan: six steps, each a sentence, each editable or dismissable before anything runs](docs/plan-review.jpg)
+![The plan: four steps, each a sentence, each editable or dismissable before anything runs](docs/plan-review.png)
 
 Every step is a sentence you can read, edit or drop. Nothing touches the file until you say so:
 
-![The result: names title-cased, phone numbers normalised, the header row frozen and picked out in blue](docs/result.jpg)
+![The result: names title-cased, phone numbers normalised to one format, amounts shown as currency and the header row frozen](docs/result.png)
 
 **Try it on the sheet in this repository.** [`docs/messy-orders.xlsx`](docs/messy-orders.xlsx) is a
 deliberately untidy order list — everything stored as text, names in four different cases, phone
@@ -41,6 +41,31 @@ Two ways to work on the same file, sharing one engine and one undo history:
 
 Uploading opens a session whose working copy is an append-only chain of revisions, so an improve
 run and a chat turn can never leave each other behind, and undo covers both.
+
+Two more screens, once an instance has been used for a while:
+
+- **History** — every run, with filters, and what each one actually did step by step.
+- **Analytics** — what has been asked of the models and what it cost: tokens and money by provider,
+  by model and by person, spend over time, and whether the runs themselves succeeded.
+
+![Analytics: tokens and spend by provider, model and person, with how the runs themselves went](docs/analytics.png)
+
+## What a run costs
+
+Every call to a model is recorded — who asked, which provider and model answered, how many tokens
+each way, how long it took. That record is the whole of the analytics screen, and it is kept honest
+in one particular way: **a number that is not known is never shown as a number**.
+
+A local model bills nothing, so its calls are counted in tokens and left out of money. A model
+nobody has priced costs an unknown amount, so it is named rather than quietly counted as free — a
+total that silently leaves out half the calls is worse than an absent one, because it looks like an
+answer.
+
+Prices are yours to enter, because nobody but you knows what you pay. **Prices** lists them, says
+how long since each was last checked, and can compare them against a published catalogue — it shows
+what would change and writes nothing until you say so.
+
+![Prices: what each model charges per million tokens, in and out, and when each was last checked](docs/prices.png)
 
 ## The model does not read your table
 
@@ -104,9 +129,18 @@ The first account comes from a migration: **`admin` / `admin`**. That is written
 generated because a password you can look up beats one nobody can find — and the app nags in the
 interface until it is changed. Change it first.
 
-Everyone signed in can manage everyone else: create accounts, rename them, reset passwords. There
-are no roles yet. The default account cannot be deleted and you cannot delete the account you are
-signed in with, so an instance cannot be locked out of itself.
+Three roles. A **user** just uses the app. An **admin** creates accounts, renames them, resets
+passwords, sets spend limits, and can make somebody else an admin — but cannot take it back. Only
+the **superadmin**, which is the seeded first account, can demote. That one-way door is deliberate:
+two administrators demoting each other is a fight the software should not host, so undoing it is
+left to the one account an instance always keeps.
+
+Upgrading an instance that already had accounts does not take anything away — everybody who could
+manage accounts yesterday becomes an admin, and only new accounts start as plain users.
+
+The default account cannot be deleted, you cannot delete the account you are signed in with, and
+nobody can change their own role or their own spend limit. An instance cannot be locked out of
+itself, and a limit is not something the limited person can lift.
 
 **Forgot the password?** There is no email recovery — a self-hosted instance has no mail server, and
 nobody else can reach your database. Two ways back in:
@@ -138,8 +172,10 @@ the hard way:
 - authentication is **off by default** — run that way, the app is designed for a machine you
   control, and the CORS allowlist is the only thing between a browser and the API. Set
   `SHEETSMITH_AUTH_ENABLED=true` for a login screen and accounts (see below);
-- with accounts on, **there are no roles yet**: every account can manage every other one. That suits
-  a small team and does not suit handing an account to someone you would not make an administrator;
+- **spend limits only see what has a price**: a model you run locally costs nothing, and one nobody
+  has priced costs an unknown amount, so neither counts towards a limit. That is the honest reach of
+  a ceiling denominated in money — the alternative would be to guess, and a budget enforced against
+  a guess is worse than none. The interface says so where the limit is set;
 - the database is still called `xlsxai` by default, from before the app was called SheetSmith —
   deliberately, because changing that default would point an existing install at an empty database.
   Everything else has been renamed: settings are `sheetsmith.*` and environment variables

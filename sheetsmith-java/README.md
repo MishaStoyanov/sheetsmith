@@ -178,8 +178,26 @@ it works by measuring the data.
 
 ## Security model
 
-This is a self-hosted tool with **no authentication**: it is meant to run on your own machine or
-inside a trusted network. Two defaults exist to keep that honest.
+**Authentication is optional and off by default.** Alone on your own machine a login screen is a
+cost with no matching risk, and switching it on for somebody who never had one would be a surprise
+rather than a feature. Set `SHEETSMITH_AUTH_ENABLED=true` the moment more than one person can reach
+the instance; the first account is seeded as `admin`/`admin` and the app says so in the interface
+until that changes.
+
+On, `/api/**` needs a token. Both shapes are built in one filter chain rather than one being guards
+inside the other, so what is allowed through is readable in one place. The flag is reported by
+`/api/capabilities` and deliberately **not** by `/api/settings`, which is user-editable — a security
+switch that looks settable invites a PUT that appears to turn it off.
+
+**Three roles, and one rule that keeps them inert.** `USER` cannot touch other accounts; `ADMIN`
+manages people and may hand out `ADMIN` but never take it back; `SUPERADMIN` is the seeded account
+and the only one that can demote. Every rule goes through a single bean rather than a plain
+`hasRole` expression, because with authentication off nobody is signed in — a role expression would
+deny every management call and take the default configuration down silently. The role is read from
+the database per request, not carried in the token: a token says what was true when it was issued,
+and a demotion would otherwise keep working for the rest of the afternoon.
+
+Two more defaults exist to keep the unauthenticated case honest.
 
 **Browser origins are allowlisted.** In the normal setup this never comes up — the app serves the UI
 and the API from the same origin, and `npm run dev` proxies `/api`, so nothing is cross-origin. It
@@ -193,8 +211,9 @@ the server, which is useful for scripting and dangerous when exposed. It is disa
 `SHEETSMITH_PATH_ENDPOINT_ENABLED=true`, and when enabled both paths must resolve — symlinks followed —
 inside one of `SHEETSMITH_PATH_ENDPOINT_ROOTS`. Enabling it without roots refuses to start.
 
-If you put this on a network anyone else can reach, put an authenticating reverse proxy in front of
-it. Nothing here is a substitute for that.
+Running it unauthenticated on a network other people can reach means anyone there can drive it. Turn
+accounts on, or put an authenticating proxy in front — the CORS allowlist is not a substitute for
+either.
 
 ---
 
@@ -306,6 +325,96 @@ DELETE /api/history/{id}
 Deletes the record. Its input and result files go too — unless they are revisions of a session, in
 which case they stay: they belong to that session's undo history, and one of them is very likely the
 sheet the user is looking at.
+
+---
+
+## Accounts API
+
+Present only when `sheetsmith.auth.enabled` is on; with it off these answer 409, because an instance
+without accounts has nobody to manage. Three roles: `USER`, `ADMIN`, `SUPERADMIN` — see the security
+model above for who may do what.
+
+### Sign in, refresh, sign out
+```
+POST /api/auth/login      {name, password, rememberMe}
+POST /api/auth/refresh
+POST /api/auth/logout
+GET  /api/auth/me
+```
+The access token comes back in the body; the refresh token is an httpOnly `SameSite=Strict` cookie
+scoped to `/api/auth`, rotated on every use. An unauthenticated call gets **401, not 403** — the
+browser silent-refresh keys off it.
+
+### Accounts
+```
+POST   /api/users                 create                          — admin
+POST   /api/users/search          {keyword, page, size, sort}     — anyone signed in
+PUT    /api/users/{id}            replace name + password         — admin
+PATCH  /api/users/{id}            name and/or password            — admin, or your own account
+DELETE /api/users/{id}            remove                          — admin
+PATCH  /api/users/{id}/role       {role}                          — see below
+PUT    /api/users/{id}/budget     {monthlyBudget}                 — admin, never your own
+```
+Search is open to anyone signed in on purpose: the history screen builds its "started by" filter
+from it, and the names are on the analytics screen anyway.
+
+`role` is its own endpoint rather than a field on the PATCH, because it is a different kind of
+decision and carries its own rules: an admin may hand out `ADMIN` but only the superadmin may take
+it back, `SUPERADMIN` cannot be given out at all, and nobody changes their own.
+
+`budget` is a PUT of its own because **null is a real value** there — "no limit" — and on a PATCH
+null already means "leave this alone". A limit is counted from the price list, so calls to a local
+or unpriced model contribute nothing to it.
+
+---
+
+## Prices API
+
+The price list is a reference table keyed on provider plus model, filled in by hand — nobody but the
+operator knows what they pay. There is no separate create: the key is natural, so `PUT` is already
+"put a price at this address".
+
+```
+POST   /api/prices/search             {keyword, page, size}
+PUT    /api/prices                    {provider, model, inputPerMillion, outputPerMillion}
+PATCH  /api/prices/{id}               {inputPerMillion?, outputPerMillion?}
+DELETE /api/prices/{id}?confirm=true
+```
+Deleting a price that recorded calls depend on is **refused without `confirm`**, and the refusal
+carries the number of them. Spend is worked out from this table every time the analytics screen is
+drawn, so removing a row changes charts somebody has already looked at.
+
+```
+POST /api/prices/catalogue/preview    what a published catalogue would change
+POST /api/prices/catalogue/apply      [ {provider, model, inputPerMillion, outputPerMillion} ]
+```
+`preview` is the only outbound request this application makes. It reads OpenRouter's open model
+catalogue — no provider publishes a price API, and asking a model instead would produce a confident
+figure for a price it does not know. It writes nothing; `apply` saves the rows a person chose, with
+the figures from the request rather than fetched again. Confirming a row that has not changed is how
+a price gets marked as checked.
+
+---
+
+## Analytics API
+
+```
+POST /api/analytics/summary   {from, to, userIds, includeUnowned, providers, models, kinds, granularity}
+```
+One endpoint, not five, because every chart on that screen is drawn from the same filters and five
+answers can disagree with each other if a call lands between the second request and the third.
+
+The answer carries totals, breakdowns by provider, model and person, a time series and the same
+series split by owner, how the runs themselves went, and two honesty flags: `costKnown` (false when
+no price has been entered) and `unpricedModels` (used here, priced nowhere). A group where nothing
+could be priced answers `null` rather than `0.00`.
+
+```
+GET /api/prompts/frequent?kind=IMPROVE&limit=5
+```
+Phrasings the caller has used more than once. **There is no parameter for whose** — the answer is
+always the caller's. A prompt is somebody describing their own data in their own words, so it is
+the one thing here that never appears on a shared screen.
 
 ---
 
