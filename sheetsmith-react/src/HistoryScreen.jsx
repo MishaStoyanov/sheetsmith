@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import Badge from './components/Badge.jsx';
 import Button from './components/Button.jsx';
-import Checkbox from './components/Checkbox.jsx';
 import DataTable from './components/DataTable.jsx';
 import DateRange from './components/DateRange.jsx';
 import FilterBar from './components/FilterBar.jsx';
@@ -16,6 +15,22 @@ const TONE = { COMPLETED: 'good', PARTIAL: 'warn', FAILED: 'bad', PROCESSING: 'n
 const STATUSES = ['COMPLETED', 'PARTIAL', 'FAILED', 'PROCESSING'];
 
 const EMPTY = { keyword: '', from: '', to: '', statuses: [], owners: [], includeUnowned: false };
+
+/**
+ * The entry for runs nobody owns, inside the list of people rather than beside it.
+ *
+ * It was a separate checkbox, and that checkbox was a switch with no effect: with nobody selected
+ * the filter matches everything — unowned runs included — so "include runs with no owner" sat
+ * unticked while those runs were plainly on screen. It only did anything once a person was picked,
+ * which is not something a checkbox can say about itself.
+ *
+ * As an option it needs no explaining. Nothing selected means anyone; picking this one means only
+ * the runs nobody owns; picking it alongside a person means both. The server already worked exactly
+ * that way — this is the control finally saying so.
+ *
+ * A string sentinel among numeric ids, so it can never collide with a real one.
+ */
+const NO_OWNER = 'none';
 
 function when(iso) {
   if (!iso) return '—';
@@ -224,9 +239,16 @@ export default function HistoryScreen({ authEnabled }) {
             <div>
               <MultiSelect
                 label="Started by"
-                options={people.map(p => ({ value: p.id, label: p.name }))}
-                value={filters.owners}
-                onChange={owners => set({ owners })}
+                placeholder="Anyone"
+                options={[
+                  { value: NO_OWNER, label: 'No owner' },
+                  ...people.map(p => ({ value: p.id, label: p.name })),
+                ]}
+                value={filters.includeUnowned ? [NO_OWNER, ...filters.owners] : filters.owners}
+                onChange={picked => set({
+                  owners: picked.filter(v => v !== NO_OWNER),
+                  includeUnowned: picked.includes(NO_OWNER),
+                })}
               />
               {/* Said next to the control it belongs to rather than over the whole page: the rest
                   of the history is fine, and an empty list that never explains itself is
@@ -237,13 +259,6 @@ export default function HistoryScreen({ authEnabled }) {
                 </span>
               )}
             </div>
-            {/* Runs made before accounts existed have no id to be named by. */}
-            <Checkbox
-              checked={filters.includeUnowned}
-              onChange={includeUnowned => set({ includeUnowned })}
-              label="Include runs with no owner"
-              style={{ height: 34 }}
-            />
           </>
         )}
       </FilterBar>
