@@ -3,6 +3,8 @@ import Button from './components/Button.jsx';
 import DateRange from './components/DateRange.jsx';
 import DonutChart, { Panel } from './components/DonutChart.jsx';
 import FilterBar from './components/FilterBar.jsx';
+import Note from './components/Note.jsx';
+import UnpricedModelsNote from './components/UnpricedModelsNote.jsx';
 import RankedBars from './components/RankedBars.jsx';
 import StatusBar from './components/StatusBar.jsx';
 import TimeBarChart from './components/TimeBarChart.jsx';
@@ -194,13 +196,7 @@ export default function AnalyticsScreen({ theme, user }) {
           money.
         </Note>
       )}
-      {data?.costKnown && data.unpricedModels.length > 0 && (
-        <Note>
-          {data.unpricedModels.length === 1 ? 'One model has' : `${data.unpricedModels.length} models have`}
-          {' '}no price, so their calls are counted in tokens but not in money:{' '}
-          <span style={{ fontFamily: mono, fontSize: 12 }}>{data.unpricedModels.join(', ')}</span>
-        </Note>
-      )}
+      {data?.costKnown && <UnpricedModelsNote models={data.unpricedModels} />}
 
       {user && (
         <div style={{ marginBottom: 16 }}>
@@ -333,10 +329,3 @@ function Stat({ label, value, hint }) {
   );
 }
 
-function Note({ children }) {
-  return (
-    <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-dim)', fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
-      {children}
-    </div>
-  );
-}
