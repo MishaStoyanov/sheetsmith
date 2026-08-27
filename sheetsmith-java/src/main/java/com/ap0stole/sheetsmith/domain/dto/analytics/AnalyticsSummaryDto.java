@@ -22,6 +22,7 @@ public record AnalyticsSummaryDto(
         List<UserSlice> byUser,
         List<Bucket> overTime,
         List<UserBucket> overTimeByUser,
+        Runs runs,
         boolean costKnown,
         List<String> unpricedModels) {
 
@@ -50,6 +51,31 @@ public record AnalyticsSummaryDto(
     }
 
     public record Bucket(String label, long calls, long totalTokens, BigDecimal cost) {
+    }
+
+    /**
+     * How the runs themselves went, as opposed to what they asked of a model.
+     *
+     * @param successRate    completed out of the runs that reached a verdict, or null when none
+     *                       have. A run still in flight is not a failure and is not counted as one
+     *                       — including it would make the number sag every time somebody presses go
+     * @param medianSeconds  the median, deliberately, not the mean: one ten-minute run on a local
+     *                       model drags an average far enough that it stops describing anything.
+     *                       Fractional, because a run that takes four tenths of a second is not a
+     *                       run that takes no time at all
+     * @param topActions     what the application is actually used for, which on an open-source
+     *                       project is a more interesting question than what it costs
+     * @param topErrors      what breaks most often, by the message the run recorded
+     */
+    public record Runs(long total, List<Count> byStatus, Double successRate, Double medianSeconds,
+                       List<Count> topActions, List<Count> topErrors) {
+
+        public static Runs none() {
+            return new Runs(0, List.of(), null, null, List.of(), List.of());
+        }
+    }
+
+    public record Count(String label, long count) {
     }
 
     /**

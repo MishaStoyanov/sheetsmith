@@ -3,6 +3,8 @@ import Button from './components/Button.jsx';
 import DateRange from './components/DateRange.jsx';
 import DonutChart, { Panel } from './components/DonutChart.jsx';
 import FilterBar from './components/FilterBar.jsx';
+import RankedBars from './components/RankedBars.jsx';
+import StatusBar from './components/StatusBar.jsx';
 import TimeBarChart from './components/TimeBarChart.jsx';
 import { getAnalyticsSummary } from './api.js';
 
@@ -28,6 +30,21 @@ function tokens(value, short = false) {
     return `${value}`;
   }
   return value.toLocaleString();
+}
+
+/**
+ * Seconds as something a person reads at a glance, not as a number of seconds.
+ *
+ * Kept to a decimal below ten, because rounding is what turned a median of four tenths of a second
+ * into "0s" — a figure that reads as a broken counter rather than as a fast run.
+ */
+function duration(seconds) {
+  if (seconds == null) return '—';
+  if (seconds < 10) return `${seconds.toFixed(1)}s`;
+  const whole = Math.round(seconds);
+  if (whole < 60) return `${whole}s`;
+  const minutes = Math.floor(whole / 60);
+  return minutes < 60 ? `${minutes}m ${whole % 60}s` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 }
 
 function money(value, short = false) {
@@ -79,6 +96,7 @@ export default function AnalyticsScreen({ theme, user }) {
 
   const activeCount = (filters.from || filters.to) ? 1 : 0;
   const totals = data?.totals;
+  const runs = data?.runs;
 
   // Your own share, taken out of the same answer as everything else rather than asked for
   // separately — a second call could come back disagreeing with the totals above it.
@@ -225,7 +243,7 @@ export default function AnalyticsScreen({ theme, user }) {
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 12, marginBottom: 28 }}>
         <DonutChart
           title={asMoney ? 'Spend by provider' : 'Tokens by provider'}
           slices={(data?.byProvider ?? []).map(s => ({ label: s.label, value: value(s) ?? 0 }))}
@@ -249,6 +267,46 @@ export default function AnalyticsScreen({ theme, user }) {
           format={format}
           theme={theme}
           empty={loading ? 'Loading…' : 'No calls in this range'}
+        />
+      </div>
+
+      {/*
+        A second question, under the same filters. The charts above are about what was asked of a
+        model; these are about whether the run around it worked — which for anyone hosting this is
+        the more useful of the two.
+      */}
+      <h2 style={{ fontSize: 16, fontWeight: 650, letterSpacing: '-0.01em', margin: '0 0 4px' }}>How runs went</h2>
+      <p style={{ fontSize: 13.5, color: 'var(--text-dim)', margin: '0 0 16px' }}>
+        Whether the work finished, what it was asked to do, and what went wrong.
+      </p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12, marginBottom: 12 }}>
+        <Stat label="Runs" value={runs ? runs.total.toLocaleString() : '—'} />
+        <Stat
+          label="Finished cleanly"
+          value={runs?.successRate == null ? '—' : `${Math.round(runs.successRate * 100)}%`}
+          hint={runs?.successRate == null ? 'nothing has finished yet' : 'of the runs that reached a verdict'}
+        />
+        <Stat label="Median run" value={duration(runs?.medianSeconds)} hint="median, not average" />
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <Panel title="How they ended">
+          <StatusBar counts={runs?.byStatus ?? []} />
+        </Panel>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 12 }}>
+        <RankedBars
+          title="Most used actions"
+          rows={runs?.topActions ?? []}
+          empty={loading ? 'Loading…' : 'No actions in this range'}
+        />
+        <RankedBars
+          title="What went wrong"
+          rows={runs?.topErrors ?? []}
+          colour="var(--del)"
+          empty={loading ? 'Loading…' : 'Nothing failed in this range'}
         />
       </div>
     </div>

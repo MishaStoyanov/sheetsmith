@@ -84,6 +84,7 @@ public class AnalyticsService {
                 byUser(rows, priceList, names, documentsPerUser(where)),
                 overTime(timeRows, priceList),
                 overTimeByUser(timeRows, priceList, names),
+                runs(query),
                 costKnown,
                 List.copyOf(unpriced));
     }
@@ -253,6 +254,73 @@ public class AnalyticsService {
         return names;
     }
 
+    // ── How the runs went ─────────────────────────────────────────────────────
+
+    /**
+     * The other half of the screen: not what was asked of a model, but whether it worked.
+     * <p>
+     * These come from the run tables rather than from the call log, and the two do not have the
+     * same shape — one run makes several calls, and a run that never reached a model makes none.
+     * They are in the same answer anyway because they are drawn under the same filters, and a
+     * second request could come back describing a different slice of time.
+     */
+    private AnalyticsSummaryDto.Runs runs(AnalyticsQuery query) {
+        Where where = Where.forRuns(query, "");
+
+        List<AnalyticsSummaryDto.Count> byStatus = jdbc.query(
+                "select status, count(*) as runs from job_records " + where.sql()
+                        + " group by status order by runs desc",
+                (rs, i) -> new AnalyticsSummaryDto.Count(rs.getString("status"), rs.getLong("runs")),
+                where.args());
+
+        long total = byStatus.stream().mapToLong(AnalyticsSummaryDto.Count::count).sum();
+        if (total == 0) {
+            return AnalyticsSummaryDto.Runs.none();
+        }
+
+        // A run still in flight has not failed, and counting it as anything but pending would make
+        // the rate sag every time somebody pressed go.
+        long decided = byStatus.stream()
+                .filter(status -> !"PROCESSING".equals(status.label()))
+                .mapToLong(AnalyticsSummaryDto.Count::count).sum();
+        long completed = byStatus.stream()
+                .filter(status -> "COMPLETED".equals(status.label()))
+                .mapToLong(AnalyticsSummaryDto.Count::count).sum();
+        Double successRate = decided == 0 ? null : (double) completed / decided;
+
+        // The median in the database, where it is one function rather than a sort and an index
+        // calculation with an off-by-one waiting in it for the even case.
+        Double median = jdbc.queryForObject("""
+                select percentile_cont(0.5) within group (
+                           order by extract(epoch from (processing_finished_at - processing_started_at)))
+                from job_records
+                """ + and(where, "processing_started_at is not null and processing_finished_at is not null"),
+                Double.class, where.args());
+
+        Where joined = Where.forRuns(query, "j.");
+        List<AnalyticsSummaryDto.Count> topActions = jdbc.query("""
+                select a.action_type as label, count(*) as runs
+                from action_results a join job_records j on j.id = a.job_id
+                """ + joined.sql() + " group by label order by runs desc, label limit 8",
+                (rs, i) -> new AnalyticsSummaryDto.Count(rs.getString("label"), rs.getLong("runs")),
+                joined.args());
+
+        List<AnalyticsSummaryDto.Count> topErrors = jdbc.query("""
+                select coalesce(nullif(a.error_message, ''), '(no message recorded)') as label,
+                       count(*) as runs
+                from action_results a join job_records j on j.id = a.job_id
+                """ + and(joined, "a.success = false") + " group by label order by runs desc, label limit 5",
+                (rs, i) -> new AnalyticsSummaryDto.Count(rs.getString("label"), rs.getLong("runs")),
+                joined.args());
+
+        return new AnalyticsSummaryDto.Runs(total, byStatus, successRate, median, topActions, topErrors);
+    }
+
+    /** One more condition on a clause that may or may not already have a {@code where}. */
+    private static String and(Where where, String condition) {
+        return where.sql().isEmpty() ? " where " + condition : where.sql() + " and " + condition;
+    }
+
     // ── Money ─────────────────────────────────────────────────────────────────
 
     /**
@@ -295,16 +363,34 @@ public class AnalyticsService {
     /** The where clause and its arguments, built together so they cannot fall out of step. */
     private record Where(String sql, Object[] args) {
 
+        /** The model calls: when a call started, and every filter the screen offers. */
         static Where from(AnalyticsQuery query) {
+            return build(query, "", "started_at", true);
+        }
+
+        /**
+         * The runs, which are a different table asked a different question.
+         * <p>
+         * Time is when the run was asked for rather than when a call inside it started, and the
+         * kind filter is left out entirely: chat and improve describe a call to a model, and a run
+         * has no such thing. A filter that silently matched nothing would be worse than an absent
+         * one.
+         */
+        static Where forRuns(AnalyticsQuery query, String prefix) {
+            return build(query, prefix, "created_at", false);
+        }
+
+        private static Where build(AnalyticsQuery query, String prefix, String timeColumn, boolean withKinds) {
             List<String> clauses = new ArrayList<>();
             List<Object> args = new ArrayList<>();
+            java.util.function.UnaryOperator<String> column = name -> prefix + name;
 
             if (query.from() != null) {
-                clauses.add("started_at >= ?");
+                clauses.add(column.apply(timeColumn) + " >= ?");
                 args.add(java.sql.Timestamp.valueOf(query.from()));
             }
             if (query.to() != null) {
-                clauses.add("started_at <= ?");
+                clauses.add(column.apply(timeColumn) + " <= ?");
                 args.add(java.sql.Timestamp.valueOf(query.to()));
             }
 
@@ -312,26 +398,27 @@ public class AnalyticsService {
             // every call on an instance without accounts belongs to nobody.
             boolean named = query.userIds() != null && !query.userIds().isEmpty();
             boolean unowned = Boolean.TRUE.equals(query.includeUnowned());
+            String userId = column.apply("user_id");
             if (named && unowned) {
-                clauses.add("(user_id in (" + placeholders(query.userIds().size()) + ") or user_id is null)");
+                clauses.add("(" + userId + " in (" + placeholders(query.userIds().size()) + ") or " + userId + " is null)");
                 args.addAll(query.userIds());
             } else if (named) {
-                clauses.add("user_id in (" + placeholders(query.userIds().size()) + ")");
+                clauses.add(userId + " in (" + placeholders(query.userIds().size()) + ")");
                 args.addAll(query.userIds());
             } else if (unowned) {
-                clauses.add("user_id is null");
+                clauses.add(userId + " is null");
             }
 
             if (notEmpty(query.providers())) {
-                clauses.add("provider in (" + placeholders(query.providers().size()) + ")");
+                clauses.add(column.apply("provider") + " in (" + placeholders(query.providers().size()) + ")");
                 args.addAll(query.providers());
             }
             if (notEmpty(query.models())) {
-                clauses.add("model in (" + placeholders(query.models().size()) + ")");
+                clauses.add(column.apply("model") + " in (" + placeholders(query.models().size()) + ")");
                 args.addAll(query.models());
             }
-            if (notEmpty(query.kinds())) {
-                clauses.add("kind in (" + placeholders(query.kinds().size()) + ")");
+            if (withKinds && notEmpty(query.kinds())) {
+                clauses.add(column.apply("kind") + " in (" + placeholders(query.kinds().size()) + ")");
                 query.kinds().forEach(kind -> args.add(kind.name()));
             }
 

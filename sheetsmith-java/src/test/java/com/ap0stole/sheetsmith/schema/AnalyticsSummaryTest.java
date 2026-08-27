@@ -48,7 +48,9 @@ class AnalyticsSummaryTest {
 
     @BeforeEach
     void seed() {
+        jdbc.update("delete from action_results");
         jdbc.update("delete from llm_usage");
+        jdbc.update("delete from job_records");
         jdbc.update("delete from model_prices");
         jdbc.update("delete from users where name = 'analytics-fixture'");
         jdbc.update("insert into users (name, password_hash) values ('analytics-fixture', 'x')");
@@ -64,6 +66,143 @@ class AnalyticsSummaryTest {
                         started_at, finished_at)
                 values (?, ?, ?, 'tidy it', ?, ?, ?, 'CLOUD', ?, ?, ?::timestamp, ?::timestamp)
                 """, kind, userId, session, prompt, completion, prompt + completion, provider, model, when, when);
+    }
+
+    /** A run, written straight in so its status and its clock are exactly what each case needs. */
+    private long run(String asked, String status, Long userId, Integer seconds) {
+        jdbc.update("""
+                insert into job_records (created_at, instruction, input_filename, input_file_path,
+                        status, user_id, processing_started_at, processing_finished_at)
+                values (?::timestamp, 'tidy it', 'book.xlsx', '/tmp/book.xlsx', ?, ?,
+                        ?::timestamp, case when ?::int is null then null
+                                           else (?::timestamp + make_interval(secs => ?::int)) end)
+                """, asked, status, userId, seconds == null ? null : asked, seconds, asked, seconds);
+        return jdbc.queryForObject("select max(id) from job_records", Long.class);
+    }
+
+    private void action(long jobId, int order, String type, boolean ok, String error) {
+        jdbc.update("""
+                insert into action_results (job_id, execution_order, action_type, success, error_message)
+                values (?, ?, ?, ?, ?)
+                """, jobId, order, type, ok, error);
+    }
+
+    @Test
+    @DisplayName("a run still in flight is not counted as a failure")
+    void inFlightRunsAreNotFailures() {
+        // The failure this guards against is a success rate that sags every time somebody presses
+        // go: a run with no verdict yet is not a verdict.
+        run("2026-08-01 10:00", "COMPLETED", danaId, 12);
+        run("2026-08-01 10:05", "PROCESSING", danaId, null);
+
+        AnalyticsSummaryDto.Runs runs = analytics.summary(AnalyticsQuery.unfiltered()).runs();
+
+        assertThat(runs.total()).isEqualTo(2);
+        assertThat(runs.successRate()).isEqualTo(1.0);
+    }
+
+    @Test
+    @DisplayName("partial counts against the success rate, because it did not do what was asked")
+    void partialIsNotSuccess() {
+        run("2026-08-01 10:00", "COMPLETED", danaId, 10);
+        run("2026-08-01 10:01", "PARTIAL", danaId, 10);
+        run("2026-08-01 10:02", "FAILED", danaId, 10);
+        run("2026-08-01 10:03", "COMPLETED", danaId, 10);
+
+        AnalyticsSummaryDto.Runs runs = analytics.summary(AnalyticsQuery.unfiltered()).runs();
+
+        assertThat(runs.successRate()).isEqualTo(0.5);
+        assertThat(runs.byStatus()).extracting(AnalyticsSummaryDto.Count::label)
+                .containsExactlyInAnyOrder("COMPLETED", "PARTIAL", "FAILED");
+    }
+
+    @Test
+    @DisplayName("the duration is the median, so one long run does not move it")
+    void oneLongRunDoesNotMoveTheMedian() {
+        // The whole reason for choosing the median: a ten-minute run on a local model drags an
+        // average far enough that the number stops describing anything.
+        run("2026-08-01 10:00", "COMPLETED", danaId, 10);
+        run("2026-08-01 10:01", "COMPLETED", danaId, 12);
+        run("2026-08-01 10:02", "COMPLETED", danaId, 14);
+        run("2026-08-01 10:03", "COMPLETED", danaId, 600);
+
+        AnalyticsSummaryDto.Runs runs = analytics.summary(AnalyticsQuery.unfiltered()).runs();
+
+        assertThat(runs.medianSeconds())
+                .as("the middle of 10, 12, 14 and 600 — an average would say 159")
+                .isEqualTo(13.0);
+    }
+
+    @Test
+    @DisplayName("a run that never finished is left out of the median rather than counted as zero")
+    void unfinishedRunsAreNotZeroSeconds() {
+        run("2026-08-01 10:00", "COMPLETED", danaId, 20);
+        run("2026-08-01 10:01", "PROCESSING", danaId, null);
+
+        assertThat(analytics.summary(AnalyticsQuery.unfiltered()).runs().medianSeconds()).isEqualTo(20.0);
+    }
+
+    @Test
+    @DisplayName("the top actions and the top errors are ranked, and the errors are only failures")
+    void actionsAndErrorsAreRanked() {
+        long first = run("2026-08-01 10:00", "PARTIAL", danaId, 10);
+        action(first, 0, "SET_CELL_VALUE", true, null);
+        action(first, 1, "SET_CELL_VALUE", true, null);
+        action(first, 2, "CREATE_CHART", false, "No numeric column to plot");
+
+        long second = run("2026-08-01 10:05", "FAILED", danaId, 10);
+        action(second, 0, "CREATE_CHART", false, "No numeric column to plot");
+        action(second, 1, "FREEZE_PANES", false, "Sheet is protected");
+
+        AnalyticsSummaryDto.Runs runs = analytics.summary(AnalyticsQuery.unfiltered()).runs();
+
+        assertThat(runs.topActions()).extracting(AnalyticsSummaryDto.Count::label,
+                        AnalyticsSummaryDto.Count::count)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("CREATE_CHART", 2L),
+                        org.assertj.core.groups.Tuple.tuple("SET_CELL_VALUE", 2L),
+                        org.assertj.core.groups.Tuple.tuple("FREEZE_PANES", 1L));
+        assertThat(runs.topErrors()).extracting(AnalyticsSummaryDto.Count::label,
+                        AnalyticsSummaryDto.Count::count)
+                .as("a successful action has no place in a list of what went wrong")
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("No numeric column to plot", 2L),
+                        org.assertj.core.groups.Tuple.tuple("Sheet is protected", 1L));
+    }
+
+    @Test
+    @DisplayName("the run figures answer to the same filters as everything else on the screen")
+    void runsFollowTheFilters() {
+        long inside = run("2026-08-01 10:00", "COMPLETED", danaId, 10);
+        action(inside, 0, "SORT_DATA", true, null);
+        long outside = run("2026-08-20 10:00", "FAILED", danaId, 10);
+        action(outside, 0, "CREATE_CHART", false, "boom");
+
+        AnalyticsQuery firstWeek = new AnalyticsQuery(
+                java.time.LocalDateTime.parse("2026-08-01T00:00"),
+                java.time.LocalDateTime.parse("2026-08-07T23:59"),
+                null, null, null, null, null, "day");
+
+        AnalyticsSummaryDto.Runs runs = analytics.summary(firstWeek).runs();
+
+        assertThat(runs.total()).isEqualTo(1);
+        assertThat(runs.successRate()).isEqualTo(1.0);
+        assertThat(runs.topActions()).extracting(AnalyticsSummaryDto.Count::label).containsExactly("SORT_DATA");
+        assertThat(runs.topErrors()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("an instance that has never run anything says nothing rather than zero per cent")
+    void noRunsIsNotZeroPerCent() {
+        call("2026-08-01 10:00", "CHAT", danaId, "s1", "OPENAI", "gpt-4o", 100, 10);
+
+        AnalyticsSummaryDto.Runs runs = analytics.summary(AnalyticsQuery.unfiltered()).runs();
+
+        assertThat(runs.total()).isZero();
+        assertThat(runs.successRate())
+                .as("nought per cent successful would read as everything having failed")
+                .isNull();
+        assertThat(runs.medianSeconds()).isNull();
     }
 
     @Test
