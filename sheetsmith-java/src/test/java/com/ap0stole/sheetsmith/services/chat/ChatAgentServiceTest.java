@@ -8,6 +8,9 @@ import com.ap0stole.sheetsmith.domain.entity.ChatMessage;
 import com.ap0stole.sheetsmith.domain.entity.DocumentSession;
 import com.ap0stole.sheetsmith.domain.enums.ChatRole;
 import com.ap0stole.sheetsmith.llm.AgentDecision;
+import com.ap0stole.sheetsmith.llm.ChatCall;
+import com.ap0stole.sheetsmith.llm.LlmEngine;
+import com.ap0stole.sheetsmith.llm.TokenUsage;
 import com.ap0stole.sheetsmith.llm.ChatLlmService;
 import com.ap0stole.sheetsmith.services.SessionLockRegistry;
 import com.ap0stole.sheetsmith.services.excel.FormulaErrorScanner;
@@ -79,15 +82,15 @@ class ChatAgentServiceTest {
         when(chatLlmService.renderResult(any())).thenReturn("{\"value\":1240}");
 
         agent = new ChatAgentService(sessionService, toolRegistry, chatLlmService, chatConfig,
-                errorScanner, new ObjectMapper(), new SessionLockRegistry());
+                errorScanner, new ObjectMapper(), new SessionLockRegistry(), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class));
     }
 
     @Test
     @DisplayName("a question runs query tools and answers without touching the sheet")
     void answersWithoutMutating() throws Exception {
         when(chatLlmService.decide(any(), any(), any(), any(), any(), eq(false)))
-                .thenReturn(AgentDecision.toolCall("AGGREGATE", Map.of("range", "A2:B4")))
-                .thenReturn(AgentDecision.answer("Widget A sold most — 1240."));
+                .thenReturn(call(AgentDecision.toolCall("AGGREGATE", Map.of("range", "A2:B4"))))
+                .thenReturn(call(AgentDecision.answer("Widget A sold most — 1240.")));
         when(toolRegistry.invoke(any(), eq("AGGREGATE"), any()))
                 .thenReturn(ToolInvocation.ok("AGGREGATE", false,
                         "Summed column B over A2:B4", "1240", Map.of("value", 1240)));
@@ -108,12 +111,12 @@ class ChatAgentServiceTest {
     @Test
     @DisplayName("a successful action is committed as a new revision")
     void commitsRevisionAfterMutation() throws Exception {
-        AgentDecision sort = AgentDecision.toolCall("SORT_DATA", Map.of("range", "A2:B4", "columnIndex", 1));
+        ChatCall sort = call(AgentDecision.toolCall("SORT_DATA", Map.of("range", "A2:B4", "columnIndex", 1)));
         when(toolRegistry.isMutating("SORT_DATA")).thenReturn(true);
         when(chatLlmService.decide(any(), any(), any(), any(), any(), eq(false)))
                 .thenReturn(sort)                                  // chosen from the compact index
                 .thenReturn(sort)                                  // restated with the full rules
-                .thenReturn(AgentDecision.answer("Sorted by revenue."));
+                .thenReturn(call(AgentDecision.answer("Sorted by revenue.")));
         when(toolRegistry.invoke(any(), eq("SORT_DATA"), any()))
                 .thenReturn(ToolInvocation.ok("SORT_DATA", true,
                         "Sorted A2:B4 by column B, highest first", "applied", "applied"));
@@ -133,8 +136,8 @@ class ChatAgentServiceTest {
     void inspectRefusesMutations() throws Exception {
         when(toolRegistry.isMutating("SORT_DATA")).thenReturn(true);
         when(chatLlmService.decide(any(), any(), any(), any(), any(), eq(false)))
-                .thenReturn(AgentDecision.toolCall("SORT_DATA", Map.of("range", "A2:B4")))
-                .thenReturn(AgentDecision.answer("Column B is unsorted and has 2 blanks."));
+                .thenReturn(call(AgentDecision.toolCall("SORT_DATA", Map.of("range", "A2:B4"))))
+                .thenReturn(call(AgentDecision.answer("Column B is unsorted and has 2 blanks.")));
 
         ChatTurnDto turn = agent.inspect(SESSION_ID, "what would you improve?");
 
@@ -149,8 +152,8 @@ class ChatAgentServiceTest {
     @DisplayName("a question never pays for the full editing rules")
     void questionsKeepTheCompactCatalog() {
         when(chatLlmService.decide(any(), any(), any(), any(), any(), eq(false)))
-                .thenReturn(AgentDecision.toolCall("AGGREGATE", Map.of("range", "A2:B4")))
-                .thenReturn(AgentDecision.answer("1240."));
+                .thenReturn(call(AgentDecision.toolCall("AGGREGATE", Map.of("range", "A2:B4"))))
+                .thenReturn(call(AgentDecision.answer("1240.")));
         when(toolRegistry.invoke(any(), eq("AGGREGATE"), any()))
                 .thenReturn(ToolInvocation.ok("AGGREGATE", false, "Summed column B", "1240", Map.of()));
 
@@ -163,13 +166,13 @@ class ChatAgentServiceTest {
     @Test
     @DisplayName("reaching for an action upgrades the prompt to the full rules exactly once")
     void editingUpgradesTheCatalogOnce() throws Exception {
-        AgentDecision clear = AgentDecision.toolCall("CLEAR_CELLS", Map.of("range", "B12"));
+        ChatCall clear = call(AgentDecision.toolCall("CLEAR_CELLS", Map.of("range", "B12")));
         when(toolRegistry.isMutating("CLEAR_CELLS")).thenReturn(true);
         when(chatLlmService.decide(any(), any(), any(), any(), any(), eq(false)))
                 .thenReturn(clear)   // picked from the compact index
                 .thenReturn(clear)   // restated with the full rules
                 .thenReturn(clear)   // a second action needs no further upgrade
-                .thenReturn(AgentDecision.answer("Cleared."));
+                .thenReturn(call(AgentDecision.answer("Cleared.")));
         when(toolRegistry.invoke(any(), eq("CLEAR_CELLS"), any()))
                 .thenReturn(ToolInvocation.ok("CLEAR_CELLS", true, "Cleared B12", "applied", "applied"));
         when(sessionService.commitRevision(eq(session), any())).thenReturn(1);
@@ -184,11 +187,11 @@ class ChatAgentServiceTest {
     @DisplayName("with the full catalog up front, an editing turn saves the restatement round trip")
     void fullCatalogAlwaysSkipsTheRestatement() throws Exception {
         chatConfig.setFullCatalogAlways(true);
-        AgentDecision sort = AgentDecision.toolCall("SORT_DATA", Map.of("range", "A2:B4", "columnIndex", 1));
+        ChatCall sort = call(AgentDecision.toolCall("SORT_DATA", Map.of("range", "A2:B4", "columnIndex", 1)));
         when(toolRegistry.isMutating("SORT_DATA")).thenReturn(true);
         when(chatLlmService.decide(any(), any(), any(), any(), any(), eq(false)))
                 .thenReturn(sort)                                  // the rules were already in front of it
-                .thenReturn(AgentDecision.answer("Sorted by revenue."));
+                .thenReturn(call(AgentDecision.answer("Sorted by revenue.")));
         when(toolRegistry.invoke(any(), eq("SORT_DATA"), any()))
                 .thenReturn(ToolInvocation.ok("SORT_DATA", true,
                         "Sorted A2:B4 by column B, highest first", "applied", "applied"));
@@ -208,13 +211,13 @@ class ChatAgentServiceTest {
     @DisplayName("skipping the restatement must not cost the self-check its baseline")
     void fullCatalogAlwaysKeepsTheSelfCheck() throws Exception {
         chatConfig.setFullCatalogAlways(true);
-        AgentDecision formula = AgentDecision.toolCall("ADD_FORMULA", Map.of("range", "C2:C4"));
+        ChatCall formula = call(AgentDecision.toolCall("ADD_FORMULA", Map.of("range", "C2:C4")));
         when(toolRegistry.isMutating(anyString())).thenReturn(true);
         when(chatLlmService.decide(any(), any(), any(), any(), any(), eq(false)))
                 .thenReturn(formula)
-                .thenReturn(AgentDecision.answer("Added the margin column."))
+                .thenReturn(call(AgentDecision.answer("Added the margin column.")))
                 .thenReturn(formula)                                        // the repair attempt
-                .thenReturn(AgentDecision.answer("Repaired."));
+                .thenReturn(call(AgentDecision.answer("Repaired.")));
         when(toolRegistry.invoke(any(), eq("ADD_FORMULA"), any()))
                 .thenReturn(ToolInvocation.ok("ADD_FORMULA", true,
                         "Wrote =A2/B2 into C2:C4", "applied", "applied"));
@@ -236,8 +239,8 @@ class ChatAgentServiceTest {
     @DisplayName("a failed tool is kept in the chain rather than hidden")
     void recordsFailedSteps() {
         when(chatLlmService.decide(any(), any(), any(), any(), any(), eq(false)))
-                .thenReturn(AgentDecision.toolCall("READ_RANGE", Map.of("range", "A1:ZZ9999")))
-                .thenReturn(AgentDecision.answer("That range is too big to read at once."));
+                .thenReturn(call(AgentDecision.toolCall("READ_RANGE", Map.of("range", "A1:ZZ9999"))))
+                .thenReturn(call(AgentDecision.answer("That range is too big to read at once.")));
         when(toolRegistry.invoke(any(), eq("READ_RANGE"), any()))
                 .thenReturn(ToolInvocation.failed("READ_RANGE", false,
                         "Read A1:ZZ9999", "Range covers 6759324 cells, limit is 300"));
@@ -254,8 +257,8 @@ class ChatAgentServiceTest {
     @DisplayName("an unusable reply costs a step but does not become one")
     void skipsUnparseableReplies() {
         when(chatLlmService.decide(any(), any(), any(), any(), any(), eq(false)))
-                .thenReturn(AgentDecision.unparseable("Your reply was not valid JSON"))
-                .thenReturn(AgentDecision.answer("Here you go."));
+                .thenReturn(call(AgentDecision.unparseable("Your reply was not valid JSON")))
+                .thenReturn(call(AgentDecision.answer("Here you go.")));
 
         ChatTurnDto turn = agent.send(SESSION_ID, "hello");
 
@@ -269,9 +272,9 @@ class ChatAgentServiceTest {
     void forcesAnswerWhenBudgetIsSpent() {
         chatConfig.setMaxSteps(2);
         when(chatLlmService.decide(any(), any(), any(), any(), any(), eq(false)))
-                .thenReturn(AgentDecision.toolCall("READ_RANGE", Map.of("range", "A1:B2")));
+                .thenReturn(call(AgentDecision.toolCall("READ_RANGE", Map.of("range", "A1:B2"))));
         when(chatLlmService.decide(any(), any(), any(), any(), any(), eq(true)))
-                .thenReturn(AgentDecision.answer("Best I can say is 1240."));
+                .thenReturn(call(AgentDecision.answer("Best I can say is 1240.")));
         when(toolRegistry.invoke(any(), eq("READ_RANGE"), any()))
                 .thenReturn(ToolInvocation.ok("READ_RANGE", false, "Read A1:B2", "2 rows", Map.of()));
 
@@ -287,7 +290,7 @@ class ChatAgentServiceTest {
     @DisplayName("the user's message is stored before the model is asked anything")
     void storesUserMessageFirst() {
         when(chatLlmService.decide(any(), any(), any(), any(), any(), anyBoolean()))
-                .thenReturn(AgentDecision.answer("Hi."));
+                .thenReturn(call(AgentDecision.answer("Hi.")));
 
         agent.send(SESSION_ID, "hello there");
 
@@ -366,8 +369,8 @@ class ChatAgentServiceTest {
     @DisplayName("a question never scans the sheet for errors")
     void questionsNeverScan() {
         when(chatLlmService.decide(any(), any(), any(), any(), any(), eq(false)))
-                .thenReturn(AgentDecision.toolCall("AGGREGATE", Map.of("range", "A2:B4")))
-                .thenReturn(AgentDecision.answer("1240."));
+                .thenReturn(call(AgentDecision.toolCall("AGGREGATE", Map.of("range", "A2:B4"))))
+                .thenReturn(call(AgentDecision.answer("1240.")));
         when(toolRegistry.invoke(any(), eq("AGGREGATE"), any()))
                 .thenReturn(ToolInvocation.ok("AGGREGATE", false, "Summed column B", "1240", Map.of()));
 
@@ -382,9 +385,9 @@ class ChatAgentServiceTest {
     @DisplayName("the listener hears every tool call, in order, saying what the stored chain says")
     void listenerMirrorsTheStoredChain() {
         when(chatLlmService.decide(any(), any(), any(), any(), any(), eq(false)))
-                .thenReturn(AgentDecision.toolCall("READ_RANGE", Map.of("range", "A1:B4")))
-                .thenReturn(AgentDecision.toolCall("AGGREGATE", Map.of("range", "B2:B4")))
-                .thenReturn(AgentDecision.answer("1240 in total."));
+                .thenReturn(call(AgentDecision.toolCall("READ_RANGE", Map.of("range", "A1:B4"))))
+                .thenReturn(call(AgentDecision.toolCall("AGGREGATE", Map.of("range", "B2:B4"))))
+                .thenReturn(call(AgentDecision.answer("1240 in total.")));
         when(toolRegistry.invoke(any(), eq("READ_RANGE"), any()))
                 .thenReturn(ToolInvocation.ok("READ_RANGE", false, "Read A1:B4", "4 rows", Map.of()));
         when(toolRegistry.invoke(any(), eq("AGGREGATE"), any()))
@@ -405,8 +408,8 @@ class ChatAgentServiceTest {
     @DisplayName("a failed tool reaches the listener too — a live view that hides errors is a lie")
     void listenerHearsFailedSteps() {
         when(chatLlmService.decide(any(), any(), any(), any(), any(), eq(false)))
-                .thenReturn(AgentDecision.toolCall("READ_RANGE", Map.of("range", "A1:ZZ9999")))
-                .thenReturn(AgentDecision.answer("That range is too big to read at once."));
+                .thenReturn(call(AgentDecision.toolCall("READ_RANGE", Map.of("range", "A1:ZZ9999"))))
+                .thenReturn(call(AgentDecision.answer("That range is too big to read at once.")));
         when(toolRegistry.invoke(any(), eq("READ_RANGE"), any()))
                 .thenReturn(ToolInvocation.failed("READ_RANGE", false,
                         "Read A1:ZZ9999", "Range covers 6759324 cells, limit is 300"));
@@ -444,8 +447,8 @@ class ChatAgentServiceTest {
     @DisplayName("a listener that blows up is the caller's problem, not the turn's")
     void listenerFailureDoesNotBreakTheTurn() {
         when(chatLlmService.decide(any(), any(), any(), any(), any(), eq(false)))
-                .thenReturn(AgentDecision.toolCall("AGGREGATE", Map.of("range", "A2:B4")))
-                .thenReturn(AgentDecision.answer("1240."));
+                .thenReturn(call(AgentDecision.toolCall("AGGREGATE", Map.of("range", "A2:B4"))))
+                .thenReturn(call(AgentDecision.answer("1240.")));
         when(toolRegistry.invoke(any(), eq("AGGREGATE"), any()))
                 .thenReturn(ToolInvocation.ok("AGGREGATE", false, "Summed column B", "1240", Map.of()));
 
@@ -476,14 +479,14 @@ class ChatAgentServiceTest {
 
     /** An editing turn followed by a model that reaches for one more tool to put things right. */
     private void scriptEditThenRepair() throws Exception {
-        AgentDecision formula = AgentDecision.toolCall("ADD_FORMULA", Map.of("range", "C2:C4"));
+        ChatCall formula = call(AgentDecision.toolCall("ADD_FORMULA", Map.of("range", "C2:C4")));
         when(toolRegistry.isMutating(anyString())).thenReturn(true);
         when(chatLlmService.decide(any(), any(), any(), any(), any(), eq(false)))
                 .thenReturn(formula)                                        // chosen from the compact index
                 .thenReturn(formula)                                        // restated with the full rules
-                .thenReturn(AgentDecision.answer("Added the margin column."))
+                .thenReturn(call(AgentDecision.answer("Added the margin column.")))
                 .thenReturn(formula)                                        // the repair attempt
-                .thenReturn(AgentDecision.answer("Repaired."));
+                .thenReturn(call(AgentDecision.answer("Repaired.")));
         when(toolRegistry.invoke(any(), eq("ADD_FORMULA"), any()))
                 .thenReturn(ToolInvocation.ok("ADD_FORMULA", true,
                         "Wrote =A2/B2 into C2:C4", "applied", "applied"));
@@ -502,5 +505,12 @@ class ChatAgentServiceTest {
             row.createCell(1).setCellValue(1240);
             workbook.write(out);
         }
+    }
+    /**
+     * A scripted reply with no cost attached. What the model decided is what these tests are about;
+     * the usage that now travels beside it is recorded elsewhere and asserted there.
+     */
+    private static ChatCall call(AgentDecision decision) {
+        return new ChatCall(decision, TokenUsage.NONE, LlmEngine.UNKNOWN);
     }
 }

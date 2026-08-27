@@ -105,6 +105,24 @@ When a `fixPlan` retry genuinely lands on another model, the run stays attribute
 **planned** it and the mismatch is logged — one column cannot hold two answers, and silently
 overwriting the attribution would be the wrong one.
 
+**`llm_usage` is where spend actually lives** (V9). One row per *call*, not per run or per turn: a
+repaired run makes two calls and a chat turn makes one per step, so summing rows is the whole of
+"how much was spent" with no special cases. Both flows write through `UsageRecorder`, which is the
+entire point — chat previously recorded nothing at all, so anybody editing more by conversation than
+by the improve flow would have seen a chart showing a fraction of the truth and looking perfectly
+plausible while doing it.
+
+Three things about it. The planning call is recorded in `/plan` with no job attached, because the
+money is spent there and a plan the user reads and walks away from cost exactly as much as one they
+applied. What was *done* is not copied in — the steps stay in `action_results` and `chat_steps` and
+the row points at the run or session, since a second copy could only drift. And recording runs in
+its own transaction inside a try/catch: by then the work has happened and the money is gone, so
+failing the turn over the bookkeeping would trade a lost row for a lost answer.
+
+Chat sessions gained an owner in the same migration. A session is always opened on the request
+thread, so unlike a job there is nothing to carry across a virtual thread — the caller is simply
+readable at the moment the document is opened, and the turn reads it from the session afterwards.
+
 ### Request flow — the scripting entry points
 
 `POST /api/excel/improve` (multipart) and `POST /api/excel/improve/path` are unchanged and own no

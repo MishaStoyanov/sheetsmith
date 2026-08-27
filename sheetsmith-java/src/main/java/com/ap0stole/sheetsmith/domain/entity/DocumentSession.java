@@ -1,6 +1,9 @@
 package com.ap0stole.sheetsmith.domain.entity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -44,6 +47,15 @@ public class DocumentSession {
     /** Highest revision written so far; also the one currently shown to the user. */
     @Column(nullable = false)
     private int currentRevision;
+
+    /**
+     * Who opened the document. Chat had no owner at all before this, so "who spent that" was
+     * unanswerable for every turn — and unlike a job, a session is always opened on the request
+     * thread, so the caller is simply readable at the moment it is created.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     public static DocumentSession create(String originalFilename, String directory) {
         DocumentSession session = new DocumentSession();

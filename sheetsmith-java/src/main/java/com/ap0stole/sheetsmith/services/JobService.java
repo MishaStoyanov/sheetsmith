@@ -67,6 +67,7 @@ public class JobService {
     private final SessionLockRegistry sessionLocks;
     private final CurrentUser currentUser;
     private final UserRepository users;
+    private final UsageRecorder usageRecorder;
 
     private final ConcurrentHashMap<String, PendingPlan> pendingPlans = new ConcurrentHashMap<>();
 
@@ -87,8 +88,15 @@ public class JobService {
         DocumentSession session = documentSessionService.require(request.sessionId());
 
         ExcelSchemaDto schema = documentSessionService.schema(session);
+        LocalDateTime askedAt = LocalDateTime.now();
         PlanningResult planned = aiPlanningService.generatePlan(request.instruction(), schema.toPromptString());
         AutomationRequest plan = planned.plan();
+
+        // Recorded here, with no job to point at, because the money is spent now: a plan the user
+        // reads and walks away from cost exactly as much as one they applied. Waiting for a job
+        // would leave every abandoned plan free of charge in the numbers.
+        usageRecorder.chatlessPlan(session.getId(), session.getUser(), request.instruction(),
+                planned.usage(), planned.engine(), askedAt);
 
         // A model that answers in prose instead of JSON parses down to zero steps, and a plan of
         // zero steps renders as an empty screen that explains nothing — indistinguishable from a
@@ -365,20 +373,26 @@ public class JobService {
         if (prePlan != null) {
             plan = prePlan;
         } else {
+            LocalDateTime askedAt = LocalDateTime.now();
             PlanningResult planned = aiPlanningService.generatePlan(instruction, schema.toPromptString());
             plan = planned.plan();
             recordEngine(job, planned.engine());
             recordUsage(job, planned.usage());
+            usageRecorder.improve(job, job.getStartedBy(), instruction,
+                    planned.usage(), planned.engine(), askedAt);
         }
 
         List<ActionResult> results = excelAutomationService.applyChanges(inputPath, resultPath, plan, job);
 
         if (shouldRetry(results, plan)) {
             log.info("Job {} triggering retry via fixPlan", job.getId());
+            LocalDateTime repairAskedAt = LocalDateTime.now();
             PlanningResult repaired = aiPlanningService.fixPlan(
                     instruction, buildErrorSummary(results), schema.toPromptString());
             recordEngine(job, repaired.engine());
             recordUsage(job, repaired.usage());
+            usageRecorder.improve(job, job.getStartedBy(), instruction,
+                    repaired.usage(), repaired.engine(), repairAskedAt);
             results = excelAutomationService.applyChanges(inputPath, resultPath, repaired.plan(), job);
         }
 

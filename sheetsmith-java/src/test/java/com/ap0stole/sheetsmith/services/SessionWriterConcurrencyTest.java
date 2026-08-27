@@ -11,6 +11,7 @@ import com.ap0stole.sheetsmith.domain.entity.JobRecord;
 import com.ap0stole.sheetsmith.domain.enums.JobStatus;
 import com.ap0stole.sheetsmith.llm.AgentDecision;
 import com.ap0stole.sheetsmith.llm.AiPlanningService;
+import com.ap0stole.sheetsmith.llm.ChatCall;
 import com.ap0stole.sheetsmith.llm.LlmEngine;
 import com.ap0stole.sheetsmith.llm.PlanningResult;
 import com.ap0stole.sheetsmith.llm.TokenUsage;
@@ -131,11 +132,11 @@ class SessionWriterConcurrencyTest {
         when(toolRegistry.invoke(any(), eq("ADD_FORMULA"), any())).thenAnswer(call -> chatEdit(call.getArgument(0)));
 
         ChatLlmService chatLlmService = mock(ChatLlmService.class);
-        AgentDecision edit = AgentDecision.toolCall("ADD_FORMULA", Map.of("range", "C1"));
+        ChatCall edit = new ChatCall(AgentDecision.toolCall("ADD_FORMULA", Map.of("range", "C1")), TokenUsage.NONE, LlmEngine.UNKNOWN);
         when(chatLlmService.decide(any(), any(), any(), any(), any(), eq(false)))
                 .thenReturn(edit)                                   // picked from the compact index
                 .thenReturn(edit)                                   // restated with the full rules
-                .thenReturn(AgentDecision.answer("Marked the sheet."));
+                .thenReturn(new ChatCall(AgentDecision.answer("Marked the sheet."), TokenUsage.NONE, LlmEngine.UNKNOWN));
 
         FormulaErrorScanner errorScanner = mock(FormulaErrorScanner.class);
         when(errorScanner.scan(any())).thenReturn(List.of());
@@ -144,14 +145,14 @@ class SessionWriterConcurrencyTest {
         SessionLockRegistry sessionLocks = new SessionLockRegistry();
 
         sessionService = new DocumentSessionService(storageConfig, sessionRepository, messageRepository,
-                mock(ChatStepRepository.class), new SessionSchemaCache(schemaExtractor));
+                mock(ChatStepRepository.class), new SessionSchemaCache(schemaExtractor), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class));
         agentService = new ChatAgentService(sessionService, toolRegistry, chatLlmService, new ChatConfig(),
-                errorScanner, new ObjectMapper(), sessionLocks);
+                errorScanner, new ObjectMapper(), sessionLocks, mock(com.ap0stole.sheetsmith.services.UsageRecorder.class));
         jobService = new JobService(jobRepository, actionResultRepository, new FileStorageService(storageConfig),
                 schemaExtractor, planningService, automationService, actionRegistry,
                 mock(PathGuard.class), new Semaphore(1), sessionService, sessionLocks,
                 new com.ap0stole.sheetsmith.auth.CurrentUser(),
-                mock(com.ap0stole.sheetsmith.repository.UserRepository.class));
+                mock(com.ap0stole.sheetsmith.repository.UserRepository.class), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class));
     }
 
     @Test

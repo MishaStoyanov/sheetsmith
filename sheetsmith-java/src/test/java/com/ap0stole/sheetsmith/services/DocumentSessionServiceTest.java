@@ -73,7 +73,7 @@ class DocumentSessionServiceTest {
                 .build());
 
         service = new DocumentSessionService(storageConfig, sessionRepository, messageRepository,
-                stepRepository, new SessionSchemaCache(schemaExtractorService));
+                stepRepository, new SessionSchemaCache(schemaExtractorService), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class));
     }
 
     @Test

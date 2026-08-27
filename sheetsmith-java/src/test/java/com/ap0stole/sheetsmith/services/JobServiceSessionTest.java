@@ -126,7 +126,7 @@ class JobServiceSessionTest {
                         : applySheet(call.getArgument(0), call.getArgument(1), call.getArgument(3)));
 
         sessionService = new DocumentSessionService(storageConfig, sessionRepository, messageRepository,
-                mock(ChatStepRepository.class), new SessionSchemaCache(new SchemaExtractorService(new ChatConfig())));
+                mock(ChatStepRepository.class), new SessionSchemaCache(new SchemaExtractorService(new ChatConfig())), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class));
 
         jobService = new JobService(jobRepository, actionResultRepository, new FileStorageService(storageConfig),
                 new SchemaExtractorService(new ChatConfig()), planningService, automationService, actionRegistry,
@@ -134,7 +134,7 @@ class JobServiceSessionTest {
                 // Nobody signed in: with authentication off a run has no owner, which is the shape
                 // every test here already assumes.
                 new com.ap0stole.sheetsmith.auth.CurrentUser(),
-                mock(com.ap0stole.sheetsmith.repository.UserRepository.class));
+                mock(com.ap0stole.sheetsmith.repository.UserRepository.class), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class));
     }
 
     @Test

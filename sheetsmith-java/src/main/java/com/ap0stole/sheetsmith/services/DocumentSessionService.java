@@ -57,6 +57,7 @@ public class DocumentSessionService {
     private final ChatMessageRepository messageRepository;
     private final ChatStepRepository stepRepository;
     private final SessionSchemaCache schemaCache;
+    private final UsageRecorder usageRecorder;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -65,6 +66,8 @@ public class DocumentSessionService {
         validateXlsx(file);
 
         DocumentSession session = DocumentSession.create(originalName(file), "");
+        // Read here, on the request thread, where the caller is still known.
+        session.setUser(usageRecorder.caller());
         Path directory = Path.of(storageConfig.getSessionDir()).resolve(session.getId());
         Files.createDirectories(directory);
         session.setDirectory(directory.toAbsolutePath().toString());

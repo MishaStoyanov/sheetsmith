@@ -11,7 +11,11 @@ import com.ap0stole.sheetsmith.domain.entity.ChatStep;
 import com.ap0stole.sheetsmith.domain.enums.ChatRole;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
+import com.ap0stole.sheetsmith.domain.entity.User;
+import java.time.LocalDateTime;
 import com.ap0stole.sheetsmith.llm.AgentDecision;
+import com.ap0stole.sheetsmith.llm.ChatCall;
+import com.ap0stole.sheetsmith.services.UsageRecorder;
 import com.ap0stole.sheetsmith.llm.ChatLlmService;
 import com.ap0stole.sheetsmith.services.DocumentSessionService;
 import com.ap0stole.sheetsmith.services.SessionLockRegistry;
@@ -56,6 +60,7 @@ public class ChatAgentService {
     private final FormulaErrorScanner errorScanner;
     private final ObjectMapper objectMapper;
     private final SessionLockRegistry sessionLocks;
+    private final UsageRecorder usageRecorder;
 
     /** The lock is shared with the improve job, which also appends revisions to this session. */
     public ChatTurnDto send(String sessionId, String text) {
@@ -87,7 +92,10 @@ public class ChatAgentService {
         // gets the full editing rules if it actually reaches for an action — unless the deployment
         // prefers one stable prompt for the whole turn (see ChatConfig#fullCatalogAlways).
         Turn turn = new Turn(sessionId, text, history, sessionService.tableContext(session),
-                toolRegistry.toolCatalogPrompt(chatConfig.isFullCatalogAlways()), listener);
+                toolRegistry.toolCatalogPrompt(chatConfig.isFullCatalogAlways()), listener,
+                // Read from the session rather than from the security context: a streamed turn runs
+                // on a virtual thread, where the caller is no longer visible.
+                session.getUser());
         turn.readOnly = readOnly;
 
         try (FileInputStream in = new FileInputStream(sessionService.currentPath(session).toFile());
@@ -240,9 +248,21 @@ public class ChatAgentService {
         }
     }
 
+    /**
+     * One step of the turn, and the record of what it cost.
+     * <p>
+     * Recorded here rather than around the loop because a turn is many calls: the model is asked
+     * once per step, plus once more for the forced answer, and each one is money. Counting only the
+     * turn would undercount every turn that used a tool.
+     */
     private AgentDecision decide(Turn turn, boolean mustAnswer) {
-        return chatLlmService.decide(turn.catalog, turn.tableContext, turn.history, turn.userText,
-                turn.trace.toString(), mustAnswer);
+        LocalDateTime startedAt = LocalDateTime.now();
+        ChatCall call = chatLlmService.decide(turn.catalog, turn.tableContext, turn.history,
+                turn.userText, turn.trace.toString(), mustAnswer);
+
+        usageRecorder.chat(turn.sessionId, turn.owner, turn.userText,
+                call.usage(), call.engine(), startedAt);
+        return call.decision();
     }
 
     private void appendTrace(Turn turn, AgentDecision decision, ToolInvocation invocation) {
@@ -307,6 +327,7 @@ public class ChatAgentService {
         private final List<Map<String, Object>> args = new ArrayList<>();
         private final StringBuilder trace = new StringBuilder();
         private final TurnListener listener;
+        private final User owner;
 
         private String catalog;
         private String answer;
@@ -321,13 +342,14 @@ public class ChatAgentService {
         private List<CellError> errorsBefore;
 
         private Turn(String sessionId, String userText, String history, String tableContext,
-                     String catalog, TurnListener listener) {
+                     String catalog, TurnListener listener, User owner) {
             this.sessionId = sessionId;
             this.userText = userText;
             this.history = history;
             this.tableContext = tableContext;
             this.catalog = catalog;
             this.listener = listener;
+            this.owner = owner;
         }
 
         private void add(ToolInvocation invocation, Map<String, Object> callArgs) {

@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.stereotype.Service;
 
 import java.util.Iterator;
@@ -64,8 +65,8 @@ public class ChatLlmService {
      *
      * @param forceAnswer when true the model is told the step budget is gone and it must answer now
      */
-    public AgentDecision decide(String toolCatalog, String tableContext, String history,
-                                String userMessage, String trace, boolean forceAnswer) {
+    public ChatCall decide(String toolCatalog, String tableContext, String history,
+                           String userMessage, String trace, boolean forceAnswer) {
 
         String system = PROTOCOL + "\nAVAILABLE TOOLS\n\n" + toolCatalog;
 
@@ -83,27 +84,38 @@ public class ChatLlmService {
                 ? "Your step budget is used up. Reply now with {\"answer\": \"...\"} based on what you have."
                 : "Reply with the next JSON object.");
 
-        String raw = call(system, user.toString());
-        return parse(raw);
+        return call(system, user.toString());
     }
 
-    private String call(String system, String user) {
+    /**
+     * Asks for the whole response rather than only its text: the token count is in the response
+     * metadata, and a chat turn whose cost was dropped here is a turn missing from the spend.
+     */
+    private ChatCall call(String system, String user) {
         LlmSettingsDto settings = llmSettingsService.getSettings();
         ChatModel chatModel = llmClientFactory.getChatModel(settings);
         ChatClient chatClient = ChatClient.builder(chatModel).defaultSystem(system).build();
 
         try {
-            String raw = chatClient.prompt().user(user).call().content();
+            ChatResponse response = chatClient.prompt().user(user).call().chatResponse();
+            String raw = textOf(response);
             if (raw == null || raw.isBlank()) {
                 throw new ApiException(ErrorCode.LLM_FAILURE, "The AI returned an empty response — try again");
             }
-            return raw;
+            return new ChatCall(parse(raw), TokenUsage.from(response), LlmEngine.of(settings));
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
             log.error("Chat LLM call failed", e);
             throw new ApiException(ErrorCode.LLM_FAILURE, LlmFailures.humanize(e));
         }
+    }
+
+    private static String textOf(ChatResponse response) {
+        if (response == null || response.getResult() == null || response.getResult().getOutput() == null) {
+            return null;
+        }
+        return response.getResult().getOutput().getText();
     }
 
     /**
