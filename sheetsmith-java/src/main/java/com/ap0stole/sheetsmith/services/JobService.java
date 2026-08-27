@@ -231,6 +231,15 @@ public class JobService {
         return jobRepository.findAll(pageable).map(JobHistoryDto::from);
     }
 
+    /**
+     * The history, narrowed. Filters combine as one query rather than being applied in Java: the
+     * page count has to be the count of what matched, not of what was read.
+     */
+    public Page<JobHistoryDto> search(HistorySearchRequest request) {
+        return jobRepository.findAll(JobSearch.of(request), JobSearch.pageable(request))
+                .map(JobHistoryDto::from);
+    }
+
     @Transactional(readOnly = true)
     public JobHistoryDto getById(Long id) {
         return jobRepository.findById(id)

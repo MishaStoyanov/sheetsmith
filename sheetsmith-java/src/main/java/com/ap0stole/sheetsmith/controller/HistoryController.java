@@ -1,5 +1,6 @@
 package com.ap0stole.sheetsmith.controller;
 
+import com.ap0stole.sheetsmith.domain.dto.HistorySearchRequest;
 import com.ap0stole.sheetsmith.domain.dto.JobHistoryDto;
 import com.ap0stole.sheetsmith.services.JobService;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,16 @@ public class HistoryController {
     public ResponseEntity<Page<JobHistoryDto>> getHistory(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(jobService.getHistory(pageable));
+    }
+
+    /**
+     * POST rather than GET because the filters are a body: a dozen optional fields, two of them
+     * lists, do not belong in a query string that has to be escaped by hand on the way in and out.
+     */
+    @PostMapping("/search")
+    public ResponseEntity<Page<JobHistoryDto>> search(@RequestBody(required = false) HistorySearchRequest request) {
+        return ResponseEntity.ok(jobService.search(
+                request == null ? HistorySearchRequest.unfiltered() : request));
     }
 
     @GetMapping("/{id}")
