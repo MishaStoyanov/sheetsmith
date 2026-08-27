@@ -57,15 +57,25 @@ class AnalyticsSummaryTest {
         danaId = jdbc.queryForObject("select id from users where name = 'analytics-fixture'", Long.class);
     }
 
-    /** Written straight in, so the timestamps and the owner are exactly what each case needs. */
+    /**
+     * Written straight in, so the timestamps and the owner are exactly what each case needs.
+     * <p>
+     * The rate is stamped from the price list as it stands at insert time, which is what the
+     * application does when it records a real call. A fixture that left it null would be testing a
+     * call made before anybody had priced that model — a real case, but not this one.
+     */
     private void call(String when, String kind, Long userId, String session,
                       String provider, String model, long prompt, long completion) {
         jdbc.update("""
                 insert into llm_usage (kind, user_id, session_id, prompt, prompt_tokens,
                         completion_tokens, total_tokens, provider_mode, provider, model,
-                        started_at, finished_at)
-                values (?, ?, ?, 'tidy it', ?, ?, ?, 'CLOUD', ?, ?, ?::timestamp, ?::timestamp)
-                """, kind, userId, session, prompt, completion, prompt + completion, provider, model, when, when);
+                        input_per_million, output_per_million, started_at, finished_at)
+                select ?, ?, ?, 'tidy it', ?, ?, ?, 'CLOUD', ?, ?,
+                       p.input_per_million, p.output_per_million, ?::timestamp, ?::timestamp
+                from (select 1) as one
+                left join model_prices p on upper(p.provider) = upper(?) and p.model = ?
+                """, kind, userId, session, prompt, completion, prompt + completion, provider, model,
+                when, when, provider, model);
     }
 
     /** A run, written straight in so its status and its clock are exactly what each case needs. */
@@ -477,6 +487,58 @@ class AnalyticsSummaryTest {
         run("2026-08-01 10:00", "FAILED", danaId, 3);
 
         assertThat(analytics.summary(AnalyticsQuery.unfiltered()).neverUsed()).isFalse();
+    }
+
+    @Test
+    @DisplayName("changing a price today does not move what last week cost")
+    void historyIsFrozenAtTheRateOfTheDay() {
+        // The reason the rate is stored on the call at all. Worked out on every read from the
+        // current list, correcting a figure would silently redraw every chart that already had it —
+        // an audit whose numbers move without anybody deciding they should is not an audit.
+        prices.upsert(new UpsertPriceRequest("OPENAI", "gpt-4o",
+                new BigDecimal("2.00"), new BigDecimal("10.00")));
+        call("2026-08-01 10:00", "CHAT", danaId, "s1", "OPENAI", "gpt-4o", 1_000_000, 0);
+
+        assertThat(analytics.summary(AnalyticsQuery.unfiltered()).totals().cost())
+                .isEqualByComparingTo("2.0000");
+
+        prices.upsert(new UpsertPriceRequest("OPENAI", "gpt-4o",
+                new BigDecimal("50.00"), new BigDecimal("99.00")));
+
+        assertThat(analytics.summary(AnalyticsQuery.unfiltered()).totals().cost())
+                .as("the call was made at two dollars a million and always will have been")
+                .isEqualByComparingTo("2.0000");
+    }
+
+    @Test
+    @DisplayName("a price change splits one model into the two rates it was called at")
+    void bothRatesAreCountedWhenAPriceMovedMidRange() {
+        prices.upsert(new UpsertPriceRequest("OPENAI", "gpt-4o",
+                new BigDecimal("2.00"), new BigDecimal("10.00")));
+        call("2026-08-01 10:00", "CHAT", danaId, "s1", "OPENAI", "gpt-4o", 1_000_000, 0);
+
+        prices.upsert(new UpsertPriceRequest("OPENAI", "gpt-4o",
+                new BigDecimal("4.00"), new BigDecimal("10.00")));
+        call("2026-08-20 10:00", "CHAT", danaId, "s1", "OPENAI", "gpt-4o", 1_000_000, 0);
+
+        // Two plus four, not two lots of either: grouping collapses the model but never the rate.
+        assertThat(analytics.summary(AnalyticsQuery.unfiltered()).totals().cost())
+                .isEqualByComparingTo("6.0000");
+    }
+
+    @Test
+    @DisplayName("a call made before anybody priced the model stays unpriced afterwards")
+    void pricingSomethingLaterDoesNotExplainEarlierSpending() {
+        call("2026-08-01 10:00", "CHAT", danaId, "s1", "OPENAI", "gpt-4o", 1_000_000, 0);
+        prices.upsert(new UpsertPriceRequest("OPENAI", "gpt-4o",
+                new BigDecimal("2.00"), new BigDecimal("10.00")));
+
+        AnalyticsSummaryDto summary = analytics.summary(AnalyticsQuery.unfiltered());
+
+        assertThat(summary.totals().cost())
+                .as("nobody could account for that call at the time, and a price entered today does not change that")
+                .isNull();
+        assertThat(summary.unpricedModels()).containsExactly("OPENAI / gpt-4o");
     }
 
     static boolean dockerAvailable() {

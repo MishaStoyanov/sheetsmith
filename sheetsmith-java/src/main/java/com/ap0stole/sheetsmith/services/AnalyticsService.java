@@ -43,33 +43,44 @@ public class AnalyticsService {
     @Transactional(readOnly = true)
     public AnalyticsSummaryDto summary(AnalyticsQuery query) {
         Where where = Where.from(query);
-        Map<String, ModelPrice> priceList = priceList();
-
+        // Grouped by the rates as well as the model. A price that changed halfway through the range
+        // makes two rows for one model, which is the point: collapsing them would need one figure
+        // to stand for two different prices.
         List<Row> rows = jdbc.query("""
                         select coalesce(provider, 'unknown') as provider,
                                coalesce(model, 'unknown')    as model,
                                user_id,
+                               input_per_million,
+                               output_per_million,
                                count(*)                      as calls,
                                coalesce(sum(prompt_tokens), 0)     as prompt_tokens,
                                coalesce(sum(completion_tokens), 0) as completion_tokens,
                                coalesce(sum(total_tokens), 0)      as total_tokens
                         from llm_usage
                         """ + where.sql() + """
-                         group by provider, model, user_id
+                         group by provider, model, user_id, input_per_million, output_per_million
                         """,
                 (rs, i) -> new Row(rs.getString("provider"), rs.getString("model"),
                         rs.getObject("user_id") == null ? null : rs.getLong("user_id"),
                         rs.getLong("calls"), rs.getLong("prompt_tokens"),
-                        rs.getLong("completion_tokens"), rs.getLong("total_tokens")),
+                        rs.getLong("completion_tokens"), rs.getLong("total_tokens"),
+                        rs.getBigDecimal("input_per_million"), rs.getBigDecimal("output_per_million")),
                 where.args());
 
+        // Read from the calls themselves rather than from the price list as it stands. A model
+        // priced only last week was unpriced when March's calls were made, and March should say so
+        // — otherwise entering a price appears to retroactively explain spending nobody could
+        // account for at the time.
         Set<String> unpriced = new TreeSet<>();
+        boolean anyPriced = false;
         for (Row row : rows) {
-            if (!priceList.containsKey(key(row.provider(), row.model()))) {
+            if (row.inputPerMillion() == null || row.outputPerMillion() == null) {
                 unpriced.add(row.provider() + " / " + row.model());
+            } else {
+                anyPriced = true;
             }
         }
-        boolean costKnown = !priceList.isEmpty() && unpriced.size() < rows.size();
+        boolean costKnown = anyPriced;
 
         // Read once, aggregated twice. The total per bucket and the same buckets split by owner
         // are the same rows summed along different axes; two queries could disagree with each
@@ -78,12 +89,12 @@ public class AnalyticsService {
         Map<Long, String> names = names();
 
         return new AnalyticsSummaryDto(
-                totals(rows, priceList, where),
-                slices(rows, priceList, Row::provider),
-                slices(rows, priceList, r -> r.provider() + " / " + r.model()),
-                byUser(rows, priceList, names, documentsPerUser(where)),
-                overTime(timeRows, priceList),
-                overTimeByUser(timeRows, priceList, names),
+                totals(rows, where),
+                slices(rows, Row::provider),
+                slices(rows, r -> r.provider() + " / " + r.model()),
+                byUser(rows, names, documentsPerUser(where)),
+                overTime(timeRows),
+                overTimeByUser(timeRows, names),
                 runs(query),
                 oldestPriceCheck(),
                 neverUsed(),
@@ -93,7 +104,7 @@ public class AnalyticsService {
 
     // ── The pieces ────────────────────────────────────────────────────────────
 
-    private AnalyticsSummaryDto.Totals totals(List<Row> rows, Map<String, ModelPrice> priceList, Where where) {
+    private AnalyticsSummaryDto.Totals totals(List<Row> rows, Where where) {
         long calls = rows.stream().mapToLong(Row::calls).sum();
         long prompt = rows.stream().mapToLong(Row::promptTokens).sum();
         long completion = rows.stream().mapToLong(Row::completionTokens).sum();
@@ -109,10 +120,10 @@ public class AnalyticsService {
                 "select count(distinct job_id) from llm_usage " + where.sql(), Long.class, where.args());
 
         return new AnalyticsSummaryDto.Totals(calls, prompt, completion, total,
-                cost(rows, priceList), documents == null ? 0 : documents, runs == null ? 0 : runs);
+                cost(rows), documents == null ? 0 : documents, runs == null ? 0 : runs);
     }
 
-    private List<AnalyticsSummaryDto.Slice> slices(List<Row> rows, Map<String, ModelPrice> priceList,
+    private List<AnalyticsSummaryDto.Slice> slices(List<Row> rows,
                                                    java.util.function.Function<Row, String> label) {
         Map<String, List<Row>> grouped = new LinkedHashMap<>();
         for (Row row : rows) {
@@ -122,12 +133,12 @@ public class AnalyticsService {
                 .map(e -> new AnalyticsSummaryDto.Slice(e.getKey(),
                         e.getValue().stream().mapToLong(Row::calls).sum(),
                         e.getValue().stream().mapToLong(Row::totalTokens).sum(),
-                        cost(e.getValue(), priceList)))
+                        cost(e.getValue())))
                 .sorted(Comparator.comparingLong(AnalyticsSummaryDto.Slice::totalTokens).reversed())
                 .toList();
     }
 
-    private List<AnalyticsSummaryDto.UserSlice> byUser(List<Row> rows, Map<String, ModelPrice> priceList,
+    private List<AnalyticsSummaryDto.UserSlice> byUser(List<Row> rows,
                                                        Map<Long, String> names,
                                                        Map<Long, Long> documents) {
         Map<Long, List<Row>> grouped = new LinkedHashMap<>();
@@ -140,7 +151,7 @@ public class AnalyticsService {
                         name(e.getKey(), names),
                         e.getValue().stream().mapToLong(Row::calls).sum(),
                         e.getValue().stream().mapToLong(Row::totalTokens).sum(),
-                        cost(e.getValue(), priceList),
+                        cost(e.getValue()),
                         documents.getOrDefault(e.getKey(), 0L)))
                 .sorted(Comparator.comparingLong(AnalyticsSummaryDto.UserSlice::totalTokens).reversed())
                 .toList();
@@ -160,18 +171,22 @@ public class AnalyticsService {
                                coalesce(provider, 'unknown') as provider,
                                coalesce(model, 'unknown')    as model,
                                user_id,
+                               input_per_million,
+                               output_per_million,
                                count(*) as calls,
                                coalesce(sum(prompt_tokens), 0)     as prompt_tokens,
                                coalesce(sum(completion_tokens), 0) as completion_tokens,
                                coalesce(sum(total_tokens), 0)      as total_tokens
                         from llm_usage
                         """.formatted(unit) + where.sql() + """
-                         group by bucket, provider, model, user_id order by bucket
+                         group by bucket, provider, model, user_id, input_per_million, output_per_million
+                         order by bucket
                         """,
                 (rs, i) -> new Row(rs.getString("provider"), rs.getString("model"),
                         rs.getObject("user_id") == null ? null : rs.getLong("user_id"),
                         rs.getLong("calls"), rs.getLong("prompt_tokens"),
-                        rs.getLong("completion_tokens"), rs.getLong("total_tokens"))
+                        rs.getLong("completion_tokens"), rs.getLong("total_tokens"),
+                        rs.getBigDecimal("input_per_million"), rs.getBigDecimal("output_per_million"))
                         .withBucket(rs.getString("bucket")),
                 where.args());
     }
@@ -196,7 +211,7 @@ public class AnalyticsService {
         return counts;
     }
 
-    private List<AnalyticsSummaryDto.Bucket> overTime(List<Row> rows, Map<String, ModelPrice> priceList) {
+    private List<AnalyticsSummaryDto.Bucket> overTime(List<Row> rows) {
         Map<String, List<Row>> grouped = new LinkedHashMap<>();
         for (Row row : rows) {
             grouped.computeIfAbsent(row.bucket(), k -> new ArrayList<>()).add(row);
@@ -205,7 +220,7 @@ public class AnalyticsService {
                 .map(e -> new AnalyticsSummaryDto.Bucket(e.getKey(),
                         e.getValue().stream().mapToLong(Row::calls).sum(),
                         e.getValue().stream().mapToLong(Row::totalTokens).sum(),
-                        cost(e.getValue(), priceList)))
+                        cost(e.getValue())))
                 .toList();
     }
 
@@ -217,7 +232,6 @@ public class AnalyticsService {
      * here rather than on the screen because the question is about the data, and the data is here.
      */
     private List<AnalyticsSummaryDto.UserBucket> overTimeByUser(List<Row> rows,
-                                                                Map<String, ModelPrice> priceList,
                                                                 Map<Long, String> names) {
         long owners = rows.stream().map(Row::userId).map(String::valueOf).distinct().count();
         if (owners < 2) {
@@ -235,7 +249,7 @@ public class AnalyticsService {
                         name(group.getFirst().userId(), names),
                         group.stream().mapToLong(Row::calls).sum(),
                         group.stream().mapToLong(Row::totalTokens).sum(),
-                        cost(group, priceList)))
+                        cost(group)))
                 .toList();
     }
 
@@ -355,32 +369,27 @@ public class AnalyticsService {
      * answers null rather than 0.00 — a total that silently leaves out half the calls is worse than
      * an absent one, because it looks like an answer.
      */
-    private BigDecimal cost(List<Row> rows, Map<String, ModelPrice> priceList) {
+    private BigDecimal cost(List<Row> rows) {
         BigDecimal sum = BigDecimal.ZERO;
         boolean anyPriced = false;
 
         for (Row row : rows) {
-            ModelPrice price = priceList.get(key(row.provider(), row.model()));
-            if (price == null) {
+            if (row.inputPerMillion() == null || row.outputPerMillion() == null) {
+                // No rate was recorded, so this call had no price when it was made — unknown
+                // rather than free, and contributing nothing either way.
                 continue;
             }
             anyPriced = true;
-            sum = sum.add(price.getInputPerMillion()
+            sum = sum.add(row.inputPerMillion()
                             .multiply(BigDecimal.valueOf(row.promptTokens())).divide(MILLION, 6, RoundingMode.HALF_UP))
-                    .add(price.getOutputPerMillion()
+                    .add(row.outputPerMillion()
                             .multiply(BigDecimal.valueOf(row.completionTokens())).divide(MILLION, 6, RoundingMode.HALF_UP));
         }
         return anyPriced ? sum.setScale(4, RoundingMode.HALF_UP) : null;
     }
 
-    private Map<String, ModelPrice> priceList() {
-        Map<String, ModelPrice> map = new HashMap<>();
-        prices.findAll().forEach(price -> map.put(key(price.getProvider(), price.getModel()), price));
-        return map;
-    }
-
     private static String key(String provider, String model) {
-        return (provider == null ? "" : provider.toUpperCase()) + " " + (model == null ? "" : model);
+        return (provider == null ? "" : provider.toUpperCase()) + " " + (model == null ? "" : model);
     }
 
     // ── Filters ───────────────────────────────────────────────────────────────
@@ -461,15 +470,19 @@ public class AnalyticsService {
 
     /** One grouped row as the database returned it. */
     private record Row(String provider, String model, Long userId, long calls,
-                       long promptTokens, long completionTokens, long totalTokens, String bucket) {
+                       long promptTokens, long completionTokens, long totalTokens,
+                       BigDecimal inputPerMillion, BigDecimal outputPerMillion, String bucket) {
 
         Row(String provider, String model, Long userId, long calls,
-            long promptTokens, long completionTokens, long totalTokens) {
-            this(provider, model, userId, calls, promptTokens, completionTokens, totalTokens, null);
+            long promptTokens, long completionTokens, long totalTokens,
+            BigDecimal inputPerMillion, BigDecimal outputPerMillion) {
+            this(provider, model, userId, calls, promptTokens, completionTokens, totalTokens,
+                    inputPerMillion, outputPerMillion, null);
         }
 
         Row withBucket(String bucket) {
-            return new Row(provider, model, userId, calls, promptTokens, completionTokens, totalTokens, bucket);
+            return new Row(provider, model, userId, calls, promptTokens, completionTokens, totalTokens,
+                    inputPerMillion, outputPerMillion, bucket);
         }
     }
 }

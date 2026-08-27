@@ -29,6 +29,7 @@ import java.time.LocalDateTime;
 public class UsageRecorder {
 
     private final LlmUsageRepository usage;
+    private final com.ap0stole.sheetsmith.repository.ModelPriceRepository prices;
     private final UserRepository users;
     private final CurrentUser currentUser;
 
@@ -90,6 +91,17 @@ public class UsageRecorder {
                 row.setProviderMode(engine.providerMode());
                 row.setProvider(engine.provider());
                 row.setModel(engine.model());
+
+                // The price as it stands now, stamped onto the row. Only for a cloud call: a model
+                // on this machine bills nothing, so it has no rate to record whatever the price
+                // list happens to say about it.
+                if ("CLOUD".equals(engine.providerMode()) && engine.provider() != null && engine.model() != null) {
+                    prices.findByProviderAndModel(engine.provider().toUpperCase(), engine.model())
+                            .ifPresent(price -> {
+                                row.setInputPerMillion(price.getInputPerMillion());
+                                row.setOutputPerMillion(price.getOutputPerMillion());
+                            });
+                }
             }
 
             row.setStartedAt(startedAt == null ? LocalDateTime.now() : startedAt);

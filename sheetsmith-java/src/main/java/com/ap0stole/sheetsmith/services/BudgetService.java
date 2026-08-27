@@ -1,10 +1,8 @@
 package com.ap0stole.sheetsmith.services;
 
 import com.ap0stole.sheetsmith.auth.CurrentUser;
-import com.ap0stole.sheetsmith.domain.entity.ModelPrice;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
-import com.ap0stole.sheetsmith.repository.ModelPriceRepository;
 import com.ap0stole.sheetsmith.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,8 +14,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -50,10 +46,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class BudgetService {
 
-    private static final BigDecimal MILLION = new BigDecimal("1000000");
-
     private final UserRepository users;
-    private final ModelPriceRepository prices;
     private final CurrentUser currentUser;
     private final JdbcTemplate jdbc;
 
@@ -91,49 +84,38 @@ public class BudgetService {
                 .formatted(plain(spent), plain(limit)));
     }
 
-    /** What this person has spent since the first of the month, as far as prices can tell. */
+    /**
+     * What this person has spent since the first of the month.
+     * <p>
+     * Summed from the rates each call recorded rather than from the price list as it stands now.
+     * Read against today's prices, a correction to a figure would move what somebody had already
+     * spent last week — and a ceiling somebody crossed retroactively is not a ceiling.
+     * <p>
+     * Arithmetic in the database, in numeric rather than floating point, because this is money
+     * being compared against a limit and binary rounding has no business deciding whether somebody
+     * may carry on working.
+     */
     @Transactional(readOnly = true)
     public BigDecimal spentThisMonth(Long userId) {
         LocalDateTime from = LocalDate.now().withDayOfMonth(1).atStartOfDay();
 
-        Map<String, ModelPrice> priceList = new HashMap<>();
-        prices.findAll().forEach(price -> priceList.put(key(price.getProvider(), price.getModel()), price));
-        if (priceList.isEmpty()) {
-            return BigDecimal.ZERO;
-        }
-
-        BigDecimal[] total = { BigDecimal.ZERO };
-        jdbc.query("""
-                select coalesce(provider, '') as provider, coalesce(model, '') as model,
-                       coalesce(sum(prompt_tokens), 0)     as prompt_tokens,
-                       coalesce(sum(completion_tokens), 0) as completion_tokens
+        BigDecimal total = jdbc.queryForObject("""
+                select coalesce(sum(
+                           coalesce(input_per_million, 0)  * prompt_tokens     / 1000000
+                         + coalesce(output_per_million, 0) * completion_tokens / 1000000), 0)
                 from llm_usage
                 where user_id = ? and started_at >= ?
-                  -- Cloud only. A local run costs no money, so no price on it can make one.
+                  -- Cloud only. A local run costs no money, so no rate on it could make one.
                   and provider_mode = 'CLOUD'
-                group by provider, model
-                """, rs -> {
-            ModelPrice price = priceList.get(key(rs.getString("provider"), rs.getString("model")));
-            if (price == null) {
-                // Unpriced, so unknown rather than free. Counted as nothing, and said so elsewhere.
-                return;
-            }
-            total[0] = total[0]
-                    .add(price.getInputPerMillion().multiply(BigDecimal.valueOf(rs.getLong("prompt_tokens")))
-                            .divide(MILLION, 6, RoundingMode.HALF_UP))
-                    .add(price.getOutputPerMillion().multiply(BigDecimal.valueOf(rs.getLong("completion_tokens")))
-                            .divide(MILLION, 6, RoundingMode.HALF_UP));
-        }, userId, java.sql.Timestamp.valueOf(from));
+                """, BigDecimal.class, userId, java.sql.Timestamp.valueOf(from));
 
-        return total[0].setScale(4, RoundingMode.HALF_UP);
+        // A row with no rate had no price when it was made: unknown rather than free, and counted
+        // as nothing either way. Said out loud on the screens, not guessed at here.
+        return (total == null ? BigDecimal.ZERO : total).setScale(4, RoundingMode.HALF_UP);
     }
 
     /** Money as somebody would write it, not as BigDecimal prints it. */
     private static String plain(BigDecimal value) {
         return value.setScale(2, RoundingMode.HALF_UP).toPlainString();
-    }
-
-    private static String key(String provider, String model) {
-        return (provider == null ? "" : provider.toUpperCase()) + " " + (model == null ? "" : model);
     }
 }

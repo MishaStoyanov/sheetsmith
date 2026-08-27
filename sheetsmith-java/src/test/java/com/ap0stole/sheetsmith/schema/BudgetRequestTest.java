@@ -94,8 +94,12 @@ class BudgetRequestTest {
         long tokens = new BigDecimal(dollars).divide(new BigDecimal("2.00")).movePointRight(6).longValue();
         jdbc.update("""
                 insert into llm_usage (kind, user_id, prompt, prompt_tokens, completion_tokens,
-                        total_tokens, provider_mode, provider, model, started_at, finished_at)
-                values ('CHAT', ?, 'x', ?, 0, ?, 'CLOUD', 'OPENAI', 'gpt-4o', ?::timestamp, ?::timestamp)
+                        total_tokens, provider_mode, provider, model,
+                        input_per_million, output_per_million, started_at, finished_at)
+                select 'CHAT', ?, 'x', ?, 0, ?, 'CLOUD', 'OPENAI', 'gpt-4o',
+                       p.input_per_million, p.output_per_million, ?::timestamp, ?::timestamp
+                from (select 1) as one
+                left join model_prices p on p.provider = 'OPENAI' and p.model = 'gpt-4o'
                 """, danaId, tokens, tokens,
                 LocalDate.now().withDayOfMonth(1).plusDays(1) + " 10:00",
                 LocalDate.now().withDayOfMonth(1).plusDays(1) + " 10:00");

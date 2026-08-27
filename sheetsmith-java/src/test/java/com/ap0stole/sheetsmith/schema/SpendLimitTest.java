@@ -96,12 +96,21 @@ class SpendLimitTest {
         spent(userId, "CLOUD", provider, model, promptTokens, when);
     }
 
+    /**
+     * The rate is stamped from the price list as it stands, which is what recording a real call
+     * does. Spending is summed from the rate on the call, so a fixture that left it null would be
+     * describing a call made before anybody had priced the model — a real case, but not this one.
+     */
     private void spent(Long userId, String mode, String provider, String model, long promptTokens, String when) {
         jdbc.update("""
                 insert into llm_usage (kind, user_id, prompt, prompt_tokens, completion_tokens,
-                        total_tokens, provider_mode, provider, model, started_at, finished_at)
-                values ('CHAT', ?, 'x', ?, 0, ?, ?, ?, ?, ?::timestamp, ?::timestamp)
-                """, userId, promptTokens, promptTokens, mode, provider, model, when, when);
+                        total_tokens, provider_mode, provider, model,
+                        input_per_million, output_per_million, started_at, finished_at)
+                select 'CHAT', ?, 'x', ?, 0, ?, ?, ?, ?,
+                       p.input_per_million, p.output_per_million, ?::timestamp, ?::timestamp
+                from (select 1) as one
+                left join model_prices p on upper(p.provider) = upper(?) and p.model = ?
+                """, userId, promptTokens, promptTokens, mode, provider, model, when, when, provider, model);
     }
 
     private String thisMonth() {

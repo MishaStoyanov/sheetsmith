@@ -62,9 +62,12 @@ class PriceCatalogueTest {
     private void called(String provider, String model) {
         jdbc.update("""
                 insert into llm_usage (kind, prompt, total_tokens, provider_mode, provider, model,
-                        started_at, finished_at)
-                values ('CHAT', 'x', 10, 'CLOUD', ?, ?, now(), now())
-                """, provider, model);
+                        input_per_million, output_per_million, started_at, finished_at)
+                select 'CHAT', 'x', 10, 'CLOUD', ?, ?,
+                       p.input_per_million, p.output_per_million, now(), now()
+                from (select 1) as one
+                left join model_prices p on upper(p.provider) = upper(?) and p.model = ?
+                """, provider, model, provider, model);
     }
 
     private PriceProposalDto.Proposal find(String model) {

@@ -60,6 +60,22 @@ public class LlmUsage {
     private String provider;
     private String model;
 
+    /**
+     * What the model charged per million tokens when this call was made.
+     * <p>
+     * Written here rather than looked up on every read, because a price is a fact about a moment.
+     * Read from the list at query time, correcting today's figure would move last March's chart —
+     * an audit whose numbers change without anybody deciding they should is not an audit.
+     * <p>
+     * The rates, not the total: a stored sum cannot tell a cheap call from a mispriced one. Null
+     * where the model had no price, which is not the same as free.
+     */
+    @Column(name = "input_per_million", precision = 12, scale = 4)
+    private java.math.BigDecimal inputPerMillion;
+
+    @Column(name = "output_per_million", precision = 12, scale = 4)
+    private java.math.BigDecimal outputPerMillion;
+
     @Column(nullable = false)
     private LocalDateTime startedAt;
 
