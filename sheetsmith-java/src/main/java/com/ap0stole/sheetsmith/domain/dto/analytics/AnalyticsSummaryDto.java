@@ -12,6 +12,10 @@ import java.util.List;
  *
  * @param costKnown       whether any of this can be expressed in money at all — false when no price
  *                        has been entered, which is how the instance starts
+ * @param neverUsed       nothing has ever been recorded here, filters ignored. Answered by the
+ *                        server because the screen cannot work it out: an empty result under a date
+ *                        range means either "nothing yet" or "nothing in these dates", and telling
+ *                        somebody to widen a range they have not set is the wrong half of that
  * @param unpricedModels  models that were used and have no price, so the screen can name what is
  *                        missing instead of quietly reporting a smaller total
  */
@@ -23,6 +27,7 @@ public record AnalyticsSummaryDto(
         List<Bucket> overTime,
         List<UserBucket> overTimeByUser,
         Runs runs,
+        boolean neverUsed,
         boolean costKnown,
         List<String> unpricedModels) {
 

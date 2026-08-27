@@ -436,6 +436,49 @@ class AnalyticsSummaryTest {
         assertThat(analytics.summary(AnalyticsQuery.unfiltered()).byUser().getFirst().documents()).isEqualTo(2);
     }
 
+    @Test
+    @DisplayName("an instance that has never been used says so, filters or no filters")
+    void neverUsedIgnoresTheFilters() {
+        // The screen cannot work this out for itself: an empty answer under a date range means
+        // either "nothing yet" or "nothing in these dates", and it must not tell somebody to widen
+        // a range on an instance where nothing has ever happened.
+        AnalyticsQuery lastWeekOnly = new AnalyticsQuery(
+                java.time.LocalDateTime.parse("2026-08-01T00:00"),
+                java.time.LocalDateTime.parse("2026-08-07T23:59"),
+                null, null, null, null, null, "day");
+
+        assertThat(analytics.summary(AnalyticsQuery.unfiltered()).neverUsed()).isTrue();
+        assertThat(analytics.summary(lastWeekOnly).neverUsed()).isTrue();
+    }
+
+    @Test
+    @DisplayName("a filter that excludes everything is not the same as an unused instance")
+    void filteredToNothingIsStillAUsedInstance() {
+        call("2026-08-01 10:00", "CHAT", danaId, "s1", "OPENAI", "gpt-4o", 100, 10);
+
+        AnalyticsQuery elsewhere = new AnalyticsQuery(
+                java.time.LocalDateTime.parse("2026-09-01T00:00"),
+                java.time.LocalDateTime.parse("2026-09-30T23:59"),
+                null, null, null, null, null, "day");
+
+        AnalyticsSummaryDto summary = analytics.summary(elsewhere);
+
+        assertThat(summary.totals().calls()).isZero();
+        assertThat(summary.neverUsed())
+                .as("there are records, just not in these dates")
+                .isFalse();
+    }
+
+    @Test
+    @DisplayName("a run with no model call still counts as the instance having been used")
+    void aRunAloneIsEnoughToCountAsUsed() {
+        // A run that failed before it reached a model writes no usage row at all, and an instance
+        // where that is the only thing that ever happened is not a fresh one.
+        run("2026-08-01 10:00", "FAILED", danaId, 3);
+
+        assertThat(analytics.summary(AnalyticsQuery.unfiltered()).neverUsed()).isFalse();
+    }
+
     static boolean dockerAvailable() {
         try {
             return DockerClientFactory.instance().isDockerAvailable();

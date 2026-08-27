@@ -3,6 +3,7 @@ import Button from './components/Button.jsx';
 import DateRange from './components/DateRange.jsx';
 import DonutChart, { Panel } from './components/DonutChart.jsx';
 import FilterBar from './components/FilterBar.jsx';
+import NothingYet from './components/NothingYet.jsx';
 import Note from './components/Note.jsx';
 import UnpricedModelsNote from './components/UnpricedModelsNote.jsx';
 import RankedBars from './components/RankedBars.jsx';
@@ -100,6 +101,12 @@ export default function AnalyticsScreen({ theme, user }) {
   const totals = data?.totals;
   const runs = data?.runs;
 
+  // Two different kinds of empty, kept apart on purpose. An instance nobody has used yet needs to
+  // be told what to do; one with nothing between two dates needs to be told to look wider. Which of
+  // the two it is comes from the server, because a filtered answer cannot tell them apart.
+  const neverUsed = !!data?.neverUsed;
+  const nothingHere = !!data && data.totals.calls === 0 && data.runs.total === 0;
+
   // Your own share, taken out of the same answer as everything else rather than asked for
   // separately — a second call could come back disagreeing with the totals above it.
   //
@@ -144,6 +151,7 @@ export default function AnalyticsScreen({ theme, user }) {
         What this instance has asked models to do, and what it cost.
       </p>
 
+      {!neverUsed && (
       <FilterBar activeCount={activeCount} onClear={() => setFilters(EMPTY)}>
         <DateRange
           label="Between"
@@ -182,6 +190,7 @@ export default function AnalyticsScreen({ theme, user }) {
           </div>
         )}
       </FilterBar>
+      )}
 
       {error && (
         <div style={{ padding: '10px 14px', borderRadius: 8, background: 'var(--del-bg)', color: 'var(--del)', border: '1px solid var(--del)', fontSize: 13.5, marginBottom: 18 }}>
@@ -189,15 +198,27 @@ export default function AnalyticsScreen({ theme, user }) {
         </div>
       )}
 
-      {/* Said out loud rather than left to be inferred from a smaller number. */}
-      {data && !data.costKnown && (
+      {/*
+        Said out loud rather than left to be inferred from a smaller number — but only where there
+        is a number. costKnown is worked out from the rows in the answer, so an empty range makes it
+        false on an instance whose price list is full, and the note would then say prices had never
+        been entered while the Prices screen listed them.
+      */}
+      {data && !data.costKnown && !nothingHere && (
         <Note>
           No prices have been entered, so spend is shown in tokens. Add them under{' '}
           <a href="#/prices" style={{ color: 'var(--accent-text)' }}>Prices</a> to see money as well.
         </Note>
       )}
-      {data?.costKnown && <UnpricedModelsNote models={data.unpricedModels} />}
+      {data?.costKnown && !nothingHere && <UnpricedModelsNote models={data.unpricedModels} />}
 
+      {nothingHere ? (
+        <NothingYet
+          variant={neverUsed ? 'never-used' : 'filtered-out'}
+          onClear={activeCount ? () => setFilters(EMPTY) : undefined}
+        />
+      ) : (
+      <>
       {user && (
         <div style={{ marginBottom: 16 }}>
           <Panel title={`Your numbers${activeCount ? ', in this range' : ''}`}>
@@ -305,6 +326,8 @@ export default function AnalyticsScreen({ theme, user }) {
           empty={loading ? 'Loading…' : 'Nothing failed in this range'}
         />
       </div>
+      </>
+      )}
     </div>
   );
 }

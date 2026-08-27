@@ -85,6 +85,7 @@ public class AnalyticsService {
                 overTime(timeRows, priceList),
                 overTimeByUser(timeRows, priceList, names),
                 runs(query),
+                neverUsed(),
                 costKnown,
                 List.copyOf(unpriced));
     }
@@ -252,6 +253,18 @@ public class AnalyticsService {
         Map<Long, String> names = new HashMap<>();
         jdbc.query("select id, name from users", rs -> { names.put(rs.getLong("id"), rs.getString("name")); });
         return names;
+    }
+
+    /**
+     * Whether anything has ever happened here, with the filters deliberately left off.
+     * <p>
+     * Two existence checks rather than two counts: the question is "has this instance ever been
+     * used", and on a busy instance counting every row to answer yes is work nobody asked for.
+     */
+    private boolean neverUsed() {
+        Boolean used = jdbc.queryForObject(
+                "select exists(select 1 from llm_usage) or exists(select 1 from job_records)", Boolean.class);
+        return !Boolean.TRUE.equals(used);
     }
 
     // ── How the runs went ─────────────────────────────────────────────────────
