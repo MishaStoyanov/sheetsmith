@@ -335,6 +335,33 @@ looks settable invites a PUT that appears to turn it off.
 `configs/SecurityProperties` is the `sheetsmith.security` properties holder (CORS allowlist, by-path
 endpoint); it was called `SecurityConfig` until the filter chain needed that name.
 
+**Three roles, and the rule that keeps them inert.** `USER` cannot touch other accounts; `ADMIN`
+manages people and may hand out `ADMIN` but never take it back; `SUPERADMIN` is the seeded account
+— the one that already cannot be deleted — and is the only role that can demote. The one-way door
+is deliberate: mutual demotion between two administrators is a fight the software should not host.
+Four refusals sit on `changeRole`: `SUPERADMIN` cannot be given out, the seeded account's role
+cannot be changed, nobody changes their own, and demotion needs the seeded account.
+
+**The trap: `@PreAuthorize("hasRole('ADMIN')")` would break the default configuration.** With
+authentication off nobody is signed in, so a plain role expression denies every management call and
+takes single-user mode down entirely — silently, on the setting most people run. Every rule
+therefore points at one bean, `auth/Authz`, which reads the switch first and answers yes where there
+are no accounts, because there the person at the keyboard is the operator by definition.
+`RolesWithoutAuthTest` is a whole class guarding that.
+
+`Authz` reads the role from the database rather than from the access token: a token says what was
+true when it was issued, and with a two-hour life a demotion would keep working all afternoon.
+
+`UserService.search` is deliberately open to anyone signed in, unlike everything else there — the
+history screen builds its "started by" filter from it, so locking it down would quietly empty a
+filter ordinary people use. `update` is guarded *inside* rather than on the method, because its two
+callers differ: an administrator editing anybody, and a person changing their own password.
+
+`V11__user_roles.sql` backfills existing accounts to `ADMIN` and the first to `SUPERADMIN`. Setting
+everyone to `USER` would wake a multi-person instance up with one administrator and everybody else
+locked out of a screen they had yesterday — an upgrade must not remove authority somebody already
+had. New accounts default to `USER`, and the column carries that default so a raw insert cannot fail.
+
 Guards that stand whether or not anyone logs in, and must not be loosened casually:
 
 - **CORS is an allowlist** (`sheetsmith.security.allowed-origins`), not `*`. With authentication off,
@@ -363,6 +390,32 @@ Guards that stand whether or not anyone logs in, and must not be loosened casual
   Hibernate built it, so Flyway stamps it as version 1 and starts it at V2; an empty database runs V1
   itself. Adding a column now means writing the next `V*.sql`: `validate` fails startup on a mapping
   the migrations do not match, which is how `SchemaMigrationTest`'s container run catches it.
+
+### Prices, and where money comes from
+
+`model_prices` (V10) is a reference table keyed on provider + model, filled in by hand and never by
+migration — nobody but the operator knows what they pay. `ModelPriceController` is four endpoints
+plus two for the catalogue; there is no separate create, because provider + model is a natural key
+and `PUT` is already "put a price at this address".
+
+**Cost is worked out in Java, not joined in SQL** (`AnalyticsService.cost`). A join would either drop
+unpriced rows or count them as zero, and both are a wrong total wearing the face of a right one.
+Instead an unpriced model contributes nothing, lands in `unpricedModels`, and a group where nothing
+could be priced answers `null` rather than `0.00`.
+
+**`PriceCatalogueService` proposes; it never applies.** No provider publishes a price API — OpenAI,
+Anthropic and Google put prices on documentation pages meant for people — so the source is
+OpenRouter's open JSON catalogue, named on the dialog because this is the one outbound call the
+application makes. Asking a model instead was rejected: it would state a confident price for a model
+whose price it does not know, and this is a screen about money.
+
+The comparison is a read; saving is a second call carrying the rows a person ticked, with the figures
+from the request rather than re-fetched. Only models already priced or actually used are offered — a
+list too long to read before confirming is a list confirmed without reading — and local models never
+are, because free is not an unfilled price. Names are matched exactly, then by longest prefix:
+Anthropic answers `claude-sonnet-4-20250514` where catalogues list `claude-sonnet-4`, and longest
+wins so `claude-sonnet-4` cannot swallow `claude-sonnet-4-5`. `ModelCatalogue` is an interface with
+one implementation purely so tests can hand the comparison a constant instead of the internet.
 
 ### Supported action types
 

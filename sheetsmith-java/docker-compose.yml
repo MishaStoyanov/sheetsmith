@@ -92,6 +92,14 @@ services:
       SHEETSMITH_ALLOWED_ORIGINS: ${SHEETSMITH_ALLOWED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
       SHEETSMITH_TTL_DAYS: ${SHEETSMITH_TTL_DAYS:-7}
       SHEETSMITH_CHAT_ENABLED: ${SHEETSMITH_CHAT_ENABLED:-true}
+      # Accounts. Off by default, matching the application: an upgrade must not put a login screen
+      # in front of an instance that never had one.
+      SHEETSMITH_AUTH_ENABLED: ${SHEETSMITH_AUTH_ENABLED:-false}
+      SHEETSMITH_JWT_SECRET: ${SHEETSMITH_JWT_SECRET:-}
+      SHEETSMITH_ACCESS_TOKEN_TTL: ${SHEETSMITH_ACCESS_TOKEN_TTL:-2h}
+      SHEETSMITH_REFRESH_TOKEN_TTL: ${SHEETSMITH_REFRESH_TOKEN_TTL:-1d}
+      SHEETSMITH_REMEMBER_ME_TTL: ${SHEETSMITH_REMEMBER_ME_TTL:-30d}
+      SHEETSMITH_ADMIN_PASSWORD_RESET: ${SHEETSMITH_ADMIN_PASSWORD_RESET:-}
       MAX_CONCURRENT_JOBS: ${MAX_CONCURRENT_JOBS:-1}
     # Lets OLLAMA_BASE_URL=http://host.docker.internal:11434 work on Linux too, where Docker does
     # not provide that name by itself.
