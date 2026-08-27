@@ -2,10 +2,8 @@ package com.ap0stole.sheetsmith.services;
 
 import com.ap0stole.sheetsmith.domain.dto.analytics.AnalyticsQuery;
 import com.ap0stole.sheetsmith.domain.dto.analytics.AnalyticsSummaryDto;
-import com.ap0stole.sheetsmith.domain.entity.ModelPrice;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
-import com.ap0stole.sheetsmith.repository.ModelPriceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -38,11 +36,11 @@ public class AnalyticsService {
     private static final BigDecimal MILLION = new BigDecimal("1000000");
 
     private final JdbcTemplate jdbc;
-    private final ModelPriceRepository prices;
+    private final WorkVisibility visibility;
 
     @Transactional(readOnly = true)
     public AnalyticsSummaryDto summary(AnalyticsQuery query) {
-        Where where = Where.from(query);
+        Where where = Where.from(query, visibility.forUserColumn("user_id"));
         // Grouped by the rates as well as the model. A price that changed halfway through the range
         // makes two rows for one model, which is the point: collapsing them would need one figure
         // to stand for two different prices.
@@ -304,7 +302,7 @@ public class AnalyticsService {
      * second request could come back describing a different slice of time.
      */
     private AnalyticsSummaryDto.Runs runs(AnalyticsQuery query) {
-        Where where = Where.forRuns(query, "");
+        Where where = Where.forRuns(query, "", visibility.forUserColumn("user_id"));
 
         List<AnalyticsSummaryDto.Count> byStatus = jdbc.query(
                 "select status, count(*) as runs from job_records " + where.sql()
@@ -336,7 +334,7 @@ public class AnalyticsService {
                 """ + and(where, "processing_started_at is not null and processing_finished_at is not null"),
                 Double.class, where.args());
 
-        Where joined = Where.forRuns(query, "j.");
+        Where joined = Where.forRuns(query, "j.", visibility.forUserColumn("j.user_id"));
         List<AnalyticsSummaryDto.Count> topActions = jdbc.query("""
                 select a.action_type as label, count(*) as runs
                 from action_results a join job_records j on j.id = a.job_id
@@ -398,8 +396,8 @@ public class AnalyticsService {
     private record Where(String sql, Object[] args) {
 
         /** The model calls: when a call started, and every filter the screen offers. */
-        static Where from(AnalyticsQuery query) {
-            return build(query, "", "started_at", true);
+        static Where from(AnalyticsQuery query, WorkVisibility.Clause visible) {
+            return build(query, "", "started_at", true, visible);
         }
 
         /**
@@ -410,14 +408,22 @@ public class AnalyticsService {
          * has no such thing. A filter that silently matched nothing would be worse than an absent
          * one.
          */
-        static Where forRuns(AnalyticsQuery query, String prefix) {
-            return build(query, prefix, "created_at", false);
+        static Where forRuns(AnalyticsQuery query, String prefix, WorkVisibility.Clause visible) {
+            return build(query, prefix, "created_at", false, visible);
         }
 
-        private static Where build(AnalyticsQuery query, String prefix, String timeColumn, boolean withKinds) {
+        private static Where build(AnalyticsQuery query, String prefix, String timeColumn,
+                                  boolean withKinds, WorkVisibility.Clause visible) {
             List<String> clauses = new ArrayList<>();
             List<Object> args = new ArrayList<>();
             java.util.function.UnaryOperator<String> column = name -> prefix + name;
+
+            // Whose work may be counted, decided before any filter the caller asked for. Kept in
+            // the same clause list so it cannot be forgotten by a query that builds its own where.
+            if (visible.restricts()) {
+                clauses.add(visible.sql());
+                args.addAll(visible.args());
+            }
 
             if (query.from() != null) {
                 clauses.add(column.apply(timeColumn) + " >= ?");

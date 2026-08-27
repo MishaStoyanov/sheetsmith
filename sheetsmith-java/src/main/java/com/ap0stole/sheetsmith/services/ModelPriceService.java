@@ -8,6 +8,7 @@ import com.ap0stole.sheetsmith.repository.LlmUsageRepository;
 import com.ap0stole.sheetsmith.repository.ModelPriceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -84,7 +85,12 @@ public class ModelPriceService {
      * The wording matters too. Nothing is lost: the runs keep their tokens, and only the money
      * column stops having a meaning for those calls. Saying "data will be deleted" would frighten
      * more than the truth deserves.
+     * <p>
+     * The superadmin's alone, like every other deletion here. Entering and correcting prices stays
+     * open to administrators: those can be put back, and a wrong price is visible in the figures it
+     * produces. A removed one takes the meaning of every call that used it with it.
      */
+    @PreAuthorize("@authz.superadmin()")
     @Transactional
     public void delete(Long id, boolean confirmed) {
         ModelPrice price = require(id);

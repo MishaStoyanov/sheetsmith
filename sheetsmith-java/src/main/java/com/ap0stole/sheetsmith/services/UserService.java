@@ -271,7 +271,12 @@ public class UserService {
         }
     }
 
-    @PreAuthorize("@authz.admin()")
+    /**
+     * Removing an account is the superadmin's alone, like every other deletion here. An
+     * administrator manages people — creates them, renames them, sets what they may spend — and all
+     * of that can be undone by the next administrator to look at it. This cannot.
+     */
+    @PreAuthorize("@authz.superadmin()")
     @Transactional
     public void delete(Long id, Long callerId) {
         User user = require(id);

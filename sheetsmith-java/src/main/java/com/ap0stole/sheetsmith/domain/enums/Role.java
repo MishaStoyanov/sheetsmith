@@ -1,11 +1,15 @@
 package com.ap0stole.sheetsmith.domain.enums;
 
 /**
- * What an account may do to other accounts.
+ * What an account may do, to other accounts and to other people's work.
  * <p>
- * Nothing else is gated on this. History and analytics stay open to everybody, because knowing what
- * the instance has cost is not an administrative act — that was the whole reason roles waited until
- * after the metrics were built.
+ * Two things hang on this. <strong>Whose work you can see</strong>: your own runs and figures
+ * always, every ordinary user's if you manage accounts, everybody's if you are the superadmin — the
+ * history and the analytics answer the same question, so they answer it the same way.
+ * <strong>Deletion</strong>: the superadmin's alone, because it is the one action nothing survives
+ * to record.
+ * <p>
+ * Everything else stays open. Knowing what the instance has cost is not an administrative act.
  */
 public enum Role {
 

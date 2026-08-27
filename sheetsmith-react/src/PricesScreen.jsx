@@ -31,7 +31,7 @@ function rate(value) {
  * Two rates, not one. A provider charges differently for what it read and what it wrote, and a
  * single blended figure cannot answer "why was that expensive".
  */
-export default function PricesScreen() {
+export default function PricesScreen({ mayDelete }) {
   const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(0);
   const [data, setData] = useState(null);
@@ -135,9 +135,14 @@ export default function PricesScreen() {
       render: price => (
         <span style={{ display: 'inline-flex', gap: 6, whiteSpace: 'nowrap' }}>
           <Button size="sm" variant="ghost" onClick={() => setEditing(price)}>Edit</Button>
-          <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(price)} style={{ color: 'var(--del)' }}>
-            Delete
-          </Button>
+          {/* Editing stays open to administrators — a wrong price shows up in the figures it
+              produces, and the next one to look can put it back. Removing one takes the meaning of
+              every call that used it, so it goes with the other deletions. */}
+          {mayDelete && (
+            <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(price)} style={{ color: 'var(--del)' }}>
+              Delete
+            </Button>
+          )}
         </span>
       ),
     },

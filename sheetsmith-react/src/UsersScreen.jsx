@@ -189,9 +189,10 @@ export default function UsersScreen({ currentUser, onSelfRenamed }) {
           </Slot>
 
           {/* The two rules that stop an instance locking itself out are shown, not just enforced:
-              a button that always refuses is worse than no button. */}
+              a button that always refuses is worse than no button. And removing an account is the
+              superadmin's, like every other deletion here, so an administrator is not offered it. */}
           <Slot>
-            {!user.protectedAccount && user.id !== currentUser?.id && (
+            {iAmSuperadmin && !user.protectedAccount && user.id !== currentUser?.id && (
               <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(user)} style={{ color: 'var(--del)' }}>
                 Delete
               </Button>

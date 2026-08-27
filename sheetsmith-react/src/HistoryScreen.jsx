@@ -47,7 +47,7 @@ function took(run) {
 const dim = { fontFamily: mono, fontSize: 12, color: 'var(--text-dim)' };
 
 /** Every run this instance has made, with the filters the search endpoint understands. */
-export default function HistoryScreen({ authEnabled }) {
+export default function HistoryScreen({ authEnabled, mayDelete }) {
   const [filters, setFilters] = useState(EMPTY);
   const [sort, setSort] = useState({ key: 'createdAt', direction: 'desc' });
   const [page, setPage] = useState(0);
@@ -191,9 +191,14 @@ export default function HistoryScreen({ authEnabled }) {
               Download
             </a>
           )}
-          <Button size="sm" variant="ghost" onClick={() => remove(run)} style={{ color: 'var(--del)' }}>
-            Delete
-          </Button>
+          {/* Only where it would work. Removing a run is the superadmin's — it is the one
+              action that leaves nothing behind to say it happened — and a button that always
+              refuses is worse than no button. */}
+          {mayDelete && (
+            <Button size="sm" variant="ghost" onClick={() => remove(run)} style={{ color: 'var(--del)' }}>
+              Delete
+            </Button>
+          )}
         </span>
       ),
     },

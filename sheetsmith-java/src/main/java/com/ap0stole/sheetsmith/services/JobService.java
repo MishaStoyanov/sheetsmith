@@ -22,6 +22,7 @@ import com.ap0stole.sheetsmith.services.excel.ExcelAutomationService;
 import com.ap0stole.sheetsmith.services.excel.StepTense;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
@@ -69,6 +70,7 @@ public class JobService {
     private final UserRepository users;
     private final UsageRecorder usageRecorder;
     private final BudgetService budgets;
+    private final WorkVisibility visibility;
 
     private final ConcurrentHashMap<String, PendingPlan> pendingPlans = new ConcurrentHashMap<>();
 
@@ -241,7 +243,7 @@ public class JobService {
     // ── History / download / delete ──────────────────────────────────────────
 
     public Page<JobHistoryDto> getHistory(Pageable pageable) {
-        return jobRepository.findAll(pageable).map(JobHistoryDto::from);
+        return jobRepository.findAll(visibility.readable(), pageable).map(JobHistoryDto::from);
     }
 
     /**
@@ -249,20 +251,27 @@ public class JobService {
      * page count has to be the count of what matched, not of what was read.
      */
     public Page<JobHistoryDto> search(HistorySearchRequest request) {
-        return jobRepository.findAll(JobSearch.of(request), JobSearch.pageable(request))
+        // Whose runs these are is decided before the filters rather than by them: a filter is a
+        // question the caller asks, and asking about somebody else's work must not answer it.
+        return jobRepository.findAll(visibility.readable().and(JobSearch.of(request)),
+                        JobSearch.pageable(request))
                 .map(JobHistoryDto::from);
     }
 
     @Transactional(readOnly = true)
     public JobHistoryDto getById(Long id) {
-        return jobRepository.findById(id)
-                .map(JobHistoryDto::fromDetail)
+        JobRecord job = jobRepository.findById(id)
                 .orElseThrow(() -> new ApiException(ErrorCode.JOB_NOT_FOUND, "Job not found: " + id));
+        visibility.requireReadable(job);
+        return JobHistoryDto.fromDetail(job);
     }
 
     public Resource downloadResult(Long id) {
         JobRecord job = jobRepository.findById(id)
                 .orElseThrow(() -> new ApiException(ErrorCode.JOB_NOT_FOUND, "Job not found: " + id));
+        // The file, not just the row about it. Hiding a run in the list while still serving its
+        // spreadsheet by id would make the list a decoration.
+        visibility.requireReadable(job);
 
         if (job.getResultFilePath() == null) {
             throw new ApiException(ErrorCode.FILE_NOT_FOUND, "No result file for job " + id);
@@ -280,7 +289,12 @@ public class JobService {
      * Files a live session owns are left alone — a session-backed job's input and result are two
      * revisions of that session's chain, and deleting them would break undo or take the current
      * sheet with them. Such a job drops its record only.
+     * <p>
+     * Restricted to the superadmin. Deletion is the one action with no undo and nothing left behind
+     * to read afterwards: the record that would say who removed the run is the record that went.
+     * Everybody else asks — see the deletion request that goes with the budget one.
      */
+    @PreAuthorize("@authz.superadmin()")
     @Transactional
     public void deleteJob(Long id) {
         JobRecord job = jobRepository.findById(id)

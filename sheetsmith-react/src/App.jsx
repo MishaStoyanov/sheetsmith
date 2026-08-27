@@ -122,6 +122,11 @@ export default function App() {
   // answer: with authentication off there is nobody to manage.
   const manages = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN';
 
+  // Removing anything is the superadmin's alone — with no accounts at all, the person at the
+  // keyboard is the operator and there is nobody to withhold it from. Passed down rather than
+  // read again in each screen, so there is one place the rule can be wrong.
+  const mayDelete = !capabilities.authEnabled || user?.role === 'SUPERADMIN';
+
   const tabs = [
     { route: 'improve', label: 'Improve', icon: <SheetIcon /> },
     { route: 'history', label: 'History', icon: <ClockIcon /> },
@@ -137,9 +142,9 @@ export default function App() {
 
   const screens = {
     improve: <ImproveScreen theme={theme} capabilities={capabilities} providerMode={providerMode} onOpenSettings={() => setSettingsOpen(true)} />,
-    history: <HistoryScreen authEnabled={capabilities.authEnabled} />,
+    history: <HistoryScreen authEnabled={capabilities.authEnabled} mayDelete={mayDelete} />,
     analytics: <AnalyticsScreen theme={theme} user={user} />,
-    prices: <PricesScreen />,
+    prices: <PricesScreen mayDelete={mayDelete} />,
     ...(capabilities.authEnabled && manages
       ? { users: <UsersScreen currentUser={user} onSelfRenamed={name => setUser(u => ({ ...u, name }))} /> }
       : {}),

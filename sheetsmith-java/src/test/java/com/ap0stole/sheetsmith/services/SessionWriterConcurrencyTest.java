@@ -156,7 +156,10 @@ class SessionWriterConcurrencyTest {
                 mock(com.ap0stole.sheetsmith.repository.UserRepository.class), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class),
                 // No budget in these: they are about the session chain, and a spend ceiling that
                 // never fires is the shape every one of them already assumes.
-                mock(com.ap0stole.sheetsmith.services.BudgetService.class));
+                mock(com.ap0stole.sheetsmith.services.BudgetService.class),
+                // Nor a visibility rule: these never read the history, and with nobody signed in
+                // there is no boundary for one to draw.
+                mock(com.ap0stole.sheetsmith.services.WorkVisibility.class));
     }
 
     @Test

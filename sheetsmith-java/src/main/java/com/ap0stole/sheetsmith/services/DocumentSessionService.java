@@ -19,6 +19,7 @@ import com.ap0stole.sheetsmith.services.SessionSchemaCache;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -103,6 +104,15 @@ public class DocumentSessionService {
         sessionRepository.save(session);
     }
 
+    /**
+     * Removing anything at all is the superadmin's alone.
+     * <p>
+     * Deletion is the one action with no undo and no audit trail left behind to read afterwards —
+     * the record that would say who did it is the record that went. Everything else on this
+     * instance can be corrected by somebody with the right role; this cannot be corrected by
+     * anybody, so it sits with the one account that cannot itself be deleted.
+     */
+    @PreAuthorize("@authz.superadmin()")
     @Transactional
     public void delete(String sessionId) {
         DocumentSession session = require(sessionId);
