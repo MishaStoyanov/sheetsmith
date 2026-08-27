@@ -24,6 +24,10 @@ public class JobHistoryDto {
     private final Long completionTokens;
     private final Long totalTokens;
 
+    /** {@code LOCAL} or {@code CLOUD}, and the model that ran; null for runs made before V5. */
+    private final String providerMode;
+    private final String model;
+
     private JobHistoryDto(Long id, LocalDateTime createdAt, JobStatus status,
                           String instruction, String inputFilename, List<AppliedActionDto> appliedActions,
                           String errorMessage, JobRecord job) {
@@ -37,6 +41,8 @@ public class JobHistoryDto {
         this.promptTokens = job.getPromptTokens();
         this.completionTokens = job.getCompletionTokens();
         this.totalTokens = job.getTotalTokens();
+        this.providerMode = job.getProviderMode();
+        this.model = job.getModel();
     }
 
     // For paginated list — does NOT access lazy actions collection

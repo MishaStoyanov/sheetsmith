@@ -7,5 +7,5 @@ import com.ap0stole.sheetsmith.requests.AutomationRequest;
  * the call site, while the job record it belongs to may not exist yet — the user has still to
  * approve the plan.
  */
-public record PlanningResult(AutomationRequest plan, TokenUsage usage) {
+public record PlanningResult(AutomationRequest plan, TokenUsage usage, LlmEngine engine) {
 }

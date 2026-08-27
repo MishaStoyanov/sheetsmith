@@ -110,10 +110,11 @@ public class AiPlanningService {
         }
 
         TokenUsage usage = TokenUsage.from(response);
+        LlmEngine engine = LlmEngine.of(settings);
         try {
             String cleaned = extractJson(raw);
             log.debug("Parsed LLM JSON: {}", cleaned);
-            return new PlanningResult(objectMapper.readValue(cleaned, AutomationRequest.class), usage);
+            return new PlanningResult(objectMapper.readValue(cleaned, AutomationRequest.class), usage, engine);
         } catch (Exception e) {
             log.error("Failed to parse LLM response as JSON: {}", raw, e);
             throw new ApiException(ErrorCode.LLM_FAILURE, "The AI returned an invalid response — try rephrasing your instruction");

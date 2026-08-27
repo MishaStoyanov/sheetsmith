@@ -8,6 +8,7 @@ import com.ap0stole.sheetsmith.domain.enums.JobStatus;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
 import com.ap0stole.sheetsmith.llm.AiPlanningService;
+import com.ap0stole.sheetsmith.llm.LlmEngine;
 import com.ap0stole.sheetsmith.llm.PlanningResult;
 import com.ap0stole.sheetsmith.llm.TokenUsage;
 import com.ap0stole.sheetsmith.repository.ActionResultRepository;
@@ -33,6 +34,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
@@ -68,7 +70,8 @@ public class JobService {
      * Carries {@code usage} because the planning call is paid for here, minutes before the user
      * approves the plan and a {@link JobRecord} exists to record it against.
      */
-    private record PendingPlan(String sessionId, String filename, String instruction, TokenUsage usage) {}
+    private record PendingPlan(String sessionId, String filename, String instruction,
+                               TokenUsage usage, LlmEngine engine) {}
 
     // ── Plan-then-apply flow (session-backed) ─────────────────────────────────
 
@@ -118,7 +121,7 @@ public class JobService {
 
         String token = UUID.randomUUID().toString();
         pendingPlans.put(token, new PendingPlan(session.getId(), session.getOriginalFilename(),
-                request.instruction(), planned.usage()));
+                request.instruction(), planned.usage(), planned.engine()));
 
         List<PlanStepDto> steps = new ArrayList<>();
         List<ActionStep> actions = plan.getActions();
@@ -171,6 +174,7 @@ public class JobService {
         JobRecord job = JobRecord.create(pending.instruction(), pending.filename(),
                 documentSessionService.currentPath(session).toString());
         addUsage(job, pending.usage());
+        recordEngine(job, pending.engine());
         jobRepository.save(job);
 
         Long jobId = job.getId();
@@ -347,6 +351,7 @@ public class JobService {
         } else {
             PlanningResult planned = aiPlanningService.generatePlan(instruction, schema.toPromptString());
             plan = planned.plan();
+            recordEngine(job, planned.engine());
             recordUsage(job, planned.usage());
         }
 
@@ -356,6 +361,7 @@ public class JobService {
             log.info("Job {} triggering retry via fixPlan", job.getId());
             PlanningResult repaired = aiPlanningService.fixPlan(
                     instruction, buildErrorSummary(results), schema.toPromptString());
+            recordEngine(job, repaired.engine());
             recordUsage(job, repaired.usage());
             results = excelAutomationService.applyChanges(inputPath, resultPath, repaired.plan(), job);
         }
@@ -374,6 +380,29 @@ public class JobService {
         }
         addUsage(job, usage);
         jobRepository.save(job);
+    }
+
+    /**
+     * First engine wins: a run is attributed to the model that planned it, which is the call that
+     * did the thinking and spent most of the tokens. Settings can change between planning and
+     * apply, so a repair may genuinely run on another model — that is said out loud rather than
+     * silently overwriting the attribution, since one column cannot hold two answers.
+     */
+    private void recordEngine(JobRecord job, LlmEngine engine) {
+        if (engine == null || !engine.isKnown()) {
+            return;
+        }
+        if (job.getProviderMode() == null && job.getModel() == null) {
+            job.setProviderMode(engine.providerMode());
+            job.setModel(engine.model());
+            return;
+        }
+        if (!Objects.equals(job.getModel(), engine.model())) {
+            log.warn("Job {} was planned on {}/{} but a later call ran on {}/{}; the run stays "
+                            + "attributed to the model that planned it",
+                    job.getId(), job.getProviderMode(), job.getModel(),
+                    engine.providerMode(), engine.model());
+        }
     }
 
     /** Adds one call's cost to whatever the record already carries; null stays null. */

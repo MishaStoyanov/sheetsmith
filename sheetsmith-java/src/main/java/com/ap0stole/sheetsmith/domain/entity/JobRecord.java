@@ -56,6 +56,17 @@ public class JobRecord {
 
     private Long totalTokens;
 
+    /**
+     * Which engine answered: {@code LOCAL} or {@code CLOUD}, and the model that actually ran.
+     * Null for runs made before this was recorded — never backfilled, because today's settings are
+     * no evidence of what last week's run used.
+     */
+    @Column(name = "provider_mode")
+    private String providerMode;
+
+    @Column(name = "model")
+    private String model;
+
     /** Who asked for the run; null for every run made before there was anyone to attribute it to. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")

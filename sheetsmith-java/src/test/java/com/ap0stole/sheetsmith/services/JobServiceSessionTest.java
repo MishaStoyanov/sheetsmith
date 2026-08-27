@@ -11,6 +11,7 @@ import com.ap0stole.sheetsmith.domain.entity.JobRecord;
 import com.ap0stole.sheetsmith.domain.enums.JobStatus;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.llm.AiPlanningService;
+import com.ap0stole.sheetsmith.llm.LlmEngine;
 import com.ap0stole.sheetsmith.llm.PlanningResult;
 import com.ap0stole.sheetsmith.llm.TokenUsage;
 import com.ap0stole.sheetsmith.repository.ActionResultRepository;
@@ -184,7 +185,7 @@ class JobServiceSessionTest {
         // What a model does when the catalog has nothing for the instruction: it answers in prose,
         // which parses down to zero actions.
         when(planningService.generatePlan(anyString(), anyString()))
-                .thenReturn(new PlanningResult(new AutomationRequest(), TokenUsage.NONE));
+                .thenReturn(new PlanningResult(new AutomationRequest(), TokenUsage.NONE, LlmEngine.UNKNOWN));
 
         assertThatThrownBy(() -> jobService.generatePlan(new PlanRequest(session.getId(), "make it nicer")))
                 .isInstanceOf(ApiException.class)
@@ -218,7 +219,7 @@ class JobServiceSessionTest {
         AutomationRequest plan = new AutomationRequest();
         plan.setActions(List.of(good, bad));
         when(planningService.generatePlan(anyString(), anyString()))
-                .thenReturn(new PlanningResult(plan, TokenUsage.NONE));
+                .thenReturn(new PlanningResult(plan, TokenUsage.NONE, LlmEngine.UNKNOWN));
 
         assertThat(jobService.generatePlan(new PlanRequest(session.getId(), "tidy it")).steps())
                 .hasSize(2);
@@ -259,6 +260,40 @@ class JobServiceSessionTest {
         assertThat(job.getPromptTokens()).isEqualTo(1400L);
         assertThat(job.getCompletionTokens()).isEqualTo(300L);
         assertThat(job.getTotalTokens()).isEqualTo(1700L);
+    }
+
+    @Test
+    @DisplayName("the run records which engine answered, not which one is configured now")
+    void engineReachesTheJobRecord() throws Exception {
+        DocumentSession session = openSession();
+        when(planningService.generatePlan(anyString(), anyString()))
+                .thenReturn(planWith("ADD_SHEET", TokenUsage.NONE, new LlmEngine("CLOUD", "gemini-3.7-flash")));
+
+        Long jobId = runImprove(session, "add a summary sheet");
+
+        JobRecord job = jobs.get(jobId);
+        assertThat(job.getProviderMode()).isEqualTo("CLOUD");
+        assertThat(job.getModel()).isEqualTo("gemini-3.7-flash");
+    }
+
+    @Test
+    @DisplayName("a repair on a different model leaves the run attributed to the one that planned it")
+    void theModelThatPlannedTheRunKeepsTheAttribution() throws Exception {
+        DocumentSession session = openSession();
+        // Settings are editable between /plan and /apply, so the two calls of one run can genuinely
+        // land on different models. One column cannot hold two answers; the planning call — the one
+        // that did the thinking and spent most of the tokens — is the one it holds.
+        when(planningService.generatePlan(anyString(), anyString()))
+                .thenReturn(planWith("ADD_SHEET", TokenUsage.NONE, new LlmEngine("CLOUD", "gpt-4o")));
+        when(planningService.fixPlan(anyString(), anyString(), anyString()))
+                .thenReturn(planWith("ADD_SHEET", TokenUsage.NONE, new LlmEngine("LOCAL", "gemma4:12b")));
+        failFirstAttempt.set(true);
+
+        Long jobId = runImprove(session, "add a summary sheet");
+
+        JobRecord job = jobs.get(jobId);
+        assertThat(job.getProviderMode()).isEqualTo("CLOUD");
+        assertThat(job.getModel()).isEqualTo("gpt-4o");
     }
 
     @Test
@@ -337,16 +372,20 @@ class JobServiceSessionTest {
     }
 
     private PlanningResult planWith(String type) {
-        return planWith(type, TokenUsage.NONE);
+        return planWith(type, TokenUsage.NONE, LlmEngine.UNKNOWN);
     }
 
     private PlanningResult planWith(String type, TokenUsage usage) {
+        return planWith(type, usage, LlmEngine.UNKNOWN);
+    }
+
+    private PlanningResult planWith(String type, TokenUsage usage, LlmEngine engine) {
         ActionStep step = new ActionStep();
         step.setType(type);
         step.getProperties().put("sheetName", "Summary");
         AutomationRequest plan = new AutomationRequest();
         plan.setActions(List.of(step));
-        return new PlanningResult(plan, usage);
+        return new PlanningResult(plan, usage, engine);
     }
 
     private MockMultipartFile upload() throws Exception {
