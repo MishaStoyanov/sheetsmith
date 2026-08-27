@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { themes } from './theme.js';
 import AppShell from './AppShell.jsx';
 import AnalyticsScreen from './AnalyticsScreen.jsx';
-import { ChartIcon, ClockIcon, SheetIcon, UsersIcon } from './components/NavIcons.jsx';
+import PricesScreen from './PricesScreen.jsx';
+import { ChartIcon, ClockIcon, SheetIcon, TagIcon, UsersIcon } from './components/NavIcons.jsx';
 import ImproveScreen from './ImproveScreen.jsx';
 import UsersScreen from './UsersScreen.jsx';
 import HistoryScreen from './HistoryScreen.jsx';
@@ -86,6 +87,9 @@ export default function App() {
     { route: 'improve', label: 'Improve', icon: <SheetIcon /> },
     { route: 'history', label: 'History', icon: <ClockIcon /> },
     { route: 'analytics', label: 'Analytics', icon: <ChartIcon /> },
+    // Beside analytics rather than inside settings: settings are about which model this instance
+    // talks to now, prices are a reference table that outlives the choice.
+    { route: 'prices', label: 'Prices', icon: <TagIcon /> },
     // Only where there are accounts to manage. Hiding it with CSS would leave a route that
     // answers nothing.
     ...(capabilities.authEnabled ? [{ route: 'users', label: 'Users', icon: <UsersIcon /> }] : []),
@@ -95,6 +99,7 @@ export default function App() {
     improve: <ImproveScreen theme={theme} capabilities={capabilities} providerMode={providerMode} onOpenSettings={() => setSettingsOpen(true)} />,
     history: <HistoryScreen authEnabled={capabilities.authEnabled} />,
     analytics: <AnalyticsScreen theme={theme} user={user} />,
+    prices: <PricesScreen />,
     ...(capabilities.authEnabled
       ? { users: <UsersScreen currentUser={user} onSelfRenamed={name => setUser(u => ({ ...u, name }))} /> }
       : {}),

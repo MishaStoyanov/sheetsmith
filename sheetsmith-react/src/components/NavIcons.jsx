@@ -58,6 +58,16 @@ export function ChartIcon() {
   );
 }
 
+/** A price tag. What a model charges is a label attached to it, not a property of the run. */
+export function TagIcon() {
+  return (
+    <Glyph>
+      <path d="M7.6 1.9H2.6a.7.7 0 0 0-.7.7v5a1.4 1.4 0 0 0 .41.99l5.3 5.3a1.4 1.4 0 0 0 1.98 0l4.31-4.31a1.4 1.4 0 0 0 0-1.98l-5.3-5.3a1.4 1.4 0 0 0-.99-.4Z" />
+      <path d="M5.1 5.1h.01" />
+    </Glyph>
+  );
+}
+
 /** Two figures, because the menu item is people and there are usually more than one. */
 export function UsersIcon() {
   return (

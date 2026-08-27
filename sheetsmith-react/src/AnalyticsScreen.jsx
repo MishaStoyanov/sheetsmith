@@ -192,8 +192,8 @@ export default function AnalyticsScreen({ theme, user }) {
       {/* Said out loud rather than left to be inferred from a smaller number. */}
       {data && !data.costKnown && (
         <Note>
-          No prices have been entered, so spend is shown in tokens. Add prices in settings to see
-          money.
+          No prices have been entered, so spend is shown in tokens. Add them under{' '}
+          <a href="#/prices" style={{ color: 'var(--accent-text)' }}>Prices</a> to see money as well.
         </Note>
       )}
       {data?.costKnown && <UnpricedModelsNote models={data.unpricedModels} />}
