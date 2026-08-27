@@ -20,6 +20,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrint;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -48,6 +50,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * returns — the two must never drift into different answers.
  */
 @WebMvcTest(controllers = ChatMessageController.class)
+// Printing is off because this endpoint answers from a virtual thread: Spring Boot's default
+// result handler iterates the response headers to print them, while the emitter is still setting
+// them, and the run dies with a ConcurrentModificationException raised inside the test harness
+// rather than by anything under test. It surfaced about one run in seven once a security filter
+// chain widened the window.
+@AutoConfigureMockMvc(print = MockMvcPrint.NONE)
 // The real chain, not Spring Boot's default one: without it the slice gets CSRF protection this
 // app does not use, and every POST here answers 403 — a failure about the test's own wiring rather
 // than about the endpoint.
