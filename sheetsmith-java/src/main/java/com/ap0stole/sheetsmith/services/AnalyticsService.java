@@ -1,0 +1,287 @@
+package com.ap0stole.sheetsmith.services;
+
+import com.ap0stole.sheetsmith.domain.dto.analytics.AnalyticsQuery;
+import com.ap0stole.sheetsmith.domain.dto.analytics.AnalyticsSummaryDto;
+import com.ap0stole.sheetsmith.domain.entity.ModelPrice;
+import com.ap0stole.sheetsmith.domain.exception.ApiException;
+import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
+import com.ap0stole.sheetsmith.repository.ModelPriceRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.*;
+
+/**
+ * The numbers behind the analytics screen.
+ * <p>
+ * Aggregation happens in the database — {@code group by}, not a loop over rows — because the only
+ * thing coming back is a handful of numbers, and reading a table into memory to measure it gets
+ * slower exactly as the instance gets more interesting.
+ * <p>
+ * Cost is worked out in Java afterwards rather than joined in SQL. The price table is small enough
+ * to hold, and putting the arithmetic in one place is what makes "some of this could not be priced"
+ * expressible at all: an SQL join would silently drop the unpriced rows or silently count them as
+ * zero, and both are a wrong total presented as a right one.
+ */
+@Service
+@RequiredArgsConstructor
+public class AnalyticsService {
+
+    /** Postgres truncation units, allow-listed so the granularity cannot arrive as SQL. */
+    private static final Map<String, String> BUCKETS = Map.of(
+            "day", "day", "week", "week", "month", "month", "year", "year");
+
+    private static final BigDecimal MILLION = new BigDecimal("1000000");
+
+    private final JdbcTemplate jdbc;
+    private final ModelPriceRepository prices;
+
+    @Transactional(readOnly = true)
+    public AnalyticsSummaryDto summary(AnalyticsQuery query) {
+        Where where = Where.from(query);
+        Map<String, ModelPrice> priceList = priceList();
+
+        List<Row> rows = jdbc.query("""
+                        select coalesce(provider, 'unknown') as provider,
+                               coalesce(model, 'unknown')    as model,
+                               user_id,
+                               count(*)                      as calls,
+                               coalesce(sum(prompt_tokens), 0)     as prompt_tokens,
+                               coalesce(sum(completion_tokens), 0) as completion_tokens,
+                               coalesce(sum(total_tokens), 0)      as total_tokens
+                        from llm_usage
+                        """ + where.sql() + """
+                         group by provider, model, user_id
+                        """,
+                (rs, i) -> new Row(rs.getString("provider"), rs.getString("model"),
+                        rs.getObject("user_id") == null ? null : rs.getLong("user_id"),
+                        rs.getLong("calls"), rs.getLong("prompt_tokens"),
+                        rs.getLong("completion_tokens"), rs.getLong("total_tokens")),
+                where.args());
+
+        Set<String> unpriced = new TreeSet<>();
+        for (Row row : rows) {
+            if (!priceList.containsKey(key(row.provider(), row.model()))) {
+                unpriced.add(row.provider() + " / " + row.model());
+            }
+        }
+        boolean costKnown = !priceList.isEmpty() && unpriced.size() < rows.size();
+
+        return new AnalyticsSummaryDto(
+                totals(rows, priceList, where),
+                slices(rows, priceList, Row::provider),
+                slices(rows, priceList, r -> r.provider() + " / " + r.model()),
+                byUser(rows, priceList),
+                overTime(query, where, priceList),
+                costKnown,
+                List.copyOf(unpriced));
+    }
+
+    // ── The pieces ────────────────────────────────────────────────────────────
+
+    private AnalyticsSummaryDto.Totals totals(List<Row> rows, Map<String, ModelPrice> priceList, Where where) {
+        long calls = rows.stream().mapToLong(Row::calls).sum();
+        long prompt = rows.stream().mapToLong(Row::promptTokens).sum();
+        long completion = rows.stream().mapToLong(Row::completionTokens).sum();
+        long total = rows.stream().mapToLong(Row::totalTokens).sum();
+
+        // Documents worked on, counted as sessions rather than as distinct filenames: two different
+        // reports both called "report.xlsx" are two documents, and the same file opened twice is
+        // two pieces of work. Whichever is chosen, the screen has to say which — this one is
+        // countable and means something.
+        Long documents = jdbc.queryForObject(
+                "select count(distinct session_id) from llm_usage " + where.sql(), Long.class, where.args());
+        Long runs = jdbc.queryForObject(
+                "select count(distinct job_id) from llm_usage " + where.sql(), Long.class, where.args());
+
+        return new AnalyticsSummaryDto.Totals(calls, prompt, completion, total,
+                cost(rows, priceList), documents == null ? 0 : documents, runs == null ? 0 : runs);
+    }
+
+    private List<AnalyticsSummaryDto.Slice> slices(List<Row> rows, Map<String, ModelPrice> priceList,
+                                                   java.util.function.Function<Row, String> label) {
+        Map<String, List<Row>> grouped = new LinkedHashMap<>();
+        for (Row row : rows) {
+            grouped.computeIfAbsent(label.apply(row), k -> new ArrayList<>()).add(row);
+        }
+        return grouped.entrySet().stream()
+                .map(e -> new AnalyticsSummaryDto.Slice(e.getKey(),
+                        e.getValue().stream().mapToLong(Row::calls).sum(),
+                        e.getValue().stream().mapToLong(Row::totalTokens).sum(),
+                        cost(e.getValue(), priceList)))
+                .sorted(Comparator.comparingLong(AnalyticsSummaryDto.Slice::totalTokens).reversed())
+                .toList();
+    }
+
+    private List<AnalyticsSummaryDto.UserSlice> byUser(List<Row> rows, Map<String, ModelPrice> priceList) {
+        Map<Long, String> names = new HashMap<>();
+        jdbc.query("select id, name from users", rs -> { names.put(rs.getLong("id"), rs.getString("name")); });
+
+        Map<Long, List<Row>> grouped = new LinkedHashMap<>();
+        for (Row row : rows) {
+            grouped.computeIfAbsent(row.userId(), k -> new ArrayList<>()).add(row);
+        }
+
+        return grouped.entrySet().stream()
+                .map(e -> new AnalyticsSummaryDto.UserSlice(e.getKey(),
+                        // Named as what it is. Calls made before there were accounts, or on an
+                        // instance with none, belong to nobody — and that is most of them.
+                        e.getKey() == null ? "No owner" : names.getOrDefault(e.getKey(), "Deleted account"),
+                        e.getValue().stream().mapToLong(Row::calls).sum(),
+                        e.getValue().stream().mapToLong(Row::totalTokens).sum(),
+                        cost(e.getValue(), priceList)))
+                .sorted(Comparator.comparingLong(AnalyticsSummaryDto.UserSlice::totalTokens).reversed())
+                .toList();
+    }
+
+    private List<AnalyticsSummaryDto.Bucket> overTime(AnalyticsQuery query, Where where,
+                                                      Map<String, ModelPrice> priceList) {
+        String unit = BUCKETS.get(query.granularity() == null ? "day" : query.granularity().toLowerCase());
+        if (unit == null) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR,
+                    "Cannot group by '" + query.granularity() + "'; try one of " + new TreeSet<>(BUCKETS.keySet()),
+                    "granularity");
+        }
+
+        List<Row> rows = jdbc.query("""
+                        select to_char(date_trunc('%s', started_at), 'YYYY-MM-DD') as bucket,
+                               coalesce(provider, 'unknown') as provider,
+                               coalesce(model, 'unknown')    as model,
+                               count(*) as calls,
+                               coalesce(sum(prompt_tokens), 0)     as prompt_tokens,
+                               coalesce(sum(completion_tokens), 0) as completion_tokens,
+                               coalesce(sum(total_tokens), 0)      as total_tokens
+                        from llm_usage
+                        """.formatted(unit) + where.sql() + """
+                         group by bucket, provider, model order by bucket
+                        """,
+                (rs, i) -> new Row(rs.getString("provider"), rs.getString("model"), null,
+                        rs.getLong("calls"), rs.getLong("prompt_tokens"),
+                        rs.getLong("completion_tokens"), rs.getLong("total_tokens"))
+                        .withBucket(rs.getString("bucket")),
+                where.args());
+
+        Map<String, List<Row>> grouped = new LinkedHashMap<>();
+        for (Row row : rows) {
+            grouped.computeIfAbsent(row.bucket(), k -> new ArrayList<>()).add(row);
+        }
+        return grouped.entrySet().stream()
+                .map(e -> new AnalyticsSummaryDto.Bucket(e.getKey(),
+                        e.getValue().stream().mapToLong(Row::calls).sum(),
+                        e.getValue().stream().mapToLong(Row::totalTokens).sum(),
+                        cost(e.getValue(), priceList)))
+                .toList();
+    }
+
+    // ── Money ─────────────────────────────────────────────────────────────────
+
+    /**
+     * What these calls cost, or null if none of them could be priced.
+     * <p>
+     * Rows with no price contribute nothing rather than zero, and a group where nothing is priced
+     * answers null rather than 0.00 — a total that silently leaves out half the calls is worse than
+     * an absent one, because it looks like an answer.
+     */
+    private BigDecimal cost(List<Row> rows, Map<String, ModelPrice> priceList) {
+        BigDecimal sum = BigDecimal.ZERO;
+        boolean anyPriced = false;
+
+        for (Row row : rows) {
+            ModelPrice price = priceList.get(key(row.provider(), row.model()));
+            if (price == null) {
+                continue;
+            }
+            anyPriced = true;
+            sum = sum.add(price.getInputPerMillion()
+                            .multiply(BigDecimal.valueOf(row.promptTokens())).divide(MILLION, 6, RoundingMode.HALF_UP))
+                    .add(price.getOutputPerMillion()
+                            .multiply(BigDecimal.valueOf(row.completionTokens())).divide(MILLION, 6, RoundingMode.HALF_UP));
+        }
+        return anyPriced ? sum.setScale(4, RoundingMode.HALF_UP) : null;
+    }
+
+    private Map<String, ModelPrice> priceList() {
+        Map<String, ModelPrice> map = new HashMap<>();
+        prices.findAll().forEach(price -> map.put(key(price.getProvider(), price.getModel()), price));
+        return map;
+    }
+
+    private static String key(String provider, String model) {
+        return (provider == null ? "" : provider.toUpperCase()) + " " + (model == null ? "" : model);
+    }
+
+    // ── Filters ───────────────────────────────────────────────────────────────
+
+    /** The where clause and its arguments, built together so they cannot fall out of step. */
+    private record Where(String sql, Object[] args) {
+
+        static Where from(AnalyticsQuery query) {
+            List<String> clauses = new ArrayList<>();
+            List<Object> args = new ArrayList<>();
+
+            if (query.from() != null) {
+                clauses.add("started_at >= ?");
+                args.add(java.sql.Timestamp.valueOf(query.from()));
+            }
+            if (query.to() != null) {
+                clauses.add("started_at <= ?");
+                args.add(java.sql.Timestamp.valueOf(query.to()));
+            }
+
+            // Owner and "no owner" are one question with two halves, exactly as in the history:
+            // every call on an instance without accounts belongs to nobody.
+            boolean named = query.userIds() != null && !query.userIds().isEmpty();
+            boolean unowned = Boolean.TRUE.equals(query.includeUnowned());
+            if (named && unowned) {
+                clauses.add("(user_id in (" + placeholders(query.userIds().size()) + ") or user_id is null)");
+                args.addAll(query.userIds());
+            } else if (named) {
+                clauses.add("user_id in (" + placeholders(query.userIds().size()) + ")");
+                args.addAll(query.userIds());
+            } else if (unowned) {
+                clauses.add("user_id is null");
+            }
+
+            if (notEmpty(query.providers())) {
+                clauses.add("provider in (" + placeholders(query.providers().size()) + ")");
+                args.addAll(query.providers());
+            }
+            if (notEmpty(query.models())) {
+                clauses.add("model in (" + placeholders(query.models().size()) + ")");
+                args.addAll(query.models());
+            }
+            if (notEmpty(query.kinds())) {
+                clauses.add("kind in (" + placeholders(query.kinds().size()) + ")");
+                query.kinds().forEach(kind -> args.add(kind.name()));
+            }
+
+            return new Where(clauses.isEmpty() ? "" : " where " + String.join(" and ", clauses), args.toArray());
+        }
+
+        private static String placeholders(int count) {
+            return String.join(", ", Collections.nCopies(count, "?"));
+        }
+
+        private static boolean notEmpty(List<?> values) {
+            return values != null && !values.isEmpty();
+        }
+    }
+
+    /** One grouped row as the database returned it. */
+    private record Row(String provider, String model, Long userId, long calls,
+                       long promptTokens, long completionTokens, long totalTokens, String bucket) {
+
+        Row(String provider, String model, Long userId, long calls,
+            long promptTokens, long completionTokens, long totalTokens) {
+            this(provider, model, userId, calls, promptTokens, completionTokens, totalTokens, null);
+        }
+
+        Row withBucket(String bucket) {
+            return new Row(provider, model, userId, calls, promptTokens, completionTokens, totalTokens, bucket);
+        }
+    }
+}
