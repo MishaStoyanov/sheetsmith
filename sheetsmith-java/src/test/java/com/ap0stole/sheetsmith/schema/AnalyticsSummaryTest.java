@@ -251,6 +251,52 @@ class AnalyticsSummaryTest {
         assertThat(analytics.summary(mineOnly).overTimeByUser()).isEmpty();
     }
 
+    @Test
+    @DisplayName("a person's documents are counted, not summed from their rows")
+    void documentsPerPersonAreDistinctSessions() {
+        // Two models on one document is two rows and one document. Adding up per-model counts
+        // would report the same spreadsheet twice.
+        call("2026-08-01 10:00", "CHAT", danaId, "s1", "OPENAI", "gpt-4o", 100, 10);
+        call("2026-08-01 10:05", "CHAT", danaId, "s1", "OLLAMA", "gemma4:12b", 100, 10);
+        call("2026-08-01 10:10", "CHAT", danaId, "s2", "OPENAI", "gpt-4o", 100, 10);
+
+        AnalyticsSummaryDto.UserSlice dana = analytics.summary(AnalyticsQuery.unfiltered()).byUser().getFirst();
+
+        assertThat(dana.calls()).isEqualTo(3);
+        assertThat(dana.documents()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("two people on one document are one document for the instance and one each")
+    void documentsDoNotHaveToAddUp() {
+        call("2026-08-01 10:00", "CHAT", danaId, "shared", "OPENAI", "gpt-4o", 100, 10);
+        call("2026-08-01 10:05", "CHAT", null, "shared", "OPENAI", "gpt-4o", 100, 10);
+
+        AnalyticsSummaryDto summary = analytics.summary(AnalyticsQuery.unfiltered());
+
+        assertThat(summary.totals().documents())
+                .as("the instance worked on one document")
+                .isEqualTo(1);
+        assertThat(summary.byUser()).extracting(AnalyticsSummaryDto.UserSlice::documents)
+                .as("and each of them worked on it")
+                .containsExactly(1L, 1L);
+    }
+
+    @Test
+    @DisplayName("a date filter narrows a person's document count with everything else")
+    void documentsFollowTheFilter() {
+        call("2026-08-01 10:00", "CHAT", danaId, "s1", "OPENAI", "gpt-4o", 100, 10);
+        call("2026-08-09 10:00", "CHAT", danaId, "s2", "OPENAI", "gpt-4o", 100, 10);
+
+        AnalyticsQuery firstWeek = new AnalyticsQuery(
+                java.time.LocalDateTime.parse("2026-08-01T00:00"),
+                java.time.LocalDateTime.parse("2026-08-07T23:59"),
+                null, null, null, null, null, "day");
+
+        assertThat(analytics.summary(firstWeek).byUser().getFirst().documents()).isEqualTo(1);
+        assertThat(analytics.summary(AnalyticsQuery.unfiltered()).byUser().getFirst().documents()).isEqualTo(2);
+    }
+
     static boolean dockerAvailable() {
         try {
             return DockerClientFactory.instance().isDockerAvailable();

@@ -93,7 +93,7 @@ export default function App() {
   const screens = {
     improve: <ImproveScreen theme={theme} capabilities={capabilities} providerMode={providerMode} onOpenSettings={() => setSettingsOpen(true)} />,
     history: <HistoryScreen authEnabled={capabilities.authEnabled} />,
-    analytics: <AnalyticsScreen theme={theme} />,
+    analytics: <AnalyticsScreen theme={theme} user={user} />,
     ...(capabilities.authEnabled
       ? { users: <UsersScreen currentUser={user} onSelfRenamed={name => setUser(u => ({ ...u, name }))} /> }
       : {}),

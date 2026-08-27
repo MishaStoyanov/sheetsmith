@@ -36,8 +36,17 @@ public record AnalyticsSummaryDto(
     public record Slice(String label, long calls, long totalTokens, BigDecimal cost) {
     }
 
-    /** @param userId null for the calls nobody owns — shown as such rather than dropped */
-    public record UserSlice(Long userId, String name, long calls, long totalTokens, BigDecimal cost) {
+    /**
+     * One person's share, carrying enough to stand on its own as a panel.
+     *
+     * @param userId    null for the calls nobody owns — shown as such rather than dropped
+     * @param documents documents worked on, counted as sessions: the same file opened twice is two
+     *                  pieces of work, and two different reports both called report.xlsx are two
+     *                  documents. Whichever is chosen the screen has to say which, and this one is
+     *                  countable and means something.
+     */
+    public record UserSlice(Long userId, String name, long calls, long totalTokens, BigDecimal cost,
+                            long documents) {
     }
 
     public record Bucket(String label, long calls, long totalTokens, BigDecimal cost) {

@@ -81,7 +81,7 @@ public class AnalyticsService {
                 totals(rows, priceList, where),
                 slices(rows, priceList, Row::provider),
                 slices(rows, priceList, r -> r.provider() + " / " + r.model()),
-                byUser(rows, priceList, names),
+                byUser(rows, priceList, names, documentsPerUser(where)),
                 overTime(timeRows, priceList),
                 overTimeByUser(timeRows, priceList, names),
                 costKnown,
@@ -125,7 +125,8 @@ public class AnalyticsService {
     }
 
     private List<AnalyticsSummaryDto.UserSlice> byUser(List<Row> rows, Map<String, ModelPrice> priceList,
-                                                       Map<Long, String> names) {
+                                                       Map<Long, String> names,
+                                                       Map<Long, Long> documents) {
         Map<Long, List<Row>> grouped = new LinkedHashMap<>();
         for (Row row : rows) {
             grouped.computeIfAbsent(row.userId(), k -> new ArrayList<>()).add(row);
@@ -136,7 +137,8 @@ public class AnalyticsService {
                         name(e.getKey(), names),
                         e.getValue().stream().mapToLong(Row::calls).sum(),
                         e.getValue().stream().mapToLong(Row::totalTokens).sum(),
-                        cost(e.getValue(), priceList)))
+                        cost(e.getValue(), priceList),
+                        documents.getOrDefault(e.getKey(), 0L)))
                 .sorted(Comparator.comparingLong(AnalyticsSummaryDto.UserSlice::totalTokens).reversed())
                 .toList();
     }
@@ -169,6 +171,26 @@ public class AnalyticsService {
                         rs.getLong("completion_tokens"), rs.getLong("total_tokens"))
                         .withBucket(rs.getString("bucket")),
                 where.args());
+    }
+
+    /**
+     * Documents per person, counted in the database rather than summed from the grouped rows.
+     * <p>
+     * Distinct is not additive: the same document worked on with two models is two rows and one
+     * document, so adding up per-model counts would report it twice. This is also why the numbers
+     * here do not add up to the instance total, and correctly so — two people on one document are
+     * two rows here and one document there.
+     */
+    private Map<Long, Long> documentsPerUser(Where where) {
+        Map<Long, Long> counts = new HashMap<>();
+        jdbc.query("select user_id, count(distinct session_id) as documents from llm_usage "
+                        + where.sql() + " group by user_id",
+                rs -> {
+                    Long userId = rs.getObject("user_id") == null ? null : rs.getLong("user_id");
+                    counts.put(userId, rs.getLong("documents"));
+                },
+                where.args());
+        return counts;
     }
 
     private List<AnalyticsSummaryDto.Bucket> overTime(List<Row> rows, Map<String, ModelPrice> priceList) {

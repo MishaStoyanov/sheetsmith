@@ -44,7 +44,7 @@ function money(value, short = false) {
 }
 
 /** Spend and volume, with one switch between the two measures rather than two axes on one plot. */
-export default function AnalyticsScreen({ theme }) {
+export default function AnalyticsScreen({ theme, user }) {
   const [filters, setFilters] = useState(EMPTY);
   const [granularity, setGranularity] = useState('day');
   const [measure, setMeasure] = useState('tokens');
@@ -79,6 +79,17 @@ export default function AnalyticsScreen({ theme }) {
 
   const activeCount = (filters.from || filters.to) ? 1 : 0;
   const totals = data?.totals;
+
+  // Your own share, taken out of the same answer as everything else rather than asked for
+  // separately — a second call could come back disagreeing with the totals above it.
+  //
+  // Without accounts there is no "yours": every call on the instance is the same anonymous pile,
+  // and the totals already are that pile. So the panel is simply not drawn, instead of drawn
+  // around a number identical to the one beside it.
+  const mine = user ? (data?.byUser ?? []).find(person => person.userId === user.id) : null;
+  const shareOfTokens = mine && totals?.totalTokens
+    ? Math.round((mine.totalTokens / totals.totalTokens) * 100)
+    : null;
 
   // Only where it says something: a breakdown by person on an instance where every call belongs to
   // the same person (or to nobody) is one bar labelled with their name. The server decides it —
@@ -173,6 +184,28 @@ export default function AnalyticsScreen({ theme }) {
         </Note>
       )}
 
+      {user && (
+        <div style={{ marginBottom: 16 }}>
+          <Panel title={`Your numbers${activeCount ? ', in this range' : ''}`}>
+            {mine ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 18 }}>
+                <Mine label="Requests" value={mine.calls.toLocaleString()} />
+                <Mine label="Documents" value={mine.documents.toLocaleString()}
+                      hint="counted as documents opened" />
+                <Mine label="Tokens" value={tokens(mine.totalTokens)}
+                      hint={shareOfTokens == null ? undefined : `${shareOfTokens}% of this instance`} />
+                <Mine label="Spend" value={mine.cost != null ? money(mine.cost) : '—'}
+                      hint={mine.cost == null ? 'no prices entered' : undefined} />
+              </div>
+            ) : (
+              <div style={{ fontSize: 13, color: 'var(--text-faint)' }}>
+                {loading ? 'Loading…' : 'Nothing of yours in this range yet.'}
+              </div>
+            )}
+          </Panel>
+        </div>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12, marginBottom: 16 }}>
         <Stat label="Calls" value={totals ? totals.calls.toLocaleString() : '—'} />
         <Stat label="Tokens" value={totals ? tokens(totals.totalTokens) : '—'} />
@@ -218,6 +251,17 @@ export default function AnalyticsScreen({ theme }) {
           empty={loading ? 'Loading…' : 'No calls in this range'}
         />
       </div>
+    </div>
+  );
+}
+
+/** One figure inside the "your numbers" panel — the panel titles them, so each only needs a word. */
+function Mine({ label, value, hint }) {
+  return (
+    <div>
+      <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 3 }}>{label}</div>
+      <div style={{ fontFamily: mono, fontSize: 21, fontWeight: 600, letterSpacing: '-0.01em' }}>{value}</div>
+      {hint && <div style={{ fontSize: 11.5, color: 'var(--text-faint)', marginTop: 3 }}>{hint}</div>}
     </div>
   );
 }
