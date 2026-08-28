@@ -183,6 +183,13 @@ default), and the superadmin can say more than that under **Settings → Storage
 Both caps are optional and empty means no cap. A zero is refused rather than obeyed: it would mean
 "delete every run as it finishes", which is not something anybody says by leaving a box empty.
 
+## The API
+
+Everything the interface does is an HTTP call you can make yourself. The reference is generated from
+the code that serves it and lives at **`/swagger-ui.html`** on a running instance (`/v3/api-docs`
+for the raw document): every endpoint says what it does and which role it needs, and *Authorize*
+takes the token from `POST /api/auth/login` so you can try them from the page.
+
 ## Status
 
 Working and in use, being prepared for a wider audience. Known gaps, so nobody has to discover them

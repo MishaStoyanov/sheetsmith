@@ -333,6 +333,16 @@ other, so what is allowed through is readable in one place. The flag is reported
 `/api/capabilities` — never by `/api/settings`, because a security switch that travels with editable
 settings invites a PUT that appears to turn it off.
 
+**Every endpoint carries its own rule.** `@PreAuthorize` sits on the handler, beside the mapping —
+`@authz.signedIn()`, `@authz.admin()`, `@authz.superadmin()`, or `@access.maySeeSession(#sessionId)`
+for the document ones. Nothing about roles lives on the services any more: the boundary is where a
+reader looks for the rule, and a service annotation is silent about self-invocation anyway (a
+catalogue apply calling its own `upsert` never crosses the proxy). What stayed on the services are
+the rules that need the row in hand — `Authz.mayManage(targetRole)` in `UserService.update` and
+`setMonthlyBudget`, and `WorkVisibility` for the history — because no path can answer "whose is
+this". `EndpointGuardTest` walks the handlers Spring registered and fails if one has no rule, with
+four named exceptions (login, refresh, logout, capabilities).
+
 **The chain names every path and denies the rest.** It used to end at `/api/** → authenticated`,
 leaving the actual rule to whether somebody had remembered a `@PreAuthorize` on the service method —
 default-allow, and five endpoints had been added without one (the LLM settings and their stored API
@@ -384,7 +394,19 @@ serving both is how a stored API key ends up in every signed-in person's browser
 
 `SecurityMatrixTest` asks every guarded endpoint as USER / ADMIN / SUPERADMIN over HTTP with real
 tokens. Service-level tests cannot find a missing guard — they call the method with a role in the
-context, and a method nobody guards is one they never think to ask about.
+context, and a method nobody guards is one they never think to ask about. When the rules moved to
+the handlers, the assertions that used to sit on services moved here with them; what remains on a
+service test is the rule that compares caller and target.
+
+### OpenAPI
+
+`springdoc-openapi-starter-webmvc-ui` serves `/swagger-ui.html` and `/v3/api-docs`, both open in
+both modes — the document lists paths and shapes, never data, and this is an open-source API whose
+endpoints are in the README anyway. `configs/OpenApiConfig` adds the bearer scheme (so *Authorize*
+in the UI works with the token from `POST /api/auth/login`) and the one paragraph a generator cannot
+write: what the two auth modes mean and who may call what. Every handler carries `@Operation`, every
+controller a `@Tag`; `mvn test` does not check that, but an endpoint without a summary is obvious in
+the UI.
 
 `V11__user_roles.sql` backfills existing accounts to `ADMIN` and the first to `SUPERADMIN`. Setting
 everyone to `USER` would wake a multi-person instance up with one administrator and everybody else

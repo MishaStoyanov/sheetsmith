@@ -14,7 +14,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,7 +49,6 @@ public class UserService {
      * administrators would quietly empty a filter ordinary people use — and the names are not a
      * secret anyway: the analytics screen prints them beside what each person spent.
      */
-    @PreAuthorize("@authz.signedIn()")
     public Page<UserDto> search(UserSearchRequest request) {
         Long first = firstUserId();
         // Never null: a null string parameter reaches PostgreSQL untyped and the driver guesses
@@ -72,7 +70,6 @@ public class UserService {
                 });
     }
 
-    @PreAuthorize("@authz.admin()")
     @Transactional
     public UserDto create(CreateUserRequest request) {
         String name = request.name().trim();
@@ -84,7 +81,6 @@ public class UserService {
     }
 
     /** PUT: name and password both become what was sent. */
-    @PreAuthorize("@authz.admin()")
     @Transactional
     public UserDto replace(Long id, ReplaceUserRequest request) {
         User user = require(id);
@@ -154,7 +150,6 @@ public class UserService {
      * hand out ADMIN; taking it back is left to the seeded account, so two administrators cannot
      * spend the afternoon demoting each other.
      */
-    @PreAuthorize("@authz.admin()")
     @Transactional
     public UserDto changeRole(Long id, Role role, Long callerId) {
         User user = require(id);
@@ -197,7 +192,6 @@ public class UserService {
      * without ever showing them the gauge is the kind of limit people resent rather than plan
      * around.
      */
-    @PreAuthorize("@authz.signedIn()")
     @Transactional(readOnly = true)
     public SpendDto mySpend(Long callerId) {
         if (callerId == null) {
@@ -228,7 +222,6 @@ public class UserService {
      * Null clears it. That is a real value here rather than a missing one, which is why this is its
      * own call and not a nullable field on the patch, where "leave it alone" already means null.
      */
-    @PreAuthorize("@authz.admin()")
     @Transactional
     public UserDto setMonthlyBudget(Long id, java.math.BigDecimal budget, Long callerId) {
         User user = require(id);
@@ -295,7 +288,6 @@ public class UserService {
      * administrator manages people — creates them, renames them, sets what they may spend — and all
      * of that can be undone by the next administrator to look at it. This cannot.
      */
-    @PreAuthorize("@authz.superadmin()")
     @Transactional
     public void delete(Long id, Long callerId) {
         User user = require(id);

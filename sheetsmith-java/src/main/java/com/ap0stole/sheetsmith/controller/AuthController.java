@@ -11,10 +11,13 @@ import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
@@ -29,6 +32,7 @@ import java.time.LocalDateTime;
  * the browser will not attach to a request another site started. The short-lived access token goes
  * in the body instead, for the page to keep in memory.
  */
+@Tag(name = "Auth", description = "Signing in, refreshing, signing out - present only when accounts are switched on.")
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -41,6 +45,8 @@ public class AuthController {
     private final AuthService authService;
     private final CurrentUser currentUser;
 
+    @Operation(summary = "Sign in",
+            description = "Returns an access token in the body; the refresh token is an httpOnly SameSite=Strict cookie scoped to /api/auth. A wrong name and a wrong password are answered identically.")
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody @Valid LoginRequest request,
                                               HttpServletResponse response) {
@@ -48,6 +54,8 @@ public class AuthController {
         return answer(authService.login(request), response);
     }
 
+    @Operation(summary = "Exchange the refresh cookie for a new access token",
+            description = "The cookie is rotated on every use: the old one stops working, and presenting a used one ends every session of that account, because it means a copy is in circulation.")
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(
             @CookieValue(name = REFRESH_COOKIE, required = false) String refreshToken,
@@ -56,6 +64,8 @@ public class AuthController {
         return answer(authService.refresh(refreshToken), response);
     }
 
+    @Operation(summary = "Sign out",
+            description = "Ends this session and clears the cookie. Answers cleanly when there is nothing to end.")
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
             @CookieValue(name = REFRESH_COOKIE, required = false) String refreshToken,
@@ -68,6 +78,9 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("@authz.signedIn()")
+    @Operation(summary = "Who the caller is",
+            description = "Name, role, and whether the default password still needs changing.")
     @GetMapping("/me")
     public ResponseEntity<MeDto> me() {
         requireAuthEnabled();

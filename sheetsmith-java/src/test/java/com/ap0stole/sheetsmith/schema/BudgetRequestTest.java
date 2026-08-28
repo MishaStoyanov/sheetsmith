@@ -265,8 +265,8 @@ class BudgetRequestTest {
 
         assertThatThrownBy(() -> budgetRequests.decide(asked.getId(), true, new BigDecimal("50.00"), danaId))
                 .isInstanceOf(ApiException.class);
-        assertThatThrownBy(() -> budgetRequests.pendingVisibleTo())
-                .isInstanceOf(AccessDeniedException.class);
+        // Who may read the queue at all is a rule about the endpoint rather than about a row, so it
+        // sits on the handler and is asked there: see SecurityMatrixTest.
     }
 
     // ── Being told ────────────────────────────────────────────────────────────

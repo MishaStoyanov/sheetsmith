@@ -3,7 +3,10 @@ package com.ap0stole.sheetsmith.controller;
 import com.ap0stole.sheetsmith.domain.dto.prompt.FrequentPromptDto;
 import com.ap0stole.sheetsmith.domain.enums.UsageKind;
 import com.ap0stole.sheetsmith.services.PromptHistoryService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -19,6 +22,7 @@ import java.util.List;
  * person's description of their own spreadsheet to another, and this is the one place on the
  * instance where that is not a hypothetical.
  */
+@Tag(name = "Prompts", description = "What you have asked for before. Always your own, never anybody else’s.")
 @RestController
 @RequestMapping("/api/prompts")
 @RequiredArgsConstructor
@@ -26,6 +30,9 @@ public class PromptController {
 
     private final PromptHistoryService promptHistory;
 
+    @PreAuthorize("@authz.signedIn()")
+    @Operation(summary = "Your own repeated prompts",
+            description = "There is no parameter for whose: it always answers about the caller. A prompt is what somebody wrote in their own words about their own data.")
     @GetMapping("/frequent")
     public List<FrequentPromptDto> frequent(@RequestParam(defaultValue = "IMPROVE") UsageKind kind,
                                             @RequestParam(defaultValue = "5") int limit) {

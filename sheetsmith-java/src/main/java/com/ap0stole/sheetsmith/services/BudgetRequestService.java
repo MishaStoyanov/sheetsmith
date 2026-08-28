@@ -10,7 +10,6 @@ import com.ap0stole.sheetsmith.repository.BudgetRequestRepository;
 import com.ap0stole.sheetsmith.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -82,7 +81,6 @@ public class BudgetRequestService {
                         userId, List.of(BudgetRequestStatus.APPROVED, BudgetRequestStatus.DECLINED));
     }
 
-    @PreAuthorize("@authz.signedIn()")
     @Transactional
     public BudgetRequest ask(Long callerId) {
         if (callerId == null) {
@@ -117,7 +115,6 @@ public class BudgetRequestService {
      * is running out of money, and a list that arrived complete and was trimmed in the browser
      * would have already told them.
      */
-    @PreAuthorize("@authz.admin()")
     @Transactional(readOnly = true)
     public List<com.ap0stole.sheetsmith.domain.dto.user.BudgetRequestDto> pendingVisibleTo() {
         return requests.findByStatus(BudgetRequestStatus.PENDING).stream()
@@ -178,7 +175,6 @@ public class BudgetRequestService {
      * Only your own, and silently ignored where there is nothing waiting: dismissing a message that
      * has already gone is not an error worth showing somebody.
      */
-    @PreAuthorize("@authz.signedIn()")
     @Transactional
     public void markSeen(Long callerId) {
         undeliveredDecisionFor(callerId).ifPresent(request -> {

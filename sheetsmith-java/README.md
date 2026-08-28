@@ -199,6 +199,11 @@ take the default configuration down silently. The role is read from the database
 carried in the token: a token says what was true when it was issued, and a demotion would otherwise
 keep working for the rest of the afternoon.
 
+**Every endpoint carries its own rule**, as `@PreAuthorize` beside the mapping — that is where a
+reader looks for it, and where Swagger shows it. `EndpointGuardTest` walks the handlers Spring
+registered and fails the build if one has no rule, so the annotation cannot be forgotten the way the
+five below were.
+
 **The chain names every path, and refuses the ones it does not.** It used to say `/api/** →
 authenticated` and leave the rest to whether somebody had remembered a method annotation, which is
 default-allow: five endpoints had been added without one, and each was open to every account on the
@@ -233,6 +238,13 @@ either.
 ---
 
 ## API Reference
+
+**Swagger UI: `http://localhost:8080/swagger-ui.html`** — the same reference generated from the
+handlers, so it cannot describe an endpoint that no longer exists. Every operation names the role it
+needs; press *Authorize* and paste the `accessToken` from `POST /api/auth/login` to try them. The
+raw document is at `/v3/api-docs`. Both stay open when accounts are on: they list paths and shapes,
+never data.
+
 
 The UI flow is plan → review → apply, and it runs against a session (open one with
 `POST /api/chat/sessions`, see [Chat API](#chat-api) — the same session backs both flows).

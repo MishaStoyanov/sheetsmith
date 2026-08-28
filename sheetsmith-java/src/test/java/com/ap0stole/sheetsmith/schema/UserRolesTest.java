@@ -93,10 +93,9 @@ class UserRolesTest {
     void plainUsersCannotManageAccounts() {
         as(plainId, "roles-plain");
 
-        assertThatThrownBy(() -> userService.create(new CreateUserRequest("roles-new", "password")))
-                .isInstanceOf(AccessDeniedException.class);
-        assertThatThrownBy(() -> userService.delete(adminId, plainId))
-                .isInstanceOf(AccessDeniedException.class);
+        // Creating and deleting are rules about the endpoint, and are asked at it - see
+        // SecurityMatrixTest. What is asked here is the rule that needs the row: who the caller is
+        // pointing at, which no path can answer.
         assertThatThrownBy(() -> userService.update(adminId, new PatchUserRequest("renamed", null, null), plainId))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("permission");
@@ -194,7 +193,7 @@ class UserRolesTest {
         as(plainId, "roles-plain");
 
         assertThatThrownBy(() -> userService.changeRole(plainId, Role.ADMIN, plainId))
-                .isInstanceOf(AccessDeniedException.class);
+                .isInstanceOf(ApiException.class);
     }
 
     @Test

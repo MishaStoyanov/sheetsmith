@@ -7,10 +7,13 @@ import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
 import com.ap0stole.sheetsmith.services.UserService;
 import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +22,7 @@ import java.util.List;
  * Five endpoints rather than four, because creating and searching are two different meanings and
  * one URL cannot hold both: they would be told apart only by the shape of the request body.
  */
+@Tag(name = "Accounts", description = "Accounts, roles and spend limits. Present only when accounts are switched on.")
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -29,6 +33,8 @@ public class UserController {
     private final CurrentUser currentUser;
     private final com.ap0stole.sheetsmith.services.BudgetRequestService budgetRequests;
 
+    @PreAuthorize("@authz.admin()")
+    @Operation(summary = "Create an account. Admin")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public UserDto create(@RequestBody @Valid CreateUserRequest request) {
@@ -36,7 +42,10 @@ public class UserController {
         return userService.create(request);
     }
 
-    /** POST, not GET, because the filters are a body rather than a queue of query parameters. */
+
+    @PreAuthorize("@authz.signedIn()")
+    @Operation(summary = "Search accounts",
+            description = "Open to anyone signed in, because the history’s started-by filter is built from it. Spending is only filled in where the caller may see it.")
     @PostMapping("/search")
     public Page<UserDto> search(@RequestBody(required = false) UserSearchRequest request) {
         requireAccounts();
@@ -45,24 +54,27 @@ public class UserController {
                 : request);
     }
 
+    @PreAuthorize("@authz.admin()")
+    @Operation(summary = "Replace an account. Admin")
     @PutMapping("/{id}")
     public UserDto replace(@PathVariable Long id, @RequestBody @Valid ReplaceUserRequest request) {
         requireAccounts();
         return userService.replace(id, request);
     }
 
+    @PreAuthorize("@authz.signedIn()")
+    @Operation(summary = "Rename, or change a password",
+            description = "Your own password takes the current one; an administrator resetting somebody else’s does not, but may only do it to an ordinary user - never a peer, never the seeded account.")
     @PatchMapping("/{id}")
     public UserDto update(@PathVariable Long id, @RequestBody @Valid PatchUserRequest request) {
         requireAccounts();
         return userService.update(id, request, currentUser.id().orElse(null));
     }
 
-    /**
-     * Your own limit and what you have spent against it.
-     * <p>
-     * Before {@code /{id}} in the file and in the mapping order, because {@code me} would otherwise
-     * be read as an id.
-     */
+
+    @PreAuthorize("@authz.signedIn()")
+    @Operation(summary = "Your own limit and what you have spent",
+            description = "Its own call rather than a field on the session: the people who most need it never reach the accounts screen, and it changes while they work.")
     @GetMapping("/me/spend")
     public SpendDto mySpend() {
         requireAccounts();
@@ -74,6 +86,9 @@ public class UserController {
      * decision of whoever answers, and asking somebody to name a figure invites them to name the
      * one they think will be granted rather than the one they need.
      */
+    @PreAuthorize("@authz.signedIn()")
+    @Operation(summary = "Ask for a bigger limit",
+            description = "No amount: how much more is the decision of whoever answers. One open request at a time.")
     @PostMapping("/me/budget-request")
     public BudgetRequestDto askForMore() {
         requireAccounts();
@@ -81,6 +96,9 @@ public class UserController {
     }
 
     /** Marks the outcome as read, which is what makes the notification happen once. */
+    @PreAuthorize("@authz.signedIn()")
+    @Operation(summary = "Acknowledge the answer",
+            description = "What makes the notification happen once.")
     @PostMapping("/me/budget-request/seen")
     public ResponseEntity<Void> markDecisionSeen() {
         requireAccounts();
@@ -89,12 +107,18 @@ public class UserController {
     }
 
     /** Everything still waiting on an answer, filtered to the ones this caller may answer. */
+    @PreAuthorize("@authz.admin()")
+    @Operation(summary = "Requests waiting for you. Admin",
+            description = "Already narrowed to the ones this caller may answer.")
     @GetMapping("/budget-requests")
     public List<BudgetRequestDto> pendingRequests() {
         requireAccounts();
         return budgetRequests.pendingVisibleTo();
     }
 
+    @PreAuthorize("@authz.admin()")
+    @Operation(summary = "Approve or decline a request. Admin",
+            description = "Approving carries the new limit and is refused if it is not larger: the person is told their limit was raised, and that has to be true.")
     @PostMapping("/budget-requests/{id}/decide")
     public BudgetRequestDto decide(@PathVariable Long id, @RequestBody @Valid DecideBudgetRequest request) {
         requireAccounts();
@@ -108,6 +132,9 @@ public class UserController {
      * Its own endpoint for the same reason the role has one: null means "no limit" here, and on a
      * PATCH null already means "leave this alone". One of those two meanings has to move.
      */
+    @PreAuthorize("@authz.admin()")
+    @Operation(summary = "Set a monthly spend limit. Admin",
+            description = "Null clears it. Nobody sets their own - except the superadmin, who has nobody above them.")
     @PutMapping("/{id}/budget")
     public UserDto setBudget(@PathVariable Long id, @RequestBody @Valid SetBudgetRequest request) {
         requireAccounts();
@@ -121,12 +148,18 @@ public class UserController {
      * decision from a rename and carries different rules — and a role arriving as one optional
      * field among several is a role that can be changed by accident.
      */
+    @PreAuthorize("@authz.admin()")
+    @Operation(summary = "Change what somebody may do. Admin",
+            description = "ADMIN can be given but not taken back; only the superadmin demotes. SUPERADMIN cannot be handed out, and the seeded account’s role cannot be changed.")
     @PatchMapping("/{id}/role")
     public UserDto changeRole(@PathVariable Long id, @RequestBody @Valid ChangeRoleRequest request) {
         requireAccounts();
         return userService.changeRole(id, request.role(), currentUser.id().orElse(null));
     }
 
+    @PreAuthorize("@authz.superadmin()")
+    @Operation(summary = "Delete an account. Superadmin only",
+            description = "Their sessions end at once. Runs they started stay, with no owner.")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         requireAccounts();

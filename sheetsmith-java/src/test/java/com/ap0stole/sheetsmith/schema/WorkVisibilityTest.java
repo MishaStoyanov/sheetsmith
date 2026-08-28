@@ -241,27 +241,6 @@ class WorkVisibilityTest {
     // ── Removing any of it ────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("an administrator cannot delete a run, not even one they can see")
-    void deletingIsNotAdministration() {
-        as(bossId, "vis-boss");
-        Long id = jobId("dana.xlsx");
-
-        assertThatThrownBy(() -> jobService.deleteJob(id)).isInstanceOf(AccessDeniedException.class);
-    }
-
-    @Test
-    @DisplayName("a user cannot delete their own run either")
-    void owningItIsNotEnough() {
-        as(danaId, "vis-dana");
-        Long id = jobId("dana.xlsx");
-
-        // Deliberate, and the reason a deletion request is worth building: on an instance that
-        // keeps an audit, being the person who made the mess is not authority to remove the record
-        // of it.
-        assertThatThrownBy(() -> jobService.deleteJob(id)).isInstanceOf(AccessDeniedException.class);
-    }
-
-    @Test
     @DisplayName("the superadmin can")
     void theSuperadminCan() {
         as(superId, "admin");

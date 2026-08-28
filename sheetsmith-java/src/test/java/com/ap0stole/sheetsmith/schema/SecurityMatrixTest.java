@@ -77,6 +77,7 @@ class SecurityMatrixTest {
 
     @BeforeEach
     void seed() throws Exception {
+        jdbc.update("delete from job_records where input_filename = 'matrix.xlsx'");
         jdbc.update("delete from document_sessions");
         jdbc.update("delete from model_prices");
         jdbc.update("delete from llm_settings");
@@ -97,6 +98,7 @@ class SecurityMatrixTest {
 
     @AfterEach
     void tidy() {
+        jdbc.update("delete from job_records where input_filename = 'matrix.xlsx'");
         jdbc.update("delete from document_sessions");
         jdbc.update("delete from model_prices");
         jdbc.update("delete from llm_settings");
@@ -230,6 +232,26 @@ class SecurityMatrixTest {
     }
 
     @Test
+    @DisplayName("the endpoints an ordinary user may not reach at all")
+    void plainUsersAreRefusedAtTheDoor() throws Exception {
+        // These were service-level assertions until the rules moved to the handlers. They belong
+        // here now, and here is where they were always more honest: the question is what the URL
+        // does for somebody, not what a method does when called with a role in the context.
+        mvc.perform(patch("/api/users/" + userId + "/role").header("Authorization", asUser)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"role\":\"ADMIN\"}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/users/budget-requests").header("Authorization", asUser))
+                .andExpect(status().isForbidden());
+        mvc.perform(put("/api/users/" + userId + "/budget").header("Authorization", asUser)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"monthlyBudget\":100}"))
+                .andExpect(status().isForbidden());
+
+        // And the ones they may: their own spending, and their own history.
+        mvc.perform(get("/api/users/me/spend").header("Authorization", asUser)).andExpect(status().isOk());
+        mvc.perform(get("/api/history").header("Authorization", asUser)).andExpect(status().isOk());
+    }
+
+    @Test
     @DisplayName("creating accounts is an administrator's, deleting one is not")
     void theAccountLadderHolds() throws Exception {
         mvc.perform(post("/api/users").header("Authorization", asUser)
@@ -243,6 +265,28 @@ class SecurityMatrixTest {
                 .andExpect(status().isNoContent());
     }
 
+    @Test
+    @DisplayName("removing a run is nobody's but the superadmin's, owner included")
+    void deletingARunIsNotAdministration() throws Exception {
+        jdbc.update("""
+                insert into job_records (created_at, instruction, input_filename, input_file_path,
+                        status, total_tokens, provider, model, user_id)
+                values (now(), 'tidy it', 'matrix.xlsx', 'C:/nowhere/matrix.xlsx', 'COMPLETED', 10,
+                        'OPENAI', 'gpt-4o', ?)
+                """, userId);
+        Long jobId = jdbc.queryForObject(
+                "select id from job_records where input_filename = 'matrix.xlsx'", Long.class);
+
+        // Being the person who made the mess is not authority to remove the record of it — which is
+        // the whole reason an instance keeps one.
+        mvc.perform(delete("/api/history/" + jobId).header("Authorization", asUser))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/history/" + jobId).header("Authorization", asAdmin))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/history/" + jobId).header("Authorization", asSuper))
+                .andExpect(status().isNoContent());
+    }
+
     // ── Somebody else's document ──────────────────────────────────────────────
 
     @Test
@@ -253,15 +297,19 @@ class SecurityMatrixTest {
         String asPeer = signIn("matrix-eve", PASSWORD);
 
         // Was: every one of these served whoever asked. The id was the whole of the security.
+        // 403 rather than 404: the rule is @PreAuthorize on the handler now, and a refusal that
+        // pretended the document did not exist would have to be a check inside the method instead —
+        // hiding the difference between "expired" and "not yours" is not worth the endpoint no
+        // longer saying, in its own signature, who may call it.
         mvc.perform(get("/api/chat/sessions/" + sessionId).header("Authorization", asPeer))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         mvc.perform(get("/api/chat/sessions/" + sessionId + "/messages").header("Authorization", asPeer))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         mvc.perform(get("/api/chat/sessions/" + sessionId + "/file").header("Authorization", asPeer))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
         mvc.perform(post("/api/chat/sessions/" + sessionId + "/revert").header("Authorization", asPeer)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"revision\":0}"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isForbidden());
 
         // Their own document is still theirs — and an administrator still sees an ordinary user's
         // work, by the same ladder the history has used since runs got owners. The boundary drawn

@@ -8,10 +8,13 @@ import com.ap0stole.sheetsmith.domain.dto.chat.SendMessageRequest;
 import com.ap0stole.sheetsmith.services.DocumentSessionService;
 import com.ap0stole.sheetsmith.services.chat.ChatAgentService;
 import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,6 +34,7 @@ import java.util.Map;
  * product with it.
  */
 @Slf4j
+@Tag(name = "Chat", description = "The two endpoints that actually talk to a model. Absent entirely on an instance running with the chat off.")
 @RestController
 @RequestMapping("/api/chat/sessions")
 @RequiredArgsConstructor
@@ -41,10 +45,12 @@ public class ChatMessageController {
     private final ChatConfig chatConfig;
     private final DocumentSessionService sessionService;
 
+    @PreAuthorize("@access.maySeeSession(#sessionId)")
+    @Operation(summary = "Send a message and wait for the answer",
+            description = "A turn is a chain of tool calls; the reply carries the steps that produced it.")
     @PostMapping("/{sessionId}/messages")
     public ResponseEntity<ChatTurnDto> send(@PathVariable String sessionId,
                                             @RequestBody @Valid SendMessageRequest request) {
-        sessionService.requireVisible(sessionId);
         return ResponseEntity.ok(agentService.send(sessionId, request.text().trim()));
     }
 
@@ -53,12 +59,12 @@ public class ChatMessageController {
      * against a local model, and those calls are the only evidence anything is happening — so they
      * go out as {@code step} events, then the finished {@link ChatTurnDto} as {@code done}.
      */
+    @PreAuthorize("@access.maySeeSession(#sessionId)")
+    @Operation(summary = "The same turn, narrated as it happens",
+            description = "Server-sent events: each tool call arrives as a step, then the finished turn as done. A turn against a local model can run for a minute, and the steps are the only evidence anything is happening.")
     @PostMapping(value = "/{sessionId}/messages/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(@PathVariable String sessionId,
                              @RequestBody @Valid SendMessageRequest request) {
-        // Before the virtual thread, not inside it: the thread carries no security context, so
-        // asking there would answer "nobody" and refuse the caller their own document.
-        sessionService.requireVisible(sessionId);
         SseEmitter emitter = new SseEmitter(chatConfig.getStreamTimeoutMs());
         String text = request.text().trim();
 

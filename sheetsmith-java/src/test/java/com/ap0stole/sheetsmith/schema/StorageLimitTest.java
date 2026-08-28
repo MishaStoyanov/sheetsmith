@@ -37,6 +37,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * The storage cap: who may set it, and what it removes when it bites.
  * <p>
+ * Who may set it is asked at the endpoint, in SecurityMatrixTest - the rule lives on the handler.
+ * What is asked here is what the setting does once somebody is allowed to set it.
+ * <p>
  * Written against real files in a temporary folder rather than a mocked filesystem, because the
  * whole feature is a claim about the disk. A test that agreed with a stub about how many bytes were
  * freed would prove nothing about the thing that actually deletes them.
@@ -133,17 +136,6 @@ class StorageLimitTest {
     }
 
     // ── Who may say ───────────────────────────────────────────────────────────
-
-    @Test
-    @DisplayName("an administrator cannot change where the files live")
-    void onlyTheSuperadminConfiguresStorage() {
-        as(danaId, "store-dana");
-        // A folder is a path on the server, and a cap small enough is a way to delete other
-        // people's work without ever pressing Delete.
-        assertThatThrownBy(() -> settings.update(new StorageSettingsDto.Update(root.toString(), 10, null)))
-                .isInstanceOf(AccessDeniedException.class);
-        assertThatThrownBy(() -> settings.get()).isInstanceOf(AccessDeniedException.class);
-    }
 
     @Test
     @DisplayName("a folder that cannot be written to is refused when it is chosen, not when a file arrives")

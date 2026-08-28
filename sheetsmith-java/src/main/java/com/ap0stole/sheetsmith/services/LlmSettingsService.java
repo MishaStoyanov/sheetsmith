@@ -7,7 +7,6 @@ import com.ap0stole.sheetsmith.repository.LlmSettingsRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,7 +58,6 @@ public class LlmSettingsService {
     }
 
     /** The same settings for the screen: no keys, only which providers have one. */
-    @PreAuthorize("@authz.superadmin()")
     @Transactional(readOnly = true)
     public LlmSettingsDto getSettings() {
         return withoutKeys(active());
@@ -73,7 +71,6 @@ public class LlmSettingsService {
      * naming it in {@code apiKeys} — see the tests — so "I did not touch this" and "remove this"
      * stay different instructions.
      */
-    @PreAuthorize("@authz.superadmin()")
     @Transactional
     public LlmSettingsDto updateSettings(LlmSettingsDto dto) {
         LlmSettingsDto merged = withKeptKeys(dto);

@@ -19,7 +19,6 @@ import com.ap0stole.sheetsmith.services.SessionSchemaCache;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -92,28 +91,6 @@ public class DocumentSessionService {
                         "Chat session not found or expired: " + sessionId));
     }
 
-    /**
-     * Refuses a session that is not the caller's to see, as "not found".
-     * <p>
-     * Called from the request handlers rather than from {@link #require}, and that is not
-     * squeamishness: the shared method is also called from a job's own virtual thread, where there
-     * is no security context and the honest answer to "who is asking" is nobody. A check there
-     * would refuse the work the caller had just asked for. So the boundary is drawn where the
-     * caller is still known — on the way in.
-     * <p>
-     * The refusal is {@code SESSION_NOT_FOUND} for the same reason the history refuses a run that
-     * way: a document somebody may not open should not be distinguishable from one that does not
-     * exist, or the difference between the two answers becomes a way to count other people's work.
-     */
-    @Transactional(readOnly = true)
-    public void requireVisible(String sessionId) {
-        DocumentSession session = require(sessionId);
-        if (!visibility.mayRead(session)) {
-            throw new ApiException(ErrorCode.SESSION_NOT_FOUND,
-                    "Chat session not found or expired: " + sessionId);
-        }
-    }
-
     @Transactional(readOnly = true)
     public DocumentSessionDto describe(String sessionId) {
         DocumentSession session = require(sessionId);
@@ -135,7 +112,6 @@ public class DocumentSessionService {
      * instance can be corrected by somebody with the right role; this cannot be corrected by
      * anybody, so it sits with the one account that cannot itself be deleted.
      */
-    @PreAuthorize("@authz.superadmin()")
     @Transactional
     public void delete(String sessionId) {
         DocumentSession session = require(sessionId);

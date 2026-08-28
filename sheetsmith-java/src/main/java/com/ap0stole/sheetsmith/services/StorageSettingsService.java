@@ -8,7 +8,6 @@ import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
 import com.ap0stole.sheetsmith.repository.StorageSettingsRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -83,7 +82,6 @@ public class StorageSettingsService {
 
     // ── What the screen asks ──────────────────────────────────────────────────
 
-    @PreAuthorize("@authz.superadmin()")
     @Transactional(readOnly = true)
     public StorageSettingsDto get() {
         return describe(row().orElse(null));
@@ -96,7 +94,6 @@ public class StorageSettingsService {
      * a directory can be listable, look writable, and still refuse every write, and the only
      * question worth answering here is the one the application will ask later.
      */
-    @PreAuthorize("@authz.superadmin()")
     @Transactional
     public StorageSettingsDto update(StorageSettingsDto.Update update) {
         String root = update.rootDir() == null || update.rootDir().isBlank() ? null : update.rootDir().trim();

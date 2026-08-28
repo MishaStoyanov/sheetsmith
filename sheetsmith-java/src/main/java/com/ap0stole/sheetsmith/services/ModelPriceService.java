@@ -8,7 +8,6 @@ import com.ap0stole.sheetsmith.repository.LlmUsageRepository;
 import com.ap0stole.sheetsmith.repository.ModelPriceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -50,7 +49,6 @@ public class ModelPriceService {
      * every chart and against every spend limit, for everybody. It was open to any signed-in caller
      * while the delete beside it was the superadmin's — half a door.
      */
-    @PreAuthorize("@authz.superadmin()")
     public ModelPriceDto upsert(UpsertPriceRequest request) {
         String provider = request.provider().trim().toUpperCase();
         String model = request.model().trim();
@@ -67,7 +65,6 @@ public class ModelPriceService {
     }
 
     @Transactional
-    @PreAuthorize("@authz.superadmin()")
     public ModelPriceDto update(Long id, PatchPriceRequest request) {
         ModelPrice price = require(id);
 
@@ -97,7 +94,6 @@ public class ModelPriceService {
      * open to administrators: those can be put back, and a wrong price is visible in the figures it
      * produces. A removed one takes the meaning of every call that used it with it.
      */
-    @PreAuthorize("@authz.superadmin()")
     @Transactional
     public void delete(Long id, boolean confirmed) {
         ModelPrice price = require(id);

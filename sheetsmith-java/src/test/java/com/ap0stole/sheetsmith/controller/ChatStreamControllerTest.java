@@ -80,6 +80,13 @@ class ChatStreamControllerTest {
     @MockitoBean
     private DocumentSessionService sessionService;
 
+    /**
+     * The rule on the handler needs its bean. Stubbed to yes: this file is about what the stream
+     * emits, and SecurityMatrixTest is where the rule itself is asked.
+     */
+    @MockitoBean(name = "access")
+    private com.ap0stole.sheetsmith.auth.SessionAccess sessionAccess;
+
     @MockitoBean
     private ManualEditService manualEditService;
 
@@ -87,6 +94,7 @@ class ChatStreamControllerTest {
 
     @BeforeEach
     void setUp() {
+        when(sessionAccess.maySeeSession(anyString())).thenReturn(true);
         turn = new ChatTurnDto(
                 new ChatMessageDto(12L, "ASSISTANT", "1240 in total.",
                         List.of(new ChatStepDto(0, "READ_RANGE", "Read A1:B4", "4 rows",

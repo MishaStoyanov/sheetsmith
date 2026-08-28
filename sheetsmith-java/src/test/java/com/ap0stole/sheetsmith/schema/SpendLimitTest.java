@@ -233,7 +233,8 @@ class SpendLimitTest {
         as(danaId, "budget-dana");
 
         assertThatThrownBy(() -> userService.setMonthlyBudget(seededId, new BigDecimal("99.00"), danaId))
-                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("Only the superadmin");
     }
 
     @Test
