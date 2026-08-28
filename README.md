@@ -164,6 +164,22 @@ delete from refresh_tokens;
 This is not a hole. Anyone who can run that already has your database, and with it every session
 and every stored API key.
 
+## Files it keeps
+
+Every run's input and its result stay on disk, because the history offers a Download button and a
+button that cannot deliver is a lie. They go on their own after `SHEETSMITH_TTL_DAYS` (seven by
+default), and the superadmin can say more than that under **Settings → Storage**:
+
+- **where they live** — a folder of your choosing rather than the one the process started in. New
+  files go there; the ones already written stay where they are and remain downloadable, because a
+  half-finished move leaves a history pointing at files that are somewhere else;
+- **how many to keep**, and **how much disk to use**. Either or both; whichever is reached first
+  wins. Over the line, the oldest finished run goes first — a run still working is never taken, and
+  neither is a file an open chat session is editing.
+
+Both caps are optional and empty means no cap. A zero is refused rather than obeyed: it would mean
+"delete every run as it finishes", which is not something anybody says by leaving a box empty.
+
 ## Status
 
 Working and in use, being prepared for a wider audience. Known gaps, so nobody has to discover them

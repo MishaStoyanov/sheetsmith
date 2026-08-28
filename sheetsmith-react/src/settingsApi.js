@@ -18,6 +18,30 @@ export async function updateSettings(settings) {
   return res.json();
 }
 
+/**
+ * Where this instance keeps its spreadsheets, and how much of them it keeps.
+ *
+ * Separate from the LLM settings although it sits in the same panel: the two are saved by different
+ * people at different moments, and one PUT carrying both would let a superadmin move the archive by
+ * changing a model name.
+ */
+export async function getStorageSettings() {
+  const res = await authFetch(`${BASE}/api/settings/storage`);
+  if (!res.ok) throw new Error(await apiMessage(res, 'Could not read the storage settings'));
+  return res.json();
+}
+
+/** Nulls are real values here — "no limit" and "wherever the instance was started". */
+export async function updateStorageSettings(update) {
+  const res = await authFetch(`${BASE}/api/settings/storage`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(update),
+  });
+  if (!res.ok) throw new Error(await apiMessage(res, 'Could not save the storage settings'));
+  return res.json();
+}
+
 export async function getOllamaModels(baseUrl) {
   const res = await authFetch(`${BASE}/api/settings/ollama/models?baseUrl=${encodeURIComponent(baseUrl)}`);
   if (!res.ok) {
@@ -27,12 +51,6 @@ export async function getOllamaModels(baseUrl) {
   return (await res.json()).models;
 }
 
-/**
- * What this instance can do, decided at startup. Read once on load: an instance running with the
- * chat off must not be offered a chat panel or a "what would you improve?" button, because both
- * would fail — and, more to the point, because their absence is the guarantee such an instance
- * exists for.
- */
 /**
  * A page of accounts. Returns the page rather than its rows: the users screen needs the total to
  * page through, and unwrapping here would leave one caller reaching for a field the other threw
@@ -48,7 +66,8 @@ export async function searchUsers(keyword, page = 0, size = 200) {
   return res.json();
 }
 
-async function userError(res, fallback) {
+/** The server's own sentence about the refusal, or a fallback when it did not send one. */
+async function apiMessage(res, fallback) {
   try {
     const body = await res.json();
     return body.message || fallback;
@@ -63,7 +82,7 @@ export async function createUser(name, password) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, password }),
   });
-  if (!res.ok) throw new Error(await userError(res, 'Could not create that account'));
+  if (!res.ok) throw new Error(await apiMessage(res, 'Could not create that account'));
   return res.json();
 }
 
@@ -75,27 +94,27 @@ export async function createUser(name, password) {
  */
 export async function getMySpend() {
   const res = await authFetch(`${BASE}/api/users/me/spend`);
-  if (!res.ok) throw new Error(await userError(res, 'Could not read your spend'));
+  if (!res.ok) throw new Error(await apiMessage(res, 'Could not read your spend'));
   return res.json();
 }
 
 /** Asks for a bigger ceiling. No amount: how much more is the decision of whoever answers. */
 export async function askForMoreBudget() {
   const res = await authFetch(`${BASE}/api/users/me/budget-request`, { method: 'POST' });
-  if (!res.ok) throw new Error(await userError(res, 'Could not send that request'));
+  if (!res.ok) throw new Error(await apiMessage(res, 'Could not send that request'));
   return res.json();
 }
 
 /** Marks the answer as read, which is what makes the notification happen once. */
 export async function markBudgetDecisionSeen() {
   const res = await authFetch(`${BASE}/api/users/me/budget-request/seen`, { method: 'POST' });
-  if (!res.ok) throw new Error(await userError(res, 'Could not dismiss that'));
+  if (!res.ok) throw new Error(await apiMessage(res, 'Could not dismiss that'));
 }
 
 /** Requests still waiting, already narrowed to the ones this caller may answer. */
 export async function getPendingBudgetRequests() {
   const res = await authFetch(`${BASE}/api/users/budget-requests`);
-  if (!res.ok) throw new Error(await userError(res, 'Could not load requests'));
+  if (!res.ok) throw new Error(await apiMessage(res, 'Could not load requests'));
   return res.json();
 }
 
@@ -106,7 +125,7 @@ export async function decideBudgetRequest(id, approve, newLimit) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ approve, newLimit }),
   });
-  if (!res.ok) throw new Error(await userError(res, 'Could not answer that request'));
+  if (!res.ok) throw new Error(await apiMessage(res, 'Could not answer that request'));
   return res.json();
 }
 
@@ -120,7 +139,7 @@ export async function setUserBudget(id, monthlyBudget) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ monthlyBudget }),
   });
-  if (!res.ok) throw new Error(await userError(res, 'Could not set that spend limit'));
+  if (!res.ok) throw new Error(await apiMessage(res, 'Could not set that spend limit'));
   return res.json();
 }
 
@@ -136,7 +155,7 @@ export async function changeUserRole(id, role) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ role }),
   });
-  if (!res.ok) throw new Error(await userError(res, 'Could not change that role'));
+  if (!res.ok) throw new Error(await apiMessage(res, 'Could not change that role'));
   return res.json();
 }
 
@@ -147,17 +166,22 @@ export async function updateUser(id, patch) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(patch),
   });
-  if (!res.ok) throw new Error(await userError(res, 'Could not save that change'));
+  if (!res.ok) throw new Error(await apiMessage(res, 'Could not save that change'));
   return res.json();
 }
 
 export async function deleteUser(id) {
   const res = await authFetch(`${BASE}/api/users/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error(await userError(res, 'Could not delete that account'));
+  if (!res.ok) throw new Error(await apiMessage(res, 'Could not delete that account'));
 }
 
+/**
+ * What this instance can do, decided at startup. Read once on load: an instance running with the
+ * chat off must not be offered a chat panel or a "what would you improve?" button, because both
+ * would fail — and, more to the point, because their absence is the guarantee such an instance
+ * exists for.
+ */
 export async function getCapabilities() {
-
   const res = await authFetch(`${BASE}/api/capabilities`);
   if (!res.ok) throw new Error(`Failed to fetch capabilities: ${res.status}`);
   return res.json();

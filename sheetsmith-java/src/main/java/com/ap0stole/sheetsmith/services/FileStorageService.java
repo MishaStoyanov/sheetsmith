@@ -17,10 +17,14 @@ import java.util.UUID;
 public class FileStorageService {
 
     private final FileStorageConfig config;
+    private final StorageSettingsService settings;
 
     public String saveInput(MultipartFile file) throws IOException {
         String sanitized = sanitize(file.getOriginalFilename());
-        Path target = Path.of(config.getUploadDir()).resolve(sanitized + "_" + UUID.randomUUID() + ".xlsx");
+        // Asked each time rather than held from startup: the folder is a setting now, and a value
+        // read once would keep writing to the old place until somebody restarted the server.
+        Path target = settings.uploadDir().resolve(sanitized + "_" + UUID.randomUUID() + ".xlsx");
+        Files.createDirectories(target.getParent());
         Files.copy(file.getInputStream(), target);
         log.info("Saved input file: {}", target);
         return target.toAbsolutePath().toString();
@@ -28,7 +32,7 @@ public class FileStorageService {
 
     public String buildResultPath(String inputFilePath) {
         String filename = Path.of(inputFilePath).getFileName().toString();
-        return Path.of(config.getResultDir()).resolve(filename).toAbsolutePath().toString();
+        return settings.resultDir().resolve(filename).toAbsolutePath().toString();
     }
 
     /**

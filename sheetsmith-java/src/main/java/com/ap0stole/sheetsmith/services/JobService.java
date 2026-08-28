@@ -71,6 +71,7 @@ public class JobService {
     private final UsageRecorder usageRecorder;
     private final BudgetService budgets;
     private final WorkVisibility visibility;
+    private final StorageQuotaService storageQuota;
 
     private final ConcurrentHashMap<String, PendingPlan> pendingPlans = new ConcurrentHashMap<>();
 
@@ -513,6 +514,15 @@ public class JobService {
 
         log.info("Job {} finished with status {} ({}/{} actions succeeded)",
                 job.getId(), status, successCount, totalCount);
+
+        // The archive just grew, so this is when it can be over its limit. Never fatal: the run has
+        // happened and the file is written, and failing it over housekeeping would trade the user's
+        // work for tidiness.
+        try {
+            storageQuota.enforce();
+        } catch (Exception e) {
+            log.warn("Could not enforce the storage limit after job {}: {}", job.getId(), e.getMessage());
+        }
         return status;
     }
 

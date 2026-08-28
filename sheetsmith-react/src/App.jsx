@@ -172,7 +172,11 @@ export default function App() {
         {screens[route] ?? <NotFound onHome={() => go('improve')} />}
       </AppShell>
 
-      <SettingsPanel open={settingsOpen} onClose={handleCloseSettings} />
+      {/* The storage tab follows the same rule as deleting: the superadmin, or — with no accounts
+          at all — the person at the keyboard, who is the operator by definition. Choosing where the
+          files live is configuring the machine, and a cap set small enough removes other people's
+          work without anybody pressing Delete. */}
+      <SettingsPanel open={settingsOpen} onClose={handleCloseSettings} maySetStorage={mayDelete} />
     </div>
   );
 }

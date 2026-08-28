@@ -1,6 +1,7 @@
 package com.ap0stole.sheetsmith.repository;
 
 import com.ap0stole.sheetsmith.domain.entity.JobRecord;
+import com.ap0stole.sheetsmith.domain.enums.JobStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -14,6 +15,14 @@ import java.util.List;
 public interface JobRepository extends JpaRepository<JobRecord, Long>, JpaSpecificationExecutor<JobRecord> {
 
     List<JobRecord> findByCreatedAtBefore(LocalDateTime threshold);
+
+    /**
+     * The oldest finished runs, for the storage cap to evict.
+     * <p>
+     * Ordered and limited by the database rather than in Java: a batch has to be the oldest two
+     * hundred rows, not two hundred arbitrary ones put in order afterwards.
+     */
+    List<JobRecord> findByStatusInOrderByCreatedAtAsc(java.util.Collection<JobStatus> statuses, Pageable pageable);
 
     /**
      * Both listings fetch the owner with the row.

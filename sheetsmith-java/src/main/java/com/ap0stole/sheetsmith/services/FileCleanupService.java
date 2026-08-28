@@ -21,6 +21,7 @@ public class FileCleanupService {
     private final FileStorageConfig storageConfig;
     private final FileStorageService fileStorageService;
     private final DocumentSessionService documentSessionService;
+    private final StorageQuotaService storageQuota;
 
     @Scheduled(cron = "0 0 2 * * *")
     public void cleanupIdleDocumentSessions() {
@@ -50,5 +51,17 @@ public class FileCleanupService {
         }
         jobRepository.deleteAll(expired);
         log.info("Cleanup: deleted {} jobs", expired.size());
+    }
+
+    /**
+     * The storage cap, checked again nightly.
+     * <p>
+     * It is enforced as each run finishes, so this pass normally finds nothing. It exists for the
+     * cases the other one cannot see: a cap lowered while the instance was idle, and files that
+     * grew or arrived without a run to trigger the check.
+     */
+    @Scheduled(cron = "0 30 2 * * *")
+    public void enforceStorageLimits() {
+        storageQuota.enforce();
     }
 }

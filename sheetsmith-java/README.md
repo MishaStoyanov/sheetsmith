@@ -1,4 +1,4 @@
-# XlsxAI — AI-powered Excel Improver
+# SheetSmith — AI-powered Excel Improver
 
 Upload an `.xlsx` file, describe what you want in plain text, and get back an improved file.  
 The app uses an LLM to generate an action plan (charts, formulas, sorting, formatting, …) and applies it via Apache POI.
@@ -121,8 +121,8 @@ mvn spring-boot:run
 | `DB_NAME` | `xlsxai` | Database name — still the old name, so an existing install keeps its data |
 | `DB_USERNAME` | `postgres` | DB user |
 | `DB_PASSWORD` | `pass` | DB password |
-| `SHEETSMITH_UPLOAD_DIR` | `./uploads` | Input file storage |
-| `SHEETSMITH_RESULT_DIR` | `./results` | Result file storage |
+| `SHEETSMITH_UPLOAD_DIR` | `./uploads` | Input file storage — the starting value; a superadmin can move it in **Settings → Storage** |
+| `SHEETSMITH_RESULT_DIR` | `./results` | Result file storage — the same |
 | `SHEETSMITH_SESSION_DIR` | `./sessions` | Chat working copies (one directory per session) |
 | `SHEETSMITH_TTL_DAYS` | `7` | Auto-delete jobs and idle chat sessions older than N days |
 | `MAX_CONCURRENT_JOBS` | `1` | Parallel job limit |
@@ -393,6 +393,39 @@ catalogue — no provider publishes a price API, and asking a model instead woul
 figure for a price it does not know. It writes nothing; `apply` saves the rows a person chose, with
 the figures from the request rather than fetched again. Confirming a row that has not changed is how
 a price gets marked as checked.
+
+---
+
+## Storage API
+
+Where this instance keeps its spreadsheets, and how much of them it keeps. **Superadmin only** — a
+folder is a path on the server's filesystem, and a cap set small enough removes other people's work
+without anybody pressing Delete.
+
+```
+GET /api/settings/storage
+PUT /api/settings/storage             {rootDir?, maxFiles?, maxBytes?}
+```
+Every field is nullable and null means *unset*, not zero: no `rootDir` means the directories the
+instance was started with, and no cap means keep everything until `SHEETSMITH_TTL_DAYS` takes it. A
+zero is refused rather than obeyed — it would mean "delete every run as it finishes", which nobody
+says by leaving a box empty.
+
+The `GET` also reports what is there now (`fileCount`, `bytesUsed`, the directories actually in use,
+and whether they are writable), measured off the disk rather than counted in the history: a file left
+behind by a crash takes the space up either way.
+
+**Changing the folder moves nothing.** New files go to the new place; files already written stay
+where they are, keep being downloadable, and age out on their own. A move would be a long,
+interruptible copy, and a half-finished one leaves a history full of rows whose files are somewhere
+else.
+
+**When a cap bites**, the oldest finished run goes first, and only finished ones — a run still
+processing has its input open on another thread, and taking it away would fail the run rather than
+free the disk. A run whose files belong to a live chat session is left alone entirely, record
+included: deleting it would cost somebody a line of history and free not one byte. Enforcement runs
+as each job finishes and again nightly at 02:30, so a cap lowered while the instance was idle still
+takes effect.
 
 ---
 

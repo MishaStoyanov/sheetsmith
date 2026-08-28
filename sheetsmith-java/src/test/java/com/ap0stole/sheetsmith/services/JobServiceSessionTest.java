@@ -128,7 +128,7 @@ class JobServiceSessionTest {
         sessionService = new DocumentSessionService(storageConfig, sessionRepository, messageRepository,
                 mock(ChatStepRepository.class), new SessionSchemaCache(new SchemaExtractorService(new ChatConfig())), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class));
 
-        jobService = new JobService(jobRepository, actionResultRepository, new FileStorageService(storageConfig),
+        jobService = new JobService(jobRepository, actionResultRepository, new FileStorageService(storageConfig, TestStorage.storage(storageConfig)),
                 new SchemaExtractorService(new ChatConfig()), planningService, automationService, actionRegistry,
                 mock(PathGuard.class), new Semaphore(1), sessionService, new SessionLockRegistry(),
                 // Nobody signed in: with authentication off a run has no owner, which is the shape
@@ -140,7 +140,9 @@ class JobServiceSessionTest {
                 mock(com.ap0stole.sheetsmith.services.BudgetService.class),
                 // Nor a visibility rule: these never read the history, and with nobody signed in
                 // there is no boundary for one to draw.
-                mock(com.ap0stole.sheetsmith.services.WorkVisibility.class));
+                mock(com.ap0stole.sheetsmith.services.WorkVisibility.class),
+                // No cap set, so nothing is ever evicted — these are about the revision chain.
+                mock(com.ap0stole.sheetsmith.services.StorageQuotaService.class));
     }
 
     @Test
