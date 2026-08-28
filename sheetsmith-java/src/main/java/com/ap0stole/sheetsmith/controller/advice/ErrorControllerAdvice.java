@@ -5,6 +5,7 @@ import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -72,6 +73,27 @@ public class ErrorControllerAdvice {
                 .body(new ErrorResponse(ErrorCode.VALIDATION_ERROR,
                         ex.getMethod() + " is not supported here"
                                 + (supported.isBlank() ? "." : " — this path accepts " + supported + ".")));
+    }
+
+    /**
+     * A rule said no, and that is not a fault.
+     * <p>
+     * Without this the {@code @PreAuthorize} guards fell through to the catch-all below, so every
+     * refusal answered <em>500 An unexpected error occurred</em>. The refusal itself held — nothing
+     * was ever changed — but the status said the server had broken rather than that the caller was
+     * not allowed, which is a difference a browser acts on: 403 is final, 500 invites a retry, and
+     * the log filled with stack traces for rules working exactly as written.
+     * <p>
+     * No detail is echoed back. Which rule refused is the caller's business only insofar as they
+     * may not; naming it would describe the shape of an instance to somebody who has just been told
+     * they may not see it.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
+        log.warn("Refused: {}", ex.getMessage());
+        return ResponseEntity
+                .status(ErrorCode.FORBIDDEN.getHttpStatus())
+                .body(new ErrorResponse(ErrorCode.FORBIDDEN, "You are not allowed to do that."));
     }
 
     @ExceptionHandler(Exception.class)

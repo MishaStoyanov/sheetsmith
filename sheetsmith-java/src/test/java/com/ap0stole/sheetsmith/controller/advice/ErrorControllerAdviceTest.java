@@ -4,6 +4,7 @@ import com.ap0stole.sheetsmith.domain.dto.ErrorResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -46,6 +47,23 @@ class ErrorControllerAdviceTest {
         assertThat(response.getBody().getMessage())
                 .contains("POST")
                 .contains("GET");
+    }
+
+    @Test
+    @DisplayName("a rule that says no is 403, not a server fault")
+    void refusalIs403() {
+        // Found live: every @PreAuthorize guard — deleting an account, changing a role, moving the
+        // archive — answered 500. The refusal held, but 500 invites a retry where 403 is final, and
+        // the log filled with stack traces for rules working exactly as written.
+        ResponseEntity<ErrorResponse> response =
+                advice.handleAccessDenied(new AccessDeniedException("Access Denied"));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(403);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getMessage()).isEqualTo("You are not allowed to do that.");
+        // What refused is not echoed back: naming the rule describes the instance to somebody who
+        // has just been told they may not see it.
+        assertThat(response.getBody().getMessage()).doesNotContain("Access Denied");
     }
 
     @Test
