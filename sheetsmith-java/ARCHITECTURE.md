@@ -330,15 +330,29 @@ a feature flag that looks settable invites a PUT that appears to turn the chat b
 must not put one in front of an instance that never had one. On, `/api/**` needs a token. Both
 shapes are built in `configs/SecurityConfig.filterChain` rather than one being guards inside the
 other, so what is allowed through is readable in one place. The flag is reported by
-`/api/capabilities` — never by `/api/settings`, which is user-editable, and a security switch that
-looks settable invites a PUT that appears to turn it off.
+`/api/capabilities` — never by `/api/settings`, because a security switch that travels with editable
+settings invites a PUT that appears to turn it off.
+
+**The chain names every path and denies the rest.** It used to end at `/api/** → authenticated`,
+leaving the actual rule to whether somebody had remembered a `@PreAuthorize` on the service method —
+default-allow, and five endpoints had been added without one (the LLM settings and their stored API
+keys, writing and patching prices, and by omission the whole session surface). The chain now carries
+every path-only rule and ends at `.requestMatchers("/api/**").denyAll()`, so an endpoint added
+without a rule answers 403 the first time it is called. Path rules go through `AuthorizationManager`
+lambdas backed by the same `Authz` bean the annotations use, because roles are not in the token and
+`hasRole` has nothing to read.
 
 `configs/SecurityProperties` is the `sheetsmith.security` properties holder (CORS allowlist, by-path
 endpoint); it was called `SecurityConfig` until the filter chain needed that name.
 
 **Three roles, and the rule that keeps them inert.** `USER` cannot touch other accounts; `ADMIN`
-manages people and may hand out `ADMIN` but never take it back; `SUPERADMIN` is the seeded account
-— the one that already cannot be deleted — and is the only role that can demote. The one-way door
+manages *ordinary users* and may hand out `ADMIN` but never take it back; `SUPERADMIN` is the seeded
+account — the one that already cannot be deleted — and is the only role that can demote, delete, or
+reach the instance's own configuration (model settings and keys, storage, prices).
+`Authz.mayManage(targetRole)` is the half that was missing: `requireAdmin` asked only whether the
+caller was an administrator and never who they were pointing at, so an administrator could reset the
+superadmin's password and sign in as them — through the very door `changeRole` was built to keep
+shut. The one-way door
 is deliberate: mutual demotion between two administrators is a fight the software should not host.
 Four refusals sit on `changeRole`: `SUPERADMIN` cannot be given out, the seeded account's role
 cannot be changed, nobody changes their own, and demotion needs the seeded account.
@@ -356,7 +370,21 @@ true when it was issued, and with a two-hour life a demotion would keep working 
 `UserService.search` is deliberately open to anyone signed in, unlike everything else there — the
 history screen builds its "started by" filter from it, so locking it down would quietly empty a
 filter ordinary people use. `update` is guarded *inside* rather than on the method, because its two
-callers differ: an administrator editing anybody, and a person changing their own password.
+callers differ: an administrator editing an ordinary user, and a person changing their own password.
+
+`WorkVisibility.mayRead` now answers for a `DocumentSession` as well as a `JobRecord`: the ladder
+was written for the history the day runs got owners, while the documents those runs work on had no
+rule at all — an id was the whole of the security. The check is called from the **controllers**, not
+from `DocumentSessionService.require`, because that method is also reached from a job's own virtual
+thread where there is no security context and the honest answer to "who is asking" is nobody.
+
+`LlmSettingsService` has two readers on purpose: `active()` is unguarded and carries the real keys
+for the planner and the chat, `getSettings()` is superadmin-only and carries none. One method
+serving both is how a stored API key ends up in every signed-in person's browser.
+
+`SecurityMatrixTest` asks every guarded endpoint as USER / ADMIN / SUPERADMIN over HTTP with real
+tokens. Service-level tests cannot find a missing guard — they call the method with a role in the
+context, and a method nobody guards is one they never think to ask about.
 
 `V11__user_roles.sql` backfills existing accounts to `ADMIN` and the first to `SUPERADMIN`. Setting
 everyone to `USER` would wake a multi-person instance up with one administrator and everybody else

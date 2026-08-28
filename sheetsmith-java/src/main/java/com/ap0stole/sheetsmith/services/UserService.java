@@ -107,7 +107,7 @@ public class UserService {
     public UserDto update(Long id, PatchUserRequest request, Long callerId) {
         User user = require(id);
         if (!id.equals(callerId)) {
-            requireAdmin("change somebody else's account");
+            requireManage(user, "change somebody else's account");
         }
 
         if (request.name() != null) {
@@ -246,9 +246,15 @@ public class UserService {
         // could set one on the account above them. The superadmin starts with no ceiling and only
         // ever has the one they chose — which is the point of it on an instance somebody spun up in
         // five minutes and does not care about counting.
-        if (user.getRole() == Role.SUPERADMIN && !id.equals(callerId)) {
-            throw new ApiException(ErrorCode.FORBIDDEN,
-                    "Only the superadmin sets their own spend limit.", "monthlyBudget");
+        if (!id.equals(callerId)) {
+            // The other half of the same hierarchy. The account above you gets its own sentence,
+            // because "you may not" and "that one sets its own" are different facts and the second
+            // is the useful one; a peer falls to the general rule below it.
+            if (user.getRole() == Role.SUPERADMIN) {
+                throw new ApiException(ErrorCode.FORBIDDEN,
+                        "Only the superadmin sets their own spend limit.", "monthlyBudget");
+            }
+            requireManage(user, "set that person's spend limit");
         }
         if (budget != null && budget.signum() < 0) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "A spend limit cannot be negative",
@@ -267,6 +273,19 @@ public class UserService {
     /** The half of a check that could not live on the method, because the other caller is yourself. */
     private void requireAdmin(String what) {
         if (!authz.admin()) {
+            throw new ApiException(ErrorCode.FORBIDDEN, "You do not have permission to " + what);
+        }
+    }
+
+    /**
+     * The same, for an act aimed at a particular person: rank matters, not just admin-ness.
+     * <p>
+     * {@code requireAdmin} was what stood here, and it asked only whether the caller was an
+     * administrator — never who they were pointing at. An administrator could therefore reset the
+     * superadmin's password and sign in as them.
+     */
+    private void requireManage(User target, String what) {
+        if (!authz.mayManage(target.getRole())) {
             throw new ApiException(ErrorCode.FORBIDDEN, "You do not have permission to " + what);
         }
     }

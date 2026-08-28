@@ -178,15 +178,19 @@ export default function AppShell({
 
           <div style={{ height: 1, background: 'var(--border)', margin: '6px 2px 7px' }} />
 
-          <button
-            className="ss-nav-item"
-            onClick={onOpenSettings}
-            title={expanded ? undefined : 'Settings'}
-            aria-label="Settings"
-          >
-            <span className="ss-nav-icon"><SettingsIcon /></span>
-            {expanded && 'Settings'}
-          </button>
+          {/* Absent rather than disabled for the same reason the Users tab is: an entry that leads
+              somewhere refusing to answer is worse than no entry at all. */}
+          {onOpenSettings && (
+            <button
+              className="ss-nav-item"
+              onClick={onOpenSettings}
+              title={expanded ? undefined : 'Settings'}
+              aria-label="Settings"
+            >
+              <span className="ss-nav-icon"><SettingsIcon /></span>
+              {expanded && 'Settings'}
+            </button>
+          )}
 
           {/* Always in view, because the frame's own control must not be hidden by the contents. */}
           <button

@@ -22,6 +22,11 @@ import java.util.Map;
 /**
  * A session and its working copy: upload, describe, download, hand-edit, undo, delete.
  * <p>
+ * <strong>Every handler that takes a session id asks whether it is the caller's first.</strong>
+ * None of them did: an id was enough to read, edit, revert or download somebody else's document.
+ * The check sits here rather than deeper because this is the last place the caller is still known —
+ * a job continues on a virtual thread that carries no security context.
+ * <p>
  * Despite the path, this is <em>not</em> the chat — it is the shared document workspace, and the
  * improve flow uploads into it and reads its revisions. The two endpoints that actually talk to a
  * model live in {@link ChatMessageController}, which disappears when the chat is turned off; these
@@ -47,17 +52,20 @@ public class ChatController {
 
     @GetMapping("/{sessionId}")
     public ResponseEntity<DocumentSessionDto> get(@PathVariable String sessionId) {
+        sessionService.requireVisible(sessionId);
         return ResponseEntity.ok(sessionService.describe(sessionId));
     }
 
     @GetMapping("/{sessionId}/messages")
     public ResponseEntity<List<ChatMessageDto>> history(@PathVariable String sessionId) {
+        sessionService.requireVisible(sessionId);
         return ResponseEntity.ok(sessionService.history(sessionId));
     }
 
     /** The current working copy — the frontend re-fetches this whenever a turn changed the sheet. */
     @GetMapping("/{sessionId}/file")
     public ResponseEntity<Resource> file(@PathVariable String sessionId) {
+        sessionService.requireVisible(sessionId);
         Resource resource = sessionService.currentFile(sessionId);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType(XLSX_MIME));
@@ -69,12 +77,14 @@ public class ChatController {
     @PostMapping("/{sessionId}/edits")
     public ResponseEntity<Map<String, Integer>> edits(@PathVariable String sessionId,
                                                       @RequestBody @Valid CellEditsRequest request) {
+        sessionService.requireVisible(sessionId);
         return ResponseEntity.ok(Map.of("revision", manualEditService.apply(sessionId, request)));
     }
 
     @PostMapping("/{sessionId}/revert")
     public ResponseEntity<Map<String, Integer>> revert(@PathVariable String sessionId,
                                                        @RequestBody @Valid RevertRequest request) throws IOException {
+        sessionService.requireVisible(sessionId);
         int revision = sessionService.revert(sessionId, request.revision());
         return ResponseEntity.ok(Map.of("revision", revision));
     }

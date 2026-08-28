@@ -73,7 +73,10 @@ class DocumentSessionServiceTest {
                 .build());
 
         service = new DocumentSessionService(storageConfig, sessionRepository, messageRepository,
-                stepRepository, new SessionSchemaCache(schemaExtractorService), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class));
+                stepRepository, new SessionSchemaCache(schemaExtractorService), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class),
+                // Nobody is signed in here, so the visibility rule answers yes to everything — which
+                // is the world these tests describe.
+                new com.ap0stole.sheetsmith.services.WorkVisibility(new com.ap0stole.sheetsmith.configs.AuthConfig(), new com.ap0stole.sheetsmith.auth.CurrentUser(), mock(com.ap0stole.sheetsmith.auth.Authz.class)));
     }
 
     @Test

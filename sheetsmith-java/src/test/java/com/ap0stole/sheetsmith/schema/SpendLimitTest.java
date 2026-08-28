@@ -76,14 +76,25 @@ class SpendLimitTest {
         bossId = jdbc.queryForObject("select id from users where name = 'budget-boss'", Long.class);
         peerId = jdbc.queryForObject("select id from users where name = 'budget-peer'", Long.class);
 
+        // Signed in to seed it: writing a price is the superadmin's act now, the same as deleting
+        // one, and a fixture that could set prices as nobody would be testing a door that is shut.
+        as(seededId, "admin");
         prices.upsert(new UpsertPriceRequest("OPENAI", "gpt-4o",
                 new BigDecimal("2.00"), new BigDecimal("10.00")));
+        SecurityContextHolder.clearContext();
     }
 
     @AfterEach
     void signOut() {
         SecurityContextHolder.clearContext();
         jdbc.update("delete from users where name like 'budget-%'");
+    }
+
+    /** Prices are the superadmin's to write, so a fixture that needs one signs in to leave it. */
+    private void priceOf(String provider, String model, String in, String out) {
+        as(seededId, "admin");
+        prices.upsert(new UpsertPriceRequest(provider, model, new BigDecimal(in), new BigDecimal(out)));
+        SecurityContextHolder.clearContext();
     }
 
     private void as(Long id, String name) {
@@ -397,8 +408,7 @@ class SpendLimitTest {
         // A model on your own machine bills nothing, whatever the price list says about it. Checked
         // against what the run recorded rather than inferred from the prices, so a price entered on
         // a local model by mistake cannot start refusing somebody's work.
-        prices.upsert(new UpsertPriceRequest("OLLAMA", "gemma4:12b",
-                new BigDecimal("99.00"), new BigDecimal("99.00")));
+        priceOf("OLLAMA", "gemma4:12b", "99.00", "99.00");
         limitFor(danaId, "1.00");
         as(danaId, "budget-dana");
         spent(danaId, "LOCAL", "OLLAMA", "gemma4:12b", 10_000_000, thisMonth());
@@ -410,8 +420,7 @@ class SpendLimitTest {
     @Test
     @DisplayName("cloud calls to the same model still count")
     void cloudRunsStillCount() {
-        prices.upsert(new UpsertPriceRequest("OPENAI", "gpt-4o",
-                new BigDecimal("2.00"), new BigDecimal("10.00")));
+        priceOf("OPENAI", "gpt-4o", "2.00", "10.00");
         limitFor(danaId, "10.00");
         as(danaId, "budget-dana");
         spent(danaId, "LOCAL", "OPENAI", "gpt-4o", 5_000_000, thisMonth());

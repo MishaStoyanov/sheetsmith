@@ -9,6 +9,7 @@ import com.ap0stole.sheetsmith.domain.dto.ImproveByPathRequest;
 import com.ap0stole.sheetsmith.domain.dto.PlanRequest;
 import com.ap0stole.sheetsmith.domain.dto.PlanResponseDto;
 import com.ap0stole.sheetsmith.domain.dto.SuggestRequest;
+import com.ap0stole.sheetsmith.services.DocumentSessionService;
 import com.ap0stole.sheetsmith.services.JobService;
 import com.ap0stole.sheetsmith.services.chat.SuggestionService;
 import jakarta.validation.Valid;
@@ -32,6 +33,7 @@ import java.util.Map;
 public class ExcelController {
 
     private final JobService jobService;
+    private final DocumentSessionService sessionService;
     /**
      * Absent when the chat is off: the inspection behind /suggest runs the chat's read-only query
      * tools over the actual data, which is exactly what such an instance exists not to do.
@@ -50,6 +52,7 @@ public class ExcelController {
     /** Plans against a session's current revision; {@code /apply} then commits the next one. */
     @PostMapping("/plan")
     public ResponseEntity<PlanResponseDto> plan(@RequestBody @Valid PlanRequest request) {
+        sessionService.requireVisible(request.sessionId());
         return ResponseEntity.ok(jobService.generatePlan(request));
     }
 
@@ -68,6 +71,7 @@ public class ExcelController {
                             + " on an instance running with the chat turned off. Describe the change"
                             + " you want instead.");
         }
+        sessionService.requireVisible(request.sessionId());
         return ResponseEntity.ok(suggestions.suggest(request.sessionId()));
     }
 

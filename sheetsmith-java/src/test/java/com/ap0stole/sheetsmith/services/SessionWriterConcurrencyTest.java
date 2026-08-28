@@ -145,7 +145,8 @@ class SessionWriterConcurrencyTest {
         SessionLockRegistry sessionLocks = new SessionLockRegistry();
 
         sessionService = new DocumentSessionService(storageConfig, sessionRepository, messageRepository,
-                mock(ChatStepRepository.class), new SessionSchemaCache(schemaExtractor), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class));
+                mock(ChatStepRepository.class), new SessionSchemaCache(schemaExtractor), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class),
+                new com.ap0stole.sheetsmith.services.WorkVisibility(new com.ap0stole.sheetsmith.configs.AuthConfig(), new com.ap0stole.sheetsmith.auth.CurrentUser(), mock(com.ap0stole.sheetsmith.auth.Authz.class)));
         agentService = new ChatAgentService(sessionService, toolRegistry, chatLlmService, new ChatConfig(),
                 errorScanner, new ObjectMapper(), sessionLocks, mock(com.ap0stole.sheetsmith.services.UsageRecorder.class),
                 mock(com.ap0stole.sheetsmith.services.BudgetService.class));

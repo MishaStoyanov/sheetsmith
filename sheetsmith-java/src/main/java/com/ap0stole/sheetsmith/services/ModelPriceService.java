@@ -45,6 +45,12 @@ public class ModelPriceService {
      * second way to say it.
      */
     @Transactional
+    /**
+     * Writing a price is the same act as deleting one: both change what every past call cost, on
+     * every chart and against every spend limit, for everybody. It was open to any signed-in caller
+     * while the delete beside it was the superadmin's — half a door.
+     */
+    @PreAuthorize("@authz.superadmin()")
     public ModelPriceDto upsert(UpsertPriceRequest request) {
         String provider = request.provider().trim().toUpperCase();
         String model = request.model().trim();
@@ -61,6 +67,7 @@ public class ModelPriceService {
     }
 
     @Transactional
+    @PreAuthorize("@authz.superadmin()")
     public ModelPriceDto update(Long id, PatchPriceRequest request) {
         ModelPrice price = require(id);
 

@@ -115,6 +115,23 @@ public class WorkVisibility {
 
     /** The same rule for one run already in hand, for the endpoints that take an id. */
     public boolean mayRead(JobRecord job) {
+        return mayReadWorkOf(job.getStartedBy());
+    }
+
+    /**
+     * And for a document session, which had no rule at all.
+     * <p>
+     * A session is somebody's spreadsheet open on a desk: its rows, its revisions and its undo
+     * history. Every endpoint under {@code /api/chat/sessions} took an id and served whoever asked,
+     * so with an id in hand any signed-in person could read, edit, revert or download a colleague's
+     * document. The history had this rule from the day runs got owners; the sessions the runs work
+     * on did not.
+     */
+    public boolean mayRead(com.ap0stole.sheetsmith.domain.entity.DocumentSession session) {
+        return mayReadWorkOf(session.getUser());
+    }
+
+    private boolean mayReadWorkOf(User owner) {
         if (!authConfig.isEnabled()) {
             return true;
         }
@@ -126,7 +143,6 @@ public class WorkVisibility {
         if (mine == Role.SUPERADMIN) {
             return true;
         }
-        User owner = job.getStartedBy();
         if (owner != null && me.equals(owner.getId())) {
             return true;
         }

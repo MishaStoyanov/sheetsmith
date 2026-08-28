@@ -644,9 +644,11 @@ export default function ImproveScreen({ theme, capabilities, providerMode, onOpe
               <button onClick={handleReset} style={{ height: 32, padding: '0 14px', borderRadius: 8, border: '1px solid var(--del)', background: 'transparent', color: 'var(--del)', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}>
                 Try again
               </button>
-              <Button onClick={onOpenSettings} variant="danger">
-                Provider settings
-              </Button>
+              {onOpenSettings && (
+                <Button onClick={onOpenSettings} variant="danger">
+                  Provider settings
+                </Button>
+              )}
             </div>
           </div>
         )}

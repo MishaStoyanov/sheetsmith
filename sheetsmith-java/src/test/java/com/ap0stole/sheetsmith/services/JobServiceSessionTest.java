@@ -126,7 +126,8 @@ class JobServiceSessionTest {
                         : applySheet(call.getArgument(0), call.getArgument(1), call.getArgument(3)));
 
         sessionService = new DocumentSessionService(storageConfig, sessionRepository, messageRepository,
-                mock(ChatStepRepository.class), new SessionSchemaCache(new SchemaExtractorService(new ChatConfig())), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class));
+                mock(ChatStepRepository.class), new SessionSchemaCache(new SchemaExtractorService(new ChatConfig())), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class),
+                new com.ap0stole.sheetsmith.services.WorkVisibility(new com.ap0stole.sheetsmith.configs.AuthConfig(), new com.ap0stole.sheetsmith.auth.CurrentUser(), mock(com.ap0stole.sheetsmith.auth.Authz.class)));
 
         jobService = new JobService(jobRepository, actionResultRepository, new FileStorageService(storageConfig, TestStorage.storage(storageConfig)),
                 new SchemaExtractorService(new ChatConfig()), planningService, automationService, actionRegistry,

@@ -5,6 +5,7 @@ import com.ap0stole.sheetsmith.configs.ConditionalOnChatEnabled;
 import com.ap0stole.sheetsmith.domain.dto.chat.ChatStepDto;
 import com.ap0stole.sheetsmith.domain.dto.chat.ChatTurnDto;
 import com.ap0stole.sheetsmith.domain.dto.chat.SendMessageRequest;
+import com.ap0stole.sheetsmith.services.DocumentSessionService;
 import com.ap0stole.sheetsmith.services.chat.ChatAgentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -38,10 +39,12 @@ public class ChatMessageController {
 
     private final ChatAgentService agentService;
     private final ChatConfig chatConfig;
+    private final DocumentSessionService sessionService;
 
     @PostMapping("/{sessionId}/messages")
     public ResponseEntity<ChatTurnDto> send(@PathVariable String sessionId,
                                             @RequestBody @Valid SendMessageRequest request) {
+        sessionService.requireVisible(sessionId);
         return ResponseEntity.ok(agentService.send(sessionId, request.text().trim()));
     }
 
@@ -53,6 +56,9 @@ public class ChatMessageController {
     @PostMapping(value = "/{sessionId}/messages/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(@PathVariable String sessionId,
                              @RequestBody @Valid SendMessageRequest request) {
+        // Before the virtual thread, not inside it: the thread carries no security context, so
+        // asking there would answer "nobody" and refuse the caller their own document.
+        sessionService.requireVisible(sessionId);
         SseEmitter emitter = new SseEmitter(chatConfig.getStreamTimeoutMs());
         String text = request.text().trim();
 

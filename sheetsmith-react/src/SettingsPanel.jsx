@@ -310,13 +310,26 @@ export default function SettingsPanel({ open, onClose, maySetStorage = false }) 
                           {active.label}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {/* The server never sends a stored key back, so this box starts empty
+                              even when one is saved. Left alone it is not sent at all and the
+                              stored key stays; typed into, it replaces; emptied after being typed
+                              into, it clears. The line below says which of those is about to
+                              happen, because a password field that looks the same in all three
+                              states is a field people guess at. */}
                           <input
                             type="password"
                             value={settings.cloud.apiKeys[active.key] ?? ''}
                             onChange={e => setCloudKey(active.key, e.target.value)}
-                            placeholder="API key"
+                            placeholder={keySaved(settings, active.key) ? 'Key saved — leave blank to keep it' : 'API key'}
                             style={inputStyle}
                           />
+                          {keySaved(settings, active.key) && (
+                            <div style={{ fontSize: 11.5, color: 'var(--text-faint)' }}>
+                              {settings.cloud.apiKeys[active.key] === ''
+                                ? 'The saved key will be removed when you save.'
+                                : 'A key is saved for this provider. Clear the box to remove it.'}
+                            </div>
+                          )}
                           <input
                             value={settings.cloud.models[active.key] ?? ''}
                             onChange={e => setCloudModel(active.key, e.target.value)}
@@ -487,6 +500,11 @@ function Gauge({ label, used, limit, format }) {
       )}
     </div>
   );
+}
+
+/** Whether the server said this provider already has a key — it never says what the key is. */
+function keySaved(settings, provider) {
+  return (settings.cloud.savedKeys ?? []).includes(provider);
 }
 
 function Field({ label, children }) {

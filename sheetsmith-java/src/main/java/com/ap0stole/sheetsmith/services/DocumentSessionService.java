@@ -59,6 +59,7 @@ public class DocumentSessionService {
     private final ChatStepRepository stepRepository;
     private final SessionSchemaCache schemaCache;
     private final UsageRecorder usageRecorder;
+    private final WorkVisibility visibility;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -89,6 +90,28 @@ public class DocumentSessionService {
         return sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ApiException(ErrorCode.SESSION_NOT_FOUND,
                         "Chat session not found or expired: " + sessionId));
+    }
+
+    /**
+     * Refuses a session that is not the caller's to see, as "not found".
+     * <p>
+     * Called from the request handlers rather than from {@link #require}, and that is not
+     * squeamishness: the shared method is also called from a job's own virtual thread, where there
+     * is no security context and the honest answer to "who is asking" is nobody. A check there
+     * would refuse the work the caller had just asked for. So the boundary is drawn where the
+     * caller is still known — on the way in.
+     * <p>
+     * The refusal is {@code SESSION_NOT_FOUND} for the same reason the history refuses a run that
+     * way: a document somebody may not open should not be distinguishable from one that does not
+     * exist, or the difference between the two answers becomes a way to count other people's work.
+     */
+    @Transactional(readOnly = true)
+    public void requireVisible(String sessionId) {
+        DocumentSession session = require(sessionId);
+        if (!visibility.mayRead(session)) {
+            throw new ApiException(ErrorCode.SESSION_NOT_FOUND,
+                    "Chat session not found or expired: " + sessionId);
+        }
     }
 
     @Transactional(readOnly = true)

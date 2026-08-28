@@ -72,6 +72,10 @@ class UserServiceTest {
         com.ap0stole.sheetsmith.auth.Authz authz = mock(com.ap0stole.sheetsmith.auth.Authz.class);
         when(authz.admin()).thenReturn(true);
         when(authz.superadmin()).thenReturn(true);
+        // Acting on somebody else now asks about their rank as well, not only about the caller's.
+        // What that rule actually says is Authz's own test; here it is a stub so these keep asking
+        // what they are about.
+        when(authz.mayManage(org.mockito.ArgumentMatchers.any())).thenReturn(true);
 
         service = new UserService(users, encoder, refreshTokens, authz,
                 mock(com.ap0stole.sheetsmith.services.BudgetService.class),

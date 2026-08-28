@@ -72,6 +72,30 @@ public class Authz {
                 .orElse(false);
     }
 
+    /**
+     * Whether the caller may act on a particular account — rename it, reset its password, set what
+     * it may spend.
+     * <p>
+     * The same ladder as {@link #maySeeSpendOf}, and for the same reason: a superadmin acts on
+     * anybody, an administrator on the ordinary users they are there to look after, and
+     * <strong>not on their peers or on the account above them</strong>. Without this half,
+     * "administrators cannot demote each other" was a rule with a door beside it — an administrator
+     * could simply reset the superadmin's password and sign in as them, and the one-way door the
+     * whole role design rests on would swing both ways.
+     * <p>
+     * Your own account is not this question. That check belongs where the caller is known, because
+     * what you may do to yourself differs from what anybody may do to you — changing your own
+     * password takes the current one, and nobody sets their own spend limit.
+     */
+    public boolean mayManage(Role targetRole) {
+        if (!authConfig.isEnabled()) {
+            return true;
+        }
+        return role()
+                .map(mine -> mine == Role.SUPERADMIN || (mine == Role.ADMIN && targetRole == Role.USER))
+                .orElse(false);
+    }
+
     /** The caller's role, or empty where there is nobody to have one. */
     public java.util.Optional<Role> role() {
         return currentUser.id().flatMap(users::findById).map(com.ap0stole.sheetsmith.domain.entity.User::getRole);

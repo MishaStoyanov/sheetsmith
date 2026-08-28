@@ -92,7 +92,7 @@ public class ChatLlmService {
      * metadata, and a chat turn whose cost was dropped here is a turn missing from the spend.
      */
     private ChatCall call(String system, String user) {
-        LlmSettingsDto settings = llmSettingsService.getSettings();
+        LlmSettingsDto settings = llmSettingsService.active();
         ChatModel chatModel = llmClientFactory.getChatModel(settings);
         ChatClient chatClient = ChatClient.builder(chatModel).defaultSystem(system).build();
 

@@ -1,6 +1,7 @@
 package com.ap0stole.sheetsmith.domain.dto;
 
 import java.util.Map;
+import java.util.Set;
 
 public record LlmSettingsDto(
         String providerMode,
@@ -10,7 +11,21 @@ public record LlmSettingsDto(
 
     public record LocalSettings(String provider, String baseUrl, String model) {}
 
-    public record CloudSettings(String activeProvider, Map<String, String> apiKeys, Map<String, String> models) {}
+    /**
+     * @param apiKeys   the keys themselves. Sent <em>to</em> the server when somebody types one;
+     *                  never sent back — see {@code savedKeys}
+     * @param savedKeys which providers already have a key stored, which is all a screen needs to
+     *                  say "this one is set". Echoing the key back would put every stored secret
+     *                  into a browser, a proxy log and a devtools tab on each visit to the settings
+     *                  panel, for a value nobody reads off the screen anyway
+     */
+    public record CloudSettings(String activeProvider, Map<String, String> apiKeys,
+                                Map<String, String> models, Set<String> savedKeys) {
+
+        public CloudSettings(String activeProvider, Map<String, String> apiKeys, Map<String, String> models) {
+            this(activeProvider, apiKeys, models, Set.of());
+        }
+    }
 
     /**
      * The settings a fresh instance starts with, taken from {@code OLLAMA_BASE_URL} and

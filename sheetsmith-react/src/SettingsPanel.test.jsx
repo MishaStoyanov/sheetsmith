@@ -11,7 +11,7 @@ vi.mock('./settingsApi.js', () => ({
 }));
 
 import SettingsPanel from './SettingsPanel.jsx';
-import { getSettings, getStorageSettings, updateStorageSettings } from './settingsApi.js';
+import { getSettings, getStorageSettings, updateSettings, updateStorageSettings } from './settingsApi.js';
 
 /**
  * The storage tab: what it shows about the disk, and what it sends when somebody sets a cap.
@@ -22,9 +22,10 @@ import { getSettings, getStorageSettings, updateStorageSettings } from './settin
  */
 
 const llm = {
-  providerMode: 'LOCAL',
+  providerMode: 'CLOUD',
   local: { provider: 'OLLAMA', baseUrl: 'http://localhost:11434', model: 'llama3.1' },
-  cloud: { activeProvider: 'OPENAI', apiKeys: {}, models: {} },
+  // What the server actually answers now: no keys, only which providers have one.
+  cloud: { activeProvider: 'OPENAI', apiKeys: {}, models: { OPENAI: 'gpt-4o' }, savedKeys: ['OPENAI'] },
 };
 
 const storage = {
@@ -43,6 +44,7 @@ beforeEach(() => {
   getSettings.mockResolvedValue(llm);
   getStorageSettings.mockResolvedValue(storage);
   updateStorageSettings.mockImplementation(async (update) => ({ ...storage, ...update }));
+  updateSettings.mockImplementation(async (dto) => dto);
 });
 
 const openStorage = async () => {
@@ -50,6 +52,34 @@ const openStorage = async () => {
   await screen.findByRole('button', { name: 'Storage' });
   await userEvent.click(screen.getByRole('button', { name: 'Storage' }));
 };
+
+describe('SettingsPanel keys', () => {
+  it('says a key is saved without showing it, and sends nothing when it is not touched', async () => {
+    render(<SettingsPanel open maySetStorage onClose={() => {}} />);
+
+    const box = await screen.findByPlaceholderText('Key saved — leave blank to keep it');
+    expect(box).toHaveValue('');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(updateSettings).toHaveBeenCalled());
+    // Not named at all: naming it blank is how the server is told to remove it, and a save that
+    // said that about every untouched provider would wipe the keys of anybody who opened this.
+    expect(updateSettings.mock.calls[0][0].cloud.apiKeys).toEqual({});
+  });
+
+  it('clearing a typed key is the way to remove it, and says so', async () => {
+    render(<SettingsPanel open maySetStorage onClose={() => {}} />);
+
+    const box = await screen.findByPlaceholderText('Key saved — leave blank to keep it');
+    await userEvent.type(box, 'sk-new');
+    await userEvent.clear(box);
+
+    expect(screen.getByText(/will be removed when you save/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(updateSettings.mock.calls[0][0].cloud.apiKeys).toEqual({ OPENAI: '' }));
+  });
+});
 
 describe('SettingsPanel storage', () => {
   it('offers nothing about storage to somebody who may not set it', async () => {

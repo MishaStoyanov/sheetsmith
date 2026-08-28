@@ -88,7 +88,7 @@ public class AiPlanningService {
      * metadata, and a plan whose cost was thrown away here cannot be attributed to the run later.
      */
     private PlanningResult callAndParse(String userMessage) {
-        LlmSettingsDto settings = llmSettingsService.getSettings();
+        LlmSettingsDto settings = llmSettingsService.active();
         ChatModel chatModel = llmClientFactory.getChatModel(settings);
         ChatClient chatClient = ChatClient.builder(chatModel).defaultSystem(systemPrompt).build();
 

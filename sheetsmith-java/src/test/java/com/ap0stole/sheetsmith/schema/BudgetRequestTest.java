@@ -73,8 +73,12 @@ class BudgetRequestTest {
         danaId = jdbc.queryForObject("select id from users where name = 'ask-dana'", Long.class);
         bossId = jdbc.queryForObject("select id from users where name = 'ask-boss'", Long.class);
 
+        // Signed in to seed it: writing a price is the superadmin's act now, the same as deleting
+        // one, and a fixture that could set prices as nobody would be testing a door that is shut.
+        as(seededId, "admin");
         prices.upsert(new UpsertPriceRequest("OPENAI", "gpt-4o",
                 new BigDecimal("2.00"), new BigDecimal("10.00")));
+        SecurityContextHolder.clearContext();
     }
 
     @AfterEach

@@ -1,6 +1,9 @@
 package com.ap0stole.sheetsmith.configs;
 
 import com.ap0stole.sheetsmith.auth.AccessTokenService;
+import com.ap0stole.sheetsmith.auth.Authz;
+import com.ap0stole.sheetsmith.auth.CurrentUser;
+import com.ap0stole.sheetsmith.repository.UserRepository;
 import com.ap0stole.sheetsmith.auth.JwtAuthenticationFilter;
 import com.ap0stole.sheetsmith.auth.JwtSecretProvider;
 import com.ap0stole.sheetsmith.domain.entity.AuthSecret;
@@ -27,6 +30,18 @@ import static org.mockito.Mockito.when;
  */
 @TestConfiguration(proxyBeanMethods = false)
 public class AuthTestBeans {
+
+    /**
+     * The rules bean the filter chain now asks for path rules — real, over an empty user table.
+     * <p>
+     * Real rather than mocked for the same reason as the filter above: these slices are about which
+     * requests reach a handler, and a mock answering false to every role would refuse them all for
+     * a reason that has nothing to do with the chain.
+     */
+    @Bean
+    Authz authz(AuthConfig authConfig) {
+        return new Authz(authConfig, new CurrentUser(), mock(UserRepository.class));
+    }
 
     @Bean
     AuthSecretRepository authSecretRepository() {

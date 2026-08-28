@@ -31,7 +31,7 @@ function rate(value) {
  * Two rates, not one. A provider charges differently for what it read and what it wrote, and a
  * single blended figure cannot answer "why was that expensive".
  */
-export default function PricesScreen({ mayDelete }) {
+export default function PricesScreen({ mayDelete, mayEdit = mayDelete }) {
   const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(0);
   const [data, setData] = useState(null);
@@ -134,10 +134,12 @@ export default function PricesScreen({ mayDelete }) {
       align: 'right',
       render: price => (
         <span style={{ display: 'inline-flex', gap: 6, whiteSpace: 'nowrap' }}>
-          <Button size="sm" variant="ghost" onClick={() => setEditing(price)}>Edit</Button>
-          {/* Editing stays open to administrators — a wrong price shows up in the figures it
-              produces, and the next one to look can put it back. Removing one takes the meaning of
-              every call that used it, so it goes with the other deletions. */}
+          {/* Editing used to stay open to administrators, on the reasoning that a wrong price shows
+              up in the figures it produces. That was too generous: a price rewrites what every past
+              call cost, on every chart and against every spend limit, so it goes with deletion. */}
+          {mayEdit && (
+            <Button size="sm" variant="ghost" onClick={() => setEditing(price)}>Edit</Button>
+          )}
           {mayDelete && (
             <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(price)} style={{ color: 'var(--del)' }}>
               Delete
@@ -159,8 +161,8 @@ export default function PricesScreen({ mayDelete }) {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-          <Button onClick={() => setCatalogue(true)}>Update from catalogue</Button>
-          <Button variant="primary" onClick={() => setEditing({})}>Add price</Button>
+          {mayEdit && <Button onClick={() => setCatalogue(true)}>Update from catalogue</Button>}
+          {mayEdit && <Button variant="primary" onClick={() => setEditing({})}>Add price</Button>}
         </div>
       </div>
 

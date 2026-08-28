@@ -125,7 +125,11 @@ export default function App() {
   // Removing anything is the superadmin's alone — with no accounts at all, the person at the
   // keyboard is the operator and there is nobody to withhold it from. Passed down rather than
   // read again in each screen, so there is one place the rule can be wrong.
+  // The superadmin, or — with no accounts at all — the person at the keyboard, who is the operator
+  // by definition. It answers three questions that turned out to be the same one: who may remove
+  // work, who may point the instance at a provider with a key, and who may say what a token costs.
   const mayDelete = !capabilities.authEnabled || user?.role === 'SUPERADMIN';
+  const mayConfigure = mayDelete;
 
   const tabs = [
     { route: 'improve', label: 'Improve', icon: <SheetIcon /> },
@@ -141,10 +145,11 @@ export default function App() {
   ];
 
   const screens = {
-    improve: <ImproveScreen theme={theme} capabilities={capabilities} providerMode={providerMode} onOpenSettings={() => setSettingsOpen(true)} />,
+    improve: <ImproveScreen theme={theme} capabilities={capabilities} providerMode={providerMode}
+      onOpenSettings={mayConfigure ? () => setSettingsOpen(true) : null} />,
     history: <HistoryScreen authEnabled={capabilities.authEnabled} mayDelete={mayDelete} />,
     analytics: <AnalyticsScreen theme={theme} user={user} />,
-    prices: <PricesScreen mayDelete={mayDelete} />,
+    prices: <PricesScreen mayDelete={mayDelete} mayEdit={mayConfigure} />,
     ...(capabilities.authEnabled && manages
       ? { users: <UsersScreen currentUser={user} onSelfRenamed={name => setUser(u => ({ ...u, name }))} /> }
       : {}),
@@ -165,18 +170,17 @@ export default function App() {
         user={user}
         route={route}
         onNavigate={go}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={mayConfigure ? () => setSettingsOpen(true) : null}
         onSignOut={handleSignOut}
         tabs={tabs}
       >
         {screens[route] ?? <NotFound onHome={() => go('improve')} />}
       </AppShell>
 
-      {/* The storage tab follows the same rule as deleting: the superadmin, or — with no accounts
-          at all — the person at the keyboard, who is the operator by definition. Choosing where the
-          files live is configuring the machine, and a cap set small enough removes other people's
-          work without anybody pressing Delete. */}
-      <SettingsPanel open={settingsOpen} onClose={handleCloseSettings} maySetStorage={mayDelete} />
+      {/* The whole panel is the superadmin's now, storage tab included: it holds the provider keys
+          and the folder the files live in. The screen only stops offering it — the refusal is the
+          chain and the service guards, and it holds for a request that never opened this panel. */}
+      <SettingsPanel open={settingsOpen} onClose={handleCloseSettings} maySetStorage={mayConfigure} />
     </div>
   );
 }

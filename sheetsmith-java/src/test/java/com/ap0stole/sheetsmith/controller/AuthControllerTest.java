@@ -2,6 +2,7 @@ package com.ap0stole.sheetsmith.controller;
 
 import com.ap0stole.sheetsmith.auth.AccessTokenService;
 import com.ap0stole.sheetsmith.auth.AuthService;
+import com.ap0stole.sheetsmith.auth.Authz;
 import com.ap0stole.sheetsmith.auth.CurrentUser;
 import com.ap0stole.sheetsmith.auth.JwtAuthenticationFilter;
 import com.ap0stole.sheetsmith.auth.JwtSecretProvider;
@@ -59,7 +60,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = AuthController.class)
 @Import({AuthConfig.class, SecurityProperties.class, SecurityConfig.class, ChatConfig.class,
         AuthService.class, AccessTokenService.class, RefreshTokenService.class,
-        JwtSecretProvider.class, JwtAuthenticationFilter.class, CurrentUser.class,
+        JwtSecretProvider.class, JwtAuthenticationFilter.class, CurrentUser.class, Authz.class,
         AuthControllerTest.Beans.class})
 @TestPropertySource(properties = "sheetsmith.auth.enabled=true")
 class AuthControllerTest {

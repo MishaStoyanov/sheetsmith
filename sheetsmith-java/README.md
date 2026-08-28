@@ -186,16 +186,31 @@ until that changes.
 
 On, `/api/**` needs a token. Both shapes are built in one filter chain rather than one being guards
 inside the other, so what is allowed through is readable in one place. The flag is reported by
-`/api/capabilities` and deliberately **not** by `/api/settings`, which is user-editable — a security
-switch that looks settable invites a PUT that appears to turn it off.
+`/api/capabilities` and deliberately **not** by `/api/settings` — a security switch that travels
+with editable settings invites a PUT that appears to turn it off.
 
 **Three roles, and one rule that keeps them inert.** `USER` cannot touch other accounts; `ADMIN`
-manages people and may hand out `ADMIN` but never take it back; `SUPERADMIN` is the seeded account
-and the only one that can demote. Every rule goes through a single bean rather than a plain
-`hasRole` expression, because with authentication off nobody is signed in — a role expression would
-deny every management call and take the default configuration down silently. The role is read from
-the database per request, not carried in the token: a token says what was true when it was issued,
-and a demotion would otherwise keep working for the rest of the afternoon.
+manages ordinary users — but never a peer and never the seeded account — and may hand out `ADMIN`
+without being able to take it back; `SUPERADMIN` is the seeded account, the only one that can
+demote or delete, and the only one that reaches the model settings, the storage settings and the
+price table. Every rule goes through a single bean rather than a plain `hasRole` expression, because
+with authentication off nobody is signed in — a role expression would deny every management call and
+take the default configuration down silently. The role is read from the database per request, not
+carried in the token: a token says what was true when it was issued, and a demotion would otherwise
+keep working for the rest of the afternoon.
+
+**The chain names every path, and refuses the ones it does not.** It used to say `/api/** →
+authenticated` and leave the rest to whether somebody had remembered a method annotation, which is
+default-allow: five endpoints had been added without one, and each was open to every account on the
+instance. Now the chain carries the rules that depend only on the path — settings, prices, deletion,
+account management — and the services keep the ones that need the row in hand: whose run, whose
+document, whose account. Anything under `/api` that the chain does not name is denied, so a new
+endpoint fails closed and is noticed in the first minute. `SecurityMatrixTest` asks every one of
+them as each role, over HTTP, with real tokens.
+
+**Stored API keys never travel back.** `GET /api/settings` reports which providers have a key, not
+what it is; a blank key on save means "leave the stored one alone", and naming it blank is the way
+to remove it.
 
 Two more defaults exist to keep the unauthenticated case honest.
 
@@ -371,7 +386,9 @@ or unpriced model contribute nothing to it.
 ## Prices API
 
 The price list is a reference table keyed on provider plus model, filled in by hand — nobody but the
-operator knows what they pay. There is no separate create: the key is natural, so `PUT` is already
+operator knows what they pay. **Reading it is open to any signed-in caller; writing it is the
+superadmin's**, deletion included: a price decides what every past call cost, on every chart and
+against every spend limit. There is no separate create: the key is natural, so `PUT` is already
 "put a price at this address".
 
 ```

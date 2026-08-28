@@ -130,10 +130,13 @@ generated because a password you can look up beats one nobody can find — and t
 interface until it is changed. Change it first.
 
 Three roles. A **user** just uses the app. An **admin** creates accounts, renames them, resets
-passwords, sets spend limits, and can make somebody else an admin — but cannot take it back. Only
-the **superadmin**, which is the seeded first account, can demote. That one-way door is deliberate:
-two administrators demoting each other is a fight the software should not host, so undoing it is
-left to the one account an instance always keeps.
+passwords, sets spend limits, and can make somebody else an admin — but cannot take it back, and
+cannot do any of it to a fellow admin or to the seeded account. Only the **superadmin**, which is
+the seeded first account, can demote or delete, and only it reaches the machine's own configuration:
+the model settings and their API keys, where the files live, and what a token costs. That one-way
+door is deliberate: two administrators demoting each other is a fight the software should not host,
+so undoing it is left to the one account an instance always keeps — and an admin who could reset
+that account's password would be walking straight through it.
 
 Upgrading an instance that already had accounts does not take anything away — everybody who could
 manage accounts yesterday becomes an admin, and only new accounts start as plain users.
