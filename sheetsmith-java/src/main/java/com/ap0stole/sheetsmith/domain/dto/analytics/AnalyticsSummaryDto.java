@@ -60,6 +60,17 @@ public record AnalyticsSummaryDto(
                             long documents) {
     }
 
+    /**
+     * One slice of a total.
+     *
+     * @param label       what the slice is: a provider, a model, or a date at the chosen
+     *                    granularity
+     * @param calls       how many calls fell in it
+     * @param totalTokens prompt and answer together
+     * @param cost        what they cost, or null where nothing in the slice had a price — null
+     *                    rather than zero, because "not priced" and "free" are different facts and
+     *                    only one of them is worth acting on
+     */
     public record Bucket(String label, long calls, long totalTokens, BigDecimal cost) {
     }
 
@@ -85,6 +96,12 @@ public record AnalyticsSummaryDto(
         }
     }
 
+    /**
+     * A tally with no money in it.
+     *
+     * @param label what was counted: a status, an action type, an error
+     * @param count how many
+     */
     public record Count(String label, long count) {
     }
 
@@ -94,6 +111,17 @@ public record AnalyticsSummaryDto(
      * Flat rather than nested inside the bucket, so a screen drawing only the total never walks
      * past a dimension it is not using. Empty when every call in range belongs to the same person
      * (or to nobody), because a stack of one segment is a plain bar wearing a legend.
+     */
+    /**
+     * A slice that also says whose it was.
+     *
+     * @param label       the time bucket or category this belongs to
+     * @param userId      the account, or null for work nobody owns — everything from before
+     *                    accounts were switched on
+     * @param name        their name, or "No owner", so a legend can be drawn without a second call
+     * @param calls       how many calls
+     * @param totalTokens prompt and answer together
+     * @param cost        what they cost, where a price was known
      */
     public record UserBucket(String label, Long userId, String name, long calls, long totalTokens,
                              BigDecimal cost) {

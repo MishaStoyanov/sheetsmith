@@ -9,7 +9,14 @@ import java.time.LocalDateTime;
 /**
  * One request for a bigger ceiling.
  *
- * @param newLimit what the limit became — present on an approval, null otherwise. Read from the
+ * @param id          the request's own id, which is what the decision endpoint takes
+ * @param userId      who asked
+ * @param userName    their name, so a queue can be read without a second call
+ * @param status      PENDING, APPROVED or DECLINED. A decline is still an answer, and is still
+ *                    delivered: a request that vanished teaches people the button does nothing
+ * @param requestedAt when they asked
+ * @param decidedAt   when it was answered, or null while it waits
+ * @param newLimit    what the limit became — present on an approval, null otherwise. Read from the
  *                 request rather than from the account, so a message about a decision says what
  *                 that decision did rather than what is true today
  */

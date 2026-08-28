@@ -1,14 +1,26 @@
 package com.ap0stole.sheetsmith.configs;
 
+import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
 import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.ExternalDocumentation;
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.media.ObjectSchema;
+import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * The API's own description, generated from the code that serves it.
@@ -35,7 +47,12 @@ public class OpenApiConfig {
                         .title("SheetSmith API")
                         .version("v1")
                         .description(description())
+                        .contact(new Contact().name("SheetSmith").url("https://github.com/MishaStoyanov/ai_excel"))
                         .license(new License().name("MIT").url("https://opensource.org/licenses/MIT")))
+                .externalDocs(new ExternalDocumentation()
+                        .description("The long-form reference: setup, the action catalogue, and why each rule is the way it is")
+                        .url("https://github.com/MishaStoyanov/ai_excel#readme"))
+                .servers(List.of(new Server().url("/").description("This instance")))
                 .components(new Components().addSecuritySchemes("bearer", new SecurityScheme()
                         .type(SecurityScheme.Type.HTTP)
                         .scheme("bearer")
@@ -45,6 +62,63 @@ public class OpenApiConfig {
                                 refresh token is an httpOnly cookie the browser sends by itself and \
                                 is not used here.""")))
                 .addSecurityItem(new SecurityRequirement().addList("bearer"));
+    }
+
+    /**
+     * The parts of the document that are the same for every endpoint: the shape of a refusal, and
+     * an order for the tags that follows how somebody actually meets the API.
+     * <p>
+     * The error schema is written here rather than inferred from a return type, because no handler
+     * returns it on the happy path — it is what the advice produces — so a generator walking method
+     * signatures would never see it. Its {@code code} carries the whole enum: the list is the
+     * contract a client writes a switch against, and one missing value is a client that falls
+     * through to "unknown error" on a case the server considers ordinary.
+     */
+    @Bean
+    public OpenApiCustomizer sheetsmithSharedShapes() {
+        return openApi -> {
+            openApi.getComponents().addSchemas("ErrorResponse", errorSchema());
+            if (openApi.getTags() != null) {
+                openApi.getTags().sort(Comparator.comparingInt(tag -> order(tag.getName())));
+            }
+        };
+    }
+
+    /** Upload first, then the work, then the money, then the machine — the order people meet it in. */
+    private static final List<String> TAG_ORDER = List.of(
+            "Capabilities", "Auth", "Sessions", "Excel", "Chat", "History",
+            "Analytics", "Prompts", "Accounts", "Prices", "Settings");
+
+    private int order(String tag) {
+        int at = TAG_ORDER.indexOf(tag);
+        return at < 0 ? TAG_ORDER.size() : at;
+    }
+
+    private Schema<?> errorSchema() {
+        StringSchema code = new StringSchema();
+        code.setDescription("What kind of refusal this is. Stable across versions and safe to switch on"
+                + " — the message is written for a person and may be reworded.");
+        Arrays.stream(ErrorCode.values()).map(Enum::name).forEach(code::addEnumItemObject);
+        code.setExample("VALIDATION_ERROR");
+
+        StringSchema message = new StringSchema();
+        message.setDescription("One sentence, meant to be shown to whoever made the request.");
+        message.setExample("A limit of zero spreadsheets would delete every run as it finished.");
+
+        StringSchema field = new StringSchema();
+        field.setNullable(true);
+        field.setDescription("The field the refusal is about, where it is about one — so a form can put"
+                + " the message beside the box rather than at the top of the page.");
+        field.setExample("maxFiles");
+
+        ObjectSchema error = new ObjectSchema();
+        error.setDescription("Every refusal from this API has this shape, whatever produced it: a code"
+                + " to act on, a sentence to show, and sometimes the field at fault.");
+        error.addProperty("code", code);
+        error.addProperty("message", message);
+        error.addProperty("field", field);
+        error.setRequired(List.of("code", "message"));
+        return error;
     }
 
     private String description() {

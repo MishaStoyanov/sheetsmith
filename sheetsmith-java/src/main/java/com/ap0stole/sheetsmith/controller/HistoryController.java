@@ -5,6 +5,10 @@ import com.ap0stole.sheetsmith.domain.dto.JobHistoryDto;
 import com.ap0stole.sheetsmith.services.JobService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
@@ -51,6 +55,10 @@ public class HistoryController {
     @PreAuthorize("@authz.signedIn()")
     @Operation(summary = "One run, with its steps",
             description = "A run the caller may not see is answered as not found rather than forbidden, so the two cannot be told apart.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "404", description = "No such run — or one this caller may not see, which is deliberately the same answer.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     @GetMapping("/{id}")
     public ResponseEntity<JobHistoryDto> getJob(@PathVariable Long id) {
         return ResponseEntity.ok(jobService.getById(id));
@@ -58,6 +66,10 @@ public class HistoryController {
 
     @PreAuthorize("@authz.signedIn()")
     @Operation(summary = "Download the result file")
+    @ApiResponses({
+            @ApiResponse(responseCode = "404", description = "No such run, or its file has aged out of the retention window.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     @GetMapping("/{id}/download")
     public ResponseEntity<Resource> downloadResult(@PathVariable Long id) {
         Resource file = jobService.downloadResult(id);
@@ -71,8 +83,12 @@ public class HistoryController {
     }
 
     @PreAuthorize("@authz.superadmin()")
-    @Operation(summary = "Delete a run. Superadmin only",
+    @Operation(summary = "Delete a run",
             description = "The record goes, and its files with it - unless they are revisions of a live session, which belong to that session’s undo history.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "404", description = "No such run.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteJob(@PathVariable Long id) {
         jobService.deleteJob(id);

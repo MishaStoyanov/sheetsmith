@@ -25,7 +25,17 @@ public record StorageSettingsDto(
         long bytesUsed,
         boolean writable) {
 
-    /** What the caller may set; the rest is read back from the disk. */
+    /**
+     * What the caller may set; the rest is read back from the disk.
+     *
+     * @param rootDir  the folder new files go into, or null for the directories the instance was
+     *                 started with. It is proved writable — by writing a file and removing it —
+     *                 before it is saved
+     * @param maxFiles how many spreadsheets to keep, or null for no cap. Zero is refused: it would
+     *                 mean deleting every run as it finished
+     * @param maxBytes how much disk to use, or null for no cap. Both caps hold at once, whichever
+     *                 is reached first
+     */
     public record Update(String rootDir, Integer maxFiles, Long maxBytes) {
     }
 }

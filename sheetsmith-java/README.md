@@ -240,10 +240,16 @@ either.
 ## API Reference
 
 **Swagger UI: `http://localhost:8080/swagger-ui.html`** — the same reference generated from the
-handlers, so it cannot describe an endpoint that no longer exists. Every operation names the role it
-needs; press *Authorize* and paste the `accessToken` from `POST /api/auth/login` to try them. The
-raw document is at `/v3/api-docs`. Both stay open when accounts are on: they list paths and shapes,
-never data.
+handlers, so it cannot describe an endpoint that no longer exists. The raw document is at
+`/v3/api-docs`; both stay open when accounts are on, because they list paths and shapes, never data.
+
+What is on the page: 50 operations, each with a summary, a description, **the role it requires read
+from its own `@PreAuthorize`**, and the refusals it can produce — 401 and 403 everywhere they apply,
+plus the specific ones (402 when a spend limit is used up, 409 for a name already taken or a price
+still in use, 413 for an oversized upload, 502 when the model or the catalogue cannot be reached).
+Every request and response shape is described, and the descriptions are the javadoc from the types
+themselves rather than a second copy. Press *Authorize*, paste the `accessToken` from
+`POST /api/auth/login`, and the token survives a reload.
 
 
 The UI flow is plan → review → apply, and it runs against a session (open one with

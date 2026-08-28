@@ -401,7 +401,23 @@ service test is the rule that compares caller and target.
 ### OpenAPI
 
 `springdoc-openapi-starter-webmvc-ui` serves `/swagger-ui.html` and `/v3/api-docs`, both open in
-both modes — the document lists paths and shapes, never data, and this is an open-source API whose
+both modes
+
+**The document is written by the code, not beside it.** Three pieces make that work, and the reason
+is the same in all three: a sentence about behaviour that lives in a second place is a sentence that
+will one day be wrong.
+
+- `therapi-runtime-javadoc` (plus its annotation processor) keeps javadoc at runtime, so springdoc
+  turns the paragraphs already on the DTOs into schema descriptions. Adding `@param` to a record is
+  how a field gets documented — there is no second copy in a `@Schema`.
+- `OpenApiRulesCustomizer` reads the `@PreAuthorize` off each handler and writes **Requires:** into
+  that operation's description, attaches the 401/403 shapes, and clears the bearer requirement from
+  the four open endpoints. Change a guard and the page changes with it.
+- `JavadocToMarkdown` translates the `<p>`/`<code>`/`<strong>` javadoc arrives with into markdown,
+  which is what Swagger UI renders. Without it the page is correct and unreadable.
+
+Per-endpoint `@ApiResponse` covers the codes an endpoint can actually produce (402, 409, 413, 502
+and the rest); the generic 401/403 come from the customizer, so they are never typed by hand. — the document lists paths and shapes, never data, and this is an open-source API whose
 endpoints are in the README anyway. `configs/OpenApiConfig` adds the bearer scheme (so *Authorize*
 in the UI works with the token from `POST /api/auth/login`) and the one paragraph a generator cannot
 write: what the two auth modes mean and who may call what. Every handler carries `@Operation`, every

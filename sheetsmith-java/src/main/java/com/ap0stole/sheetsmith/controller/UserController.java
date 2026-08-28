@@ -9,6 +9,10 @@ import com.ap0stole.sheetsmith.services.UserService;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -34,7 +38,13 @@ public class UserController {
     private final com.ap0stole.sheetsmith.services.BudgetRequestService budgetRequests;
 
     @PreAuthorize("@authz.admin()")
-    @Operation(summary = "Create an account. Admin")
+    @Operation(summary = "Create an account")
+    @ApiResponses({
+            @ApiResponse(responseCode = "400", description = "A blank name, or a password shorter than the minimum.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+            @ApiResponse(responseCode = "409", description = "That name is taken. Names are unique, because 'who ran this' stops being an answer at the second namesake.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public UserDto create(@RequestBody @Valid CreateUserRequest request) {
@@ -55,7 +65,7 @@ public class UserController {
     }
 
     @PreAuthorize("@authz.admin()")
-    @Operation(summary = "Replace an account. Admin")
+    @Operation(summary = "Replace an account")
     @PutMapping("/{id}")
     public UserDto replace(@PathVariable Long id, @RequestBody @Valid ReplaceUserRequest request) {
         requireAccounts();
@@ -65,6 +75,14 @@ public class UserController {
     @PreAuthorize("@authz.signedIn()")
     @Operation(summary = "Rename, or change a password",
             description = "Your own password takes the current one; an administrator resetting somebody else’s does not, but may only do it to an ordinary user - never a peer, never the seeded account.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "400", description = "Changing your own password without the current one, or a name already taken.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+            @ApiResponse(responseCode = "403", description = "An administrator pointing at a peer or at the seeded account.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+            @ApiResponse(responseCode = "404", description = "No such account.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     @PatchMapping("/{id}")
     public UserDto update(@PathVariable Long id, @RequestBody @Valid PatchUserRequest request) {
         requireAccounts();
@@ -89,6 +107,10 @@ public class UserController {
     @PreAuthorize("@authz.signedIn()")
     @Operation(summary = "Ask for a bigger limit",
             description = "No amount: how much more is the decision of whoever answers. One open request at a time.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "409", description = "A request from this account is already waiting for an answer.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     @PostMapping("/me/budget-request")
     public BudgetRequestDto askForMore() {
         requireAccounts();
@@ -108,7 +130,7 @@ public class UserController {
 
     /** Everything still waiting on an answer, filtered to the ones this caller may answer. */
     @PreAuthorize("@authz.admin()")
-    @Operation(summary = "Requests waiting for you. Admin",
+    @Operation(summary = "Requests waiting for you",
             description = "Already narrowed to the ones this caller may answer.")
     @GetMapping("/budget-requests")
     public List<BudgetRequestDto> pendingRequests() {
@@ -117,8 +139,14 @@ public class UserController {
     }
 
     @PreAuthorize("@authz.admin()")
-    @Operation(summary = "Approve or decline a request. Admin",
+    @Operation(summary = "Approve or decline a request",
             description = "Approving carries the new limit and is refused if it is not larger: the person is told their limit was raised, and that has to be true.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "400", description = "Approving without a larger limit than the one in force. The person is told their limit was raised, and that has to be true.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+            @ApiResponse(responseCode = "404", description = "No such request, or it has already been answered.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     @PostMapping("/budget-requests/{id}/decide")
     public BudgetRequestDto decide(@PathVariable Long id, @RequestBody @Valid DecideBudgetRequest request) {
         requireAccounts();
@@ -133,8 +161,14 @@ public class UserController {
      * PATCH null already means "leave this alone". One of those two meanings has to move.
      */
     @PreAuthorize("@authz.admin()")
-    @Operation(summary = "Set a monthly spend limit. Admin",
+    @Operation(summary = "Set a monthly spend limit",
             description = "Null clears it. Nobody sets their own - except the superadmin, who has nobody above them.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "403", description = "Your own limit — a limit you can lift is not a limit — or the account above you.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+            @ApiResponse(responseCode = "400", description = "A negative amount.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     @PutMapping("/{id}/budget")
     public UserDto setBudget(@PathVariable Long id, @RequestBody @Valid SetBudgetRequest request) {
         requireAccounts();
@@ -149,8 +183,12 @@ public class UserController {
      * field among several is a role that can be changed by accident.
      */
     @PreAuthorize("@authz.admin()")
-    @Operation(summary = "Change what somebody may do. Admin",
+    @Operation(summary = "Change what somebody may do",
             description = "ADMIN can be given but not taken back; only the superadmin demotes. SUPERADMIN cannot be handed out, and the seeded account’s role cannot be changed.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "403", description = "Handing out SUPERADMIN, changing the seeded account, changing your own role, or demoting without being the superadmin.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     @PatchMapping("/{id}/role")
     public UserDto changeRole(@PathVariable Long id, @RequestBody @Valid ChangeRoleRequest request) {
         requireAccounts();
@@ -158,8 +196,14 @@ public class UserController {
     }
 
     @PreAuthorize("@authz.superadmin()")
-    @Operation(summary = "Delete an account. Superadmin only",
+    @Operation(summary = "Delete an account",
             description = "Their sessions end at once. Runs they started stay, with no owner.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "403", description = "The seeded account, or the one the caller is signed in with. Neither is a permission rule: they are locks against locking yourself out.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+            @ApiResponse(responseCode = "404", description = "No such account.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         requireAccounts();

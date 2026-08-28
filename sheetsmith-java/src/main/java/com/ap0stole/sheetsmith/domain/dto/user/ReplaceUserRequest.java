@@ -7,6 +7,10 @@ import jakarta.validation.constraints.Size;
  * PUT: the account as it should be from now on. Both fields are required precisely because this is
  * a replacement — an omitted password here would mean "keep the old one", which is a patch wearing
  * a put's name.
+ *
+ * @param name     what the account is called from now on
+ * @param password what it signs in with from now on. Replacing an account ends its sessions, for
+ *                 the same reason changing a password does
  */
 public record ReplaceUserRequest(
         @NotBlank(message = "A username is required")

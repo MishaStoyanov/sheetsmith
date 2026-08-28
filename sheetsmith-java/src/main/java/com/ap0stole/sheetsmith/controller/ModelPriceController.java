@@ -6,6 +6,10 @@ import com.ap0stole.sheetsmith.services.PriceCatalogueService;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -40,16 +44,24 @@ public class ModelPriceController {
 
     /** Sets the price for a model, adding it if nobody has priced it yet. */
     @PreAuthorize("@authz.superadmin()")
-    @Operation(summary = "Set the price for a provider and model. Superadmin only",
+    @Operation(summary = "Set the price for a provider and model",
             description = "The key is natural (provider + model), so this creates as well as replaces.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "400", description = "A price below zero, or a provider and model that are not both given.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     @PutMapping
     public ModelPriceDto upsert(@RequestBody @Valid UpsertPriceRequest request) {
         return priceService.upsert(request);
     }
 
     @PreAuthorize("@authz.superadmin()")
-    @Operation(summary = "Correct one price. Superadmin only",
+    @Operation(summary = "Correct one price",
             description = "Only the two figures: provider and model are the row’s address, not its contents.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "404", description = "No such price.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     @PatchMapping("/{id}")
     public ModelPriceDto update(@PathVariable Long id, @RequestBody @Valid PatchPriceRequest request) {
         return priceService.update(id, request);
@@ -63,8 +75,12 @@ public class ModelPriceController {
      * comparison, and saving is the separate call below carrying the rows somebody picked.
      */
     @PreAuthorize("@authz.superadmin()")
-    @Operation(summary = "Compare against the public catalogue. Superadmin only",
+    @Operation(summary = "Compare against the public catalogue",
             description = "The only request this application makes to the outside world. It writes nothing; the answer is a was-and-would-be table.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "502", description = "The public catalogue could not be reached. This is the one outbound request the application makes.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     @PostMapping("/catalogue/preview")
     public PriceProposalDto preview() {
         return catalogueService.preview();
@@ -77,7 +93,7 @@ public class ModelPriceController {
      * what is saved even if the catalogue moved while it was being read.
      */
     @PreAuthorize("@authz.superadmin()")
-    @Operation(summary = "Save the rows somebody confirmed. Superadmin only",
+    @Operation(summary = "Save the rows somebody confirmed",
             description = "Saves the figures from the request rather than fetching them again, so what is stored is what was agreed to. Confirming an unchanged row is how a price gets marked as checked.")
     @PostMapping("/catalogue/apply")
     public Map<String, Integer> applyCatalogue(@RequestBody @Valid List<UpsertPriceRequest> accepted) {
@@ -90,8 +106,14 @@ public class ModelPriceController {
      * too.
      */
     @PreAuthorize("@authz.superadmin()")
-    @Operation(summary = "Remove a price. Superadmin only",
+    @Operation(summary = "Remove a price",
             description = "Refused without confirm=true when calls were priced by it, and the refusal carries how many: their spend stops being countable, and charts already drawn change.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "404", description = "No such price.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
+            @ApiResponse(responseCode = "409", description = "Calls were priced by this row. The refusal carries how many: without it their spend stops being countable and charts already drawn change. Repeat with confirm=true to go ahead.",
+                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id,
                                        @RequestParam(defaultValue = "false") boolean confirm) {

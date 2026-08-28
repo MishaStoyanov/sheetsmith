@@ -41,6 +41,16 @@
             <version>2.8.9</version>
         </dependency>
 
+        <!-- Keeps the javadoc at runtime, which is what lets springdoc put it in the API document.
+             This codebase explains its types where they are declared; without this, every one of
+             those paragraphs would have to be typed a second time into a @Schema to be visible to
+             anybody calling the API, and the second copy is the one that goes stale. -->
+        <dependency>
+            <groupId>com.github.therapi</groupId>
+            <artifactId>therapi-runtime-javadoc</artifactId>
+            <version>0.15.0</version>
+        </dependency>
+
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi</artifactId>
@@ -156,6 +166,12 @@
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                             <version>${lombok.version}</version>
+                        </path>
+                        <!-- Writes the javadoc into the jar for the dependency above to read. -->
+                        <path>
+                            <groupId>com.github.therapi</groupId>
+                            <artifactId>therapi-runtime-javadoc-scribe</artifactId>
+                            <version>0.15.0</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

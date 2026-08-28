@@ -6,8 +6,12 @@ package com.ap0stole.sheetsmith.domain.dto.auth;
  * The refresh token is <em>not</em> here: it travels as an httpOnly cookie, which is the whole
  * point of that choice — a thirty-day credential no script on the page can read.
  *
+ * @param accessToken      the bearer token for every other call. Two hours, held in memory by
+ *                         the browser rather than in storage a script could read
  * @param expiresInSeconds so the browser can renew a minute early rather than discovering the
  *                         expiry by being refused
+ * @param user             who has just signed in, so the interface can draw itself without a
+ *                         second call
  */
 public record AuthResponse(String accessToken, long expiresInSeconds, MeDto user) {
 }

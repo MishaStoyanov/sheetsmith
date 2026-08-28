@@ -3,12 +3,27 @@ package com.ap0stole.sheetsmith.domain.dto;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Which model this instance calls, and how.
+ *
+ * @param providerMode LOCAL or CLOUD — which of the two blocks below is in force
+ * @param local        the Ollama server on this machine or network
+ * @param cloud        the vendor to call instead, and the key to call it with
+ */
 public record LlmSettingsDto(
         String providerMode,
         LocalSettings local,
         CloudSettings cloud
 ) {
 
+    /**
+     * A model on your own machine, which is the default and the reason this application exists.
+     *
+     * @param provider only OLLAMA today
+     * @param baseUrl  where it listens. In Docker this is host.docker.internal rather than
+     *                 localhost, which a container cannot reach the host by
+     * @param model    the tag to ask for, as Ollama lists it
+     */
     public record LocalSettings(String provider, String baseUrl, String model) {}
 
     /**

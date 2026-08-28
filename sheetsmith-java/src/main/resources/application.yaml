@@ -105,3 +105,21 @@ sheetsmith:
     history-messages: ${SHEETSMITH_CHAT_HISTORY:${XLSXAI_CHAT_HISTORY:12}}
     repair-steps: ${SHEETSMITH_CHAT_REPAIR_STEPS:${XLSXAI_CHAT_REPAIR_STEPS:2}}
     stream-timeout-ms: ${SHEETSMITH_CHAT_STREAM_TIMEOUT_MS:${XLSXAI_CHAT_STREAM_TIMEOUT_MS:600000}}
+
+# The API's own description. Everything here is about the page a person reads, not about what the
+# server serves: the token is remembered across reloads (try-it-out is the point of the page, and
+# pasting it again on every refresh is how people stop using it), the operations arrive folded so a
+# fifty-endpoint API is legible at a glance, and the tags keep the order the document declares
+# rather than being re-sorted alphabetically into Accounts-first.
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    doc-expansion: none
+    operations-sorter: method
+    tags-sorter: as-is
+    display-request-duration: true
+    persist-authorization: true
+    try-it-out-enabled: true
+  default-produces-media-type: application/json
