@@ -53,8 +53,9 @@ class ReadRangeToolTest {
         QueryResult result = tool.execute(workbook, Map.of("range", "A1:D2"));
 
         Map<String, Object> data = data(result);
-        assertThat(data.get("sheet")).isEqualTo("Sales");
-        assertThat(data.get("range")).isEqualTo("A1:D2");
+        assertThat(data)
+                .containsEntry("sheet", "Sales")
+                .containsEntry("range", "A1:D2");
 
         List<List<Object>> values = values(data);
         assertThat(values).hasSize(2);

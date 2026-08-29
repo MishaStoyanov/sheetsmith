@@ -72,9 +72,10 @@ class SparklineHandlerTest {
         String detail = sparklines.execute(workbook, props("range", "F2:F4", "dataRange", "B2:E4"));
 
         String xml = sheetXml(sheet);
-        assertThat(xml).contains(SparklineHandler.SPARKLINE_EXT_URI);
-        assertThat(xml).contains("Data!B2:E2").contains("<xm:sqref>F2</xm:sqref>");
-        assertThat(xml).contains("Data!B4:E4").contains("<xm:sqref>F4</xm:sqref>");
+        assertThat(xml)
+                .contains(SparklineHandler.SPARKLINE_EXT_URI)
+                .contains("Data!B2:E2").contains("<xm:sqref>F2</xm:sqref>")
+                .contains("Data!B4:E4").contains("<xm:sqref>F4</xm:sqref>");
         assertThat(detail).isNull();
     }
 
@@ -84,8 +85,9 @@ class SparklineHandlerTest {
         sparklines.execute(workbook, props("range", "B6:E6", "dataRange", "B2:E4"));
 
         String xml = sheetXml(sheet);
-        assertThat(xml).contains("Data!B2:B4").contains("<xm:sqref>B6</xm:sqref>");
-        assertThat(xml).contains("Data!E2:E4").contains("<xm:sqref>E6</xm:sqref>");
+        assertThat(xml)
+                .contains("Data!B2:B4").contains("<xm:sqref>B6</xm:sqref>")
+                .contains("Data!E2:E4").contains("<xm:sqref>E6</xm:sqref>");
     }
 
     @Test
@@ -95,8 +97,9 @@ class SparklineHandlerTest {
                 "range", "F2:F4", "dataRange", "B2:E4", "type", "column", "color", "#15803D"));
 
         String xml = sheetXml(sheet);
-        assertThat(xml).contains("type=\"column\"");
-        assertThat(xml).contains("<x14:colorSeries rgb=\"FF15803D\"/>");
+        assertThat(xml)
+                .contains("type=\"column\"")
+                .contains("<x14:colorSeries rgb=\"FF15803D\"/>");
     }
 
     @Test
@@ -135,8 +138,9 @@ class SparklineHandlerTest {
         }
         try (XSSFWorkbook reopened = new XSSFWorkbook(file)) {
             String xml = sheetXml(reopened.getSheet("Data"));
-            assertThat(xml).contains(SparklineHandler.SPARKLINE_EXT_URI);
-            assertThat(xml).contains("<xm:sqref>F2</xm:sqref>");
+            assertThat(xml)
+                    .contains(SparklineHandler.SPARKLINE_EXT_URI)
+                    .contains("<xm:sqref>F2</xm:sqref>");
         }
     }
 

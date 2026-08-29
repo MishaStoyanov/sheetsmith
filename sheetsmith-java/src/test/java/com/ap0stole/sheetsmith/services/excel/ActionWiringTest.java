@@ -102,9 +102,10 @@ class ActionWiringTest {
     @DisplayName("a handler taking a constructor argument still resolves — the untested edge of the three")
     void theHandlerWithADependencyIsSatisfiable() {
         contexts.run(context -> {
-            assertThat(context).hasNotFailed();
-            assertThat(context).hasSingleBean(AutosizeColumnsHandler.class);
-            assertThat(context).hasSingleBean(ProcessingConfig.class);
+            assertThat(context)
+                    .hasNotFailed()
+                    .hasSingleBean(AutosizeColumnsHandler.class)
+                    .hasSingleBean(ProcessingConfig.class);
         });
     }
 

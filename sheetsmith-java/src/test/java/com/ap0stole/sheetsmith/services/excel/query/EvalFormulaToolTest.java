@@ -46,9 +46,10 @@ class EvalFormulaToolTest {
     void evaluatesAggregateFormulas() {
         Map<String, Object> data = data(tool.execute(workbook, Map.of("formula", "SUM(C2:C5)")));
 
-        assertThat(data.get("formula")).isEqualTo("SUM(C2:C5)");
-        assertThat(data.get("value")).isEqualTo(1050L);
-        assertThat(data.get("type")).isEqualTo("number");
+        assertThat(data)
+                .containsEntry("formula", "SUM(C2:C5)")
+                .containsEntry("value", 1050L)
+                .containsEntry("type", "number");
     }
 
     @Test
@@ -65,12 +66,14 @@ class EvalFormulaToolTest {
                 .get("value")).isEqualTo(250L);
 
         Map<String, Object> text = data(tool.execute(workbook, Map.of("formula", "UPPER(A2)")));
-        assertThat(text.get("value")).isEqualTo("WIDGET A");
-        assertThat(text.get("type")).isEqualTo("text");
+        assertThat(text)
+                .containsEntry("value", "WIDGET A")
+                .containsEntry("type", "text");
 
         Map<String, Object> bool = data(tool.execute(workbook, Map.of("formula", "COUNT(B2:B5)>2")));
-        assertThat(bool.get("value")).isEqualTo(true);
-        assertThat(bool.get("type")).isEqualTo("boolean");
+        assertThat(bool)
+                .containsEntry("value", true)
+                .containsEntry("type", "boolean");
     }
 
     @Test
@@ -82,8 +85,9 @@ class EvalFormulaToolTest {
     void reportsExcelErrorsAsValues() {
         Map<String, Object> data = data(tool.execute(workbook, Map.of("formula", "1/0")));
 
-        assertThat(data.get("type")).isEqualTo("error");
-        assertThat(data.get("value")).isEqualTo("#DIV/0!");
+        assertThat(data)
+                .containsEntry("type", "error")
+                .containsEntry("value", "#DIV/0!");
     }
 
     @Test
@@ -109,7 +113,7 @@ class EvalFormulaToolTest {
         assertThat(sales.getLastRowNum()).isEqualTo(lastRowBefore);
         assertThat(sales.getPhysicalNumberOfRows()).isEqualTo(physicalRowsBefore);
         assertThat((Object) sales.getRow(lastRowBefore + 5)).isNull();
-        assertThat(sales.getCTWorksheet().toString()).isEqualTo(xmlBefore);
+        assertThat(sales.getCTWorksheet()).hasToString(xmlBefore);
     }
 
     @Test

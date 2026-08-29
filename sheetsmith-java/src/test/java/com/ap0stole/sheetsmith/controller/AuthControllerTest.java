@@ -102,9 +102,10 @@ class AuthControllerTest {
                 .doesNotContain("refresh");
 
         String cookie = result.getResponse().getHeader(HttpHeaders.SET_COOKIE);
-        assertThat(cookie).contains("sheetsmith_refresh=");
-        assertThat(cookie).contains("HttpOnly");
-        assertThat(cookie).contains("SameSite=Strict");
+        assertThat(cookie)
+                .contains("sheetsmith_refresh=")
+                .contains("HttpOnly")
+                .contains("SameSite=Strict");
         assertThat(cookie)
                 .as("scoped to the auth path: no other endpoint has any use for it")
                 .contains("Path=/api/auth");

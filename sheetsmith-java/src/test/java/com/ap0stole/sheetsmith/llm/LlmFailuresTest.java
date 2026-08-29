@@ -25,8 +25,9 @@ class LlmFailuresTest {
     void explainsARateLimit() {
         String message = LlmFailures.humanize(new RuntimeException(GEMINI_429));
 
-        assertThat(message).contains("rate limit or quota").contains("switch provider in settings");
-        assertThat(message).doesNotContain("{").doesNotContain("RESOURCE_EXHAUSTED");
+        assertThat(message)
+                .contains("rate limit or quota").contains("switch provider in settings")
+                .doesNotContain("{").doesNotContain("RESOURCE_EXHAUSTED");
         assertThat(message.length()).isLessThan(300);
     }
 
@@ -51,8 +52,9 @@ class LlmFailuresTest {
 
         String message = LlmFailures.humanize(new RuntimeException(noisy));
 
-        assertThat(message).startsWith("AI request failed: boom boom");
-        assertThat(message).endsWith("…");
+        assertThat(message)
+                .startsWith("AI request failed: boom boom")
+                .endsWith("…");
         assertThat(message.length()).isLessThan(250);
     }
 

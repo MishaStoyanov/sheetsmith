@@ -83,8 +83,9 @@ class ChatToolRegistryTest {
     void buildsPromptCatalog() {
         String catalog = registry.toolCatalogPrompt(true);
 
-        assertThat(catalog).contains("ACTION TOOLS").contains("FORMAT_CELLS");
-        assertThat(catalog).contains("QUERY TOOLS").contains("3. STUB_QUERY");
+        assertThat(catalog)
+                .contains("ACTION TOOLS").contains("FORMAT_CELLS")
+                .contains("QUERY TOOLS").contains("3. STUB_QUERY");
     }
 
     @Test

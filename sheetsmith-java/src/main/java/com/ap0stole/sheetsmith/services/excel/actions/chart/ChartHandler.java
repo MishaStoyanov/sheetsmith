@@ -47,9 +47,7 @@ public class ChartHandler {
         CellRangeAddress rangeAddr = CellRangeAddress.valueOf(rangeStr);
         int rowCount = rangeAddr.getLastRow() - rangeAddr.getFirstRow() + 1;
 
-        int width = (config.getChartWidth() != null)
-                ? config.getChartWidth()
-                : (rowCount <= 6 ? 6 : Math.min(14, Math.max(5, (int) (rowCount * 1.1) + 2)));
+        int width = config.getChartWidth() != null ? config.getChartWidth() : widthFor(rowCount);
         int height = (config.getChartHeight() != null) ? config.getChartHeight() : 12;
 
         XSSFDrawing drawing = targetSheet.createDrawingPatriarch();
@@ -120,5 +118,19 @@ public class ChartHandler {
                     + sheet.getSheetName() + "\" (" + charts.size() + " chart(s))");
         }
         return charts.get(idx);
+    }
+
+    /**
+     * How wide a chart of this many rows should be, in columns.
+     * <p>
+     * A handful of rows gets a fixed small chart; past that the width grows with the data and stops
+     * between five and fourteen columns, because a chart wider than the screen is not more readable
+     * than one that fits.
+     */
+    private static int widthFor(int rowCount) {
+        if (rowCount <= 6) {
+            return 6;
+        }
+        return Math.clamp((int) (rowCount * 1.1) + 2, 5, 14);
     }
 }

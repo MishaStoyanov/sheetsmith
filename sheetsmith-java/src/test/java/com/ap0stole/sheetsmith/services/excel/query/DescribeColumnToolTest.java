@@ -50,12 +50,13 @@ class DescribeColumnToolTest {
         QueryResult result = tool.execute(workbook, props("A2:D6", 1));
         Map<String, Object> data = data(result);
 
-        assertThat(data.get("count")).isEqualTo(4);
-        assertThat(data.get("blanks")).isEqualTo(1);
-        assertThat(data.get("distinct")).isEqualTo(3);
-        assertThat(data.get("type")).isEqualTo("numeric");
-        assertThat(data.get("min")).isEqualTo(40L);
-        assertThat(data.get("max")).isEqualTo(200L);
+        assertThat(data)
+                .containsEntry("count", 4)
+                .containsEntry("blanks", 1)
+                .containsEntry("distinct", 3)
+                .containsEntry("type", "numeric")
+                .containsEntry("min", 40L)
+                .containsEntry("max", 200L);
         assertThat(samples(data)).containsExactly(100L, 40L, 200L);
         assertThat(result.summary()).contains("Column B").contains("min 40").contains("max 200");
     }
@@ -64,9 +65,10 @@ class DescribeColumnToolTest {
     void describesATextColumnWithoutBounds() {
         Map<String, Object> data = data(tool.execute(workbook, props("A2:D6", 0)));
 
-        assertThat(data.get("type")).isEqualTo("text");
-        assertThat(data.get("count")).isEqualTo(5);
-        assertThat(data.get("distinct")).isEqualTo(4);
+        assertThat(data)
+                .containsEntry("type", "text")
+                .containsEntry("count", 5)
+                .containsEntry("distinct", 4);
         assertThat(data.get("min")).isNull();
         assertThat(data.get("max")).isNull();
     }
@@ -75,9 +77,10 @@ class DescribeColumnToolTest {
     void flagsMixedColumns() {
         Map<String, Object> data = data(tool.execute(workbook, props("A2:D6", 2)));
 
-        assertThat(data.get("type")).isEqualTo("mixed");
-        assertThat(data.get("min")).isEqualTo(5L);
-        assertThat(data.get("max")).isEqualTo(7L);
+        assertThat(data)
+                .containsEntry("type", "mixed")
+                .containsEntry("min", 5L)
+                .containsEntry("max", 7L);
         assertThat(samples(data)).containsExactly(5L, "n/a", 7L);
     }
 
@@ -85,9 +88,10 @@ class DescribeColumnToolTest {
     void reportsAnEmptyColumn() {
         Map<String, Object> data = data(tool.execute(workbook, props("A2:D6", 3)));
 
-        assertThat(data.get("type")).isEqualTo("empty");
-        assertThat(data.get("count")).isEqualTo(0);
-        assertThat(data.get("blanks")).isEqualTo(5);
+        assertThat(data)
+                .containsEntry("type", "empty")
+                .containsEntry("count", 0)
+                .containsEntry("blanks", 5);
         assertThat(samples(data)).isEmpty();
     }
 

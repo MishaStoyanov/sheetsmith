@@ -1,6 +1,7 @@
 package com.ap0stole.sheetsmith.services;
 
 import com.ap0stole.sheetsmith.auth.CurrentUser;
+import com.ap0stole.sheetsmith.domain.entity.User;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
 import com.ap0stole.sheetsmith.repository.UserRepository;
@@ -64,13 +65,13 @@ public class BudgetService {
         }
 
         BigDecimal limit = users.findById(caller.get())
-                .map(user -> user.getMonthlyBudget())
+                .map(User::getMonthlyBudget)
                 .orElse(null);
         if (limit == null) {
             return;
         }
 
-        BigDecimal spent = spentThisMonth(caller.get());
+        BigDecimal spent = spentSinceTheFirst(caller.get());
         if (spent.compareTo(limit) < 0) {
             return;
         }
@@ -97,6 +98,11 @@ public class BudgetService {
      */
     @Transactional(readOnly = true)
     public BigDecimal spentThisMonth(Long userId) {
+        return spentSinceTheFirst(userId);
+    }
+
+    /** The same sum, reachable from {@link #requireHeadroom} without going out through the proxy. */
+    private BigDecimal spentSinceTheFirst(Long userId) {
         LocalDateTime from = LocalDate.now().withDayOfMonth(1).atStartOfDay();
 
         BigDecimal total = jdbc.queryForObject("""

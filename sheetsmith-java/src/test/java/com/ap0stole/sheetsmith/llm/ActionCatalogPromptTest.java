@@ -31,9 +31,10 @@ class ActionCatalogPromptTest {
 
         // Numbered last by hand, so it is asserted as "the last one" rather than as a literal that
         // has to be edited every time an action is added ahead of it.
-        assertThat(prompt).containsPattern("(?m)^ *[0-9]+[.] TRANSFORM_COLUMN$");
-        assertThat(prompt).contains("PHONE_US").contains("TRIM").contains("TO_NUMBER");
-        assertThat(prompt).contains("+1 (555) 123-4567");
+        assertThat(prompt)
+                .containsPattern("(?m)^ *[0-9]+[.] TRANSFORM_COLUMN$")
+                .contains("PHONE_US").contains("TRIM").contains("TO_NUMBER")
+                .contains("+1 (555) 123-4567");
         // The 13 that were there before must survive the assembly.
         assertThat(prompt).contains("1. FORMAT_CELLS").contains("13. RENAME_CHART_AXIS");
     }
@@ -114,10 +115,11 @@ class ActionCatalogPromptTest {
     void indexNamesTheOperations() {
         String index = catalog.mutatingActionsIndex();
 
-        assertThat(index).contains("TRANSFORM_COLUMN — range (ONE column), operation (PHONE_US|TO_NUMBER|TRIM)");
-        assertThat(index).contains("FORMAT_CELLS");
-        assertThat(index).contains("Every action also accepts");
-        assertThat(index).doesNotContain("+1 (555) 123-4567");
+        assertThat(index)
+                .contains("TRANSFORM_COLUMN — range (ONE column), operation (PHONE_US|TO_NUMBER|TRIM)")
+                .contains("FORMAT_CELLS")
+                .contains("Every action also accepts")
+                .doesNotContain("+1 (555) 123-4567");
         assertThat(index.length()).isLessThan(catalog.mutatingActions().length() / 2);
     }
 

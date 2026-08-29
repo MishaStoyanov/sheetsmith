@@ -34,6 +34,9 @@ import java.util.Map;
 @Component
 public class DeleteColumnsHandler implements ActionHandler {
 
+    /** The property this step reads its columns from, named once for the three places it is read. */
+    private static final String RANGE = "range";
+
     private final ObjectMapper mapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
@@ -87,7 +90,7 @@ public class DeleteColumnsHandler implements ActionHandler {
     @Override
     public String describe(Map<String, Object> properties, StepTense tense) {
         String at = ActionDescriptions.text(properties, "at");
-        String range = ActionDescriptions.text(properties, "range");
+        String range = ActionDescriptions.text(properties, RANGE);
         Integer count = ActionDescriptions.integer(properties, "count");
 
         String what;
@@ -110,8 +113,8 @@ public class DeleteColumnsHandler implements ActionHandler {
         if (range != null && !range.isBlank()) {
             String cleaned = range.substring(range.lastIndexOf('!') + 1).replace("$", "").trim();
             String[] parts = cleaned.split(":", 2);
-            int first = StructureShift.column(letters(parts[0], range), "range");
-            int last = parts.length == 1 ? first : StructureShift.column(letters(parts[1], range), "range");
+            int first = StructureShift.column(letters(parts[0], range), RANGE);
+            int last = parts.length == 1 ? first : StructureShift.column(letters(parts[1], range), RANGE);
             return new int[]{Math.min(first, last), Math.max(first, last)};
         }
         int first = StructureShift.column(cfg.getAt(), "at");

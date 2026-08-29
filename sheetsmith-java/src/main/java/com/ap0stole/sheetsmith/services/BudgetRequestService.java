@@ -46,9 +46,20 @@ public class BudgetRequestService {
     private final BudgetService budgets;
     private final Authz authz;
 
-    /** Whether this person is close enough to their ceiling for asking to mean anything. */
+    /**
+     * Whether this person is close enough to their ceiling for asking to mean anything.
+     * <p>
+     * The three pairs below are each an annotated entry point over a plain body. Callers in other
+     * beans arrive through the proxy and get their transaction; {@link #ask} and {@link #markSeen}
+     * call the body directly, because a call through {@code this} never reaches the proxy and an
+     * annotation that does nothing where it is written is one the next reader will believe.
+     */
     @Transactional(readOnly = true)
     public boolean mayAsk(Long userId) {
+        return withinAskingDistance(userId);
+    }
+
+    private boolean withinAskingDistance(Long userId) {
         if (userId == null) {
             return false;
         }
@@ -67,6 +78,10 @@ public class BudgetRequestService {
 
     @Transactional(readOnly = true)
     public Optional<BudgetRequest> pendingFor(Long userId) {
+        return pending(userId);
+    }
+
+    private Optional<BudgetRequest> pending(Long userId) {
         return userId == null
                 ? Optional.empty()
                 : requests.findFirstByUserIdAndStatus(userId, BudgetRequestStatus.PENDING);
@@ -75,6 +90,10 @@ public class BudgetRequestService {
     /** The decision this person has not been shown yet, if there is one. */
     @Transactional(readOnly = true)
     public Optional<BudgetRequest> undeliveredDecisionFor(Long userId) {
+        return undeliveredDecision(userId);
+    }
+
+    private Optional<BudgetRequest> undeliveredDecision(Long userId) {
         return userId == null
                 ? Optional.empty()
                 : requests.findFirstByUserIdAndStatusInAndSeenAtIsNullOrderByDecidedAtDesc(
@@ -93,13 +112,13 @@ public class BudgetRequestService {
         if (user.getMonthlyBudget() == null) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "You have no spend limit to raise.");
         }
-        if (!mayAsk(callerId)) {
+        if (!withinAskingDistance(callerId)) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR,
                     "You still have room this month. Ask when you are closer to your limit.");
         }
         // The database has a partial unique index saying the same thing, because check-then-insert
         // is two statements and two clicks is not a hypothetical.
-        if (pendingFor(callerId).isPresent()) {
+        if (pending(callerId).isPresent()) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR,
                     "You already have a request waiting. One at a time.");
         }
@@ -177,7 +196,7 @@ public class BudgetRequestService {
      */
     @Transactional
     public void markSeen(Long callerId) {
-        undeliveredDecisionFor(callerId).ifPresent(request -> {
+        undeliveredDecision(callerId).ifPresent(request -> {
             request.setSeenAt(LocalDateTime.now());
             requests.save(request);
         });

@@ -176,7 +176,7 @@ public class CreateTableHandler implements ActionHandler {
      */
     private String name(XSSFWorkbook workbook, String requested) {
         String base = requested == null || requested.isBlank() ? "Table" : requested.trim();
-        base = base.replaceAll("[^A-Za-z0-9_]", "_");
+        base = base.replaceAll("\\W", "_");
         if (base.isEmpty() || Character.isDigit(base.charAt(0))) {
             base = "Table_" + base;
         }

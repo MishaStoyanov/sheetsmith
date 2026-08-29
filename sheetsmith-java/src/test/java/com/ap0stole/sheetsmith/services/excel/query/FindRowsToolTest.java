@@ -51,9 +51,10 @@ class FindRowsToolTest {
     void returnsEveryRowWhenThereAreNoFilters() {
         Map<String, Object> data = data(tool.execute(workbook, props("A2:C6")));
 
-        assertThat(data.get("matched")).isEqualTo(5);
-        assertThat(data.get("returned")).isEqualTo(5);
-        assertThat(data.get("truncated")).isEqualTo(false);
+        assertThat(data)
+                .containsEntry("matched", 5)
+                .containsEntry("returned", 5)
+                .containsEntry("truncated", false);
         assertThat(rows(data).getFirst()).containsExactly("Widget A", "North", 100L);
     }
 
@@ -64,7 +65,7 @@ class FindRowsToolTest {
 
         Map<String, Object> data = data(tool.execute(workbook, props));
 
-        assertThat(data.get("matched")).isEqualTo(3);
+        assertThat(data).containsEntry("matched", 3);
         assertThat(rows(data)).extracting(r -> r.get(0))
                 .containsExactly("Widget A", "Widget A", "Widget C");
     }
@@ -101,9 +102,10 @@ class FindRowsToolTest {
         Map<String, Object> data = data(result);
 
         assertThat(rows(data)).extracting(r -> r.get(0)).containsExactly("Widget C", "Widget A");
-        assertThat(data.get("matched")).isEqualTo(5);
-        assertThat(data.get("returned")).isEqualTo(2);
-        assertThat(data.get("truncated")).isEqualTo(true);
+        assertThat(data)
+                .containsEntry("matched", 5)
+                .containsEntry("returned", 2)
+                .containsEntry("truncated", true);
         assertThat(result.summary()).isEqualTo("5 rows matched, returned the first 2");
     }
 
@@ -134,8 +136,9 @@ class FindRowsToolTest {
 
         Map<String, Object> data = data(tool.execute(workbook, props));
 
-        assertThat(data.get("returned")).isEqualTo(2);
-        assertThat(data.get("truncated")).isEqualTo(true);
+        assertThat(data)
+                .containsEntry("returned", 2)
+                .containsEntry("truncated", true);
     }
 
     @Test

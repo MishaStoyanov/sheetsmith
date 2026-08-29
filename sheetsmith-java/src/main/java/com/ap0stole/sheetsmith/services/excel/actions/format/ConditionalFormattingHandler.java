@@ -110,7 +110,6 @@ public class ConditionalFormattingHandler implements ActionHandler {
                 (byte) Integer.parseInt(clean.substring(2, 4), 16),
                 (byte) Integer.parseInt(clean.substring(4, 6), 16)
         };
-        XSSFColor color = new XSSFColor(rgb, workbook.getStylesSource().getIndexedColors());
-        return color;
+        return new XSSFColor(rgb, workbook.getStylesSource().getIndexedColors());
     }
 }

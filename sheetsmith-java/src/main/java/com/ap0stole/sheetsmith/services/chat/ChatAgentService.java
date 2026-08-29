@@ -47,6 +47,9 @@ import java.util.Map;
 @ConditionalOnChatEnabled
 public class ChatAgentService {
 
+    /** The prefix every line of a turn's trace starts with. */
+    private static final String STEP = "STEP ";
+
     private static final String FALLBACK_ANSWER =
             "I couldn't finish that one — open the steps below to see what I tried.";
 
@@ -141,7 +144,7 @@ public class ChatAgentService {
             // A read-only turn refuses the tool rather than the whole turn, so the model can
             // correct itself instead of the caller getting a sheet it never asked to change.
             if (turn.readOnly && decision.isToolCall() && toolRegistry.isMutating(decision.tool())) {
-                turn.trace.append("STEP ").append(turn.stepNumber).append(": REFUSED — ")
+                turn.trace.append(STEP).append(turn.stepNumber).append(": REFUSED — ")
                         .append(decision.tool())
                         .append(" changes the sheet, and this is a look-only pass. ")
                         .append("Use query tools, then answer.\n");
@@ -164,7 +167,7 @@ public class ChatAgentService {
 
             if (!decision.isToolCall()) {
                 log.warn("Chat session {} got an unusable reply: {}", turn.sessionId, decision.parseError());
-                turn.trace.append("STEP ").append(turn.stepNumber).append(": REJECTED — ")
+                turn.trace.append(STEP).append(turn.stepNumber).append(": REJECTED — ")
                         .append(decision.parseError())
                         .append(" Reply with a single JSON object.\n");
                 continue;
@@ -273,7 +276,7 @@ public class ChatAgentService {
     }
 
     private void appendTrace(Turn turn, AgentDecision decision, ToolInvocation invocation) {
-        turn.trace.append("STEP ").append(turn.stepNumber).append(": ").append(invocation.tool())
+        turn.trace.append(STEP).append(turn.stepNumber).append(": ").append(invocation.tool())
                 .append(' ').append(writeArgs(decision.args())).append(" → ");
         if (invocation.success()) {
             turn.trace.append(invocation.mutating()

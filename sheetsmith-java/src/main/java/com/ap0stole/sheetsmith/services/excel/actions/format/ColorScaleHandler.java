@@ -38,6 +38,10 @@ import java.util.Map;
 @Component
 public class ColorScaleHandler implements ActionHandler {
 
+    private static final String MIN_COLOR = "minColor";
+    private static final String MID_COLOR = "midColor";
+    private static final String MAX_COLOR = "maxColor";
+
     /** Low, middle, high — from the palette the prompt hands the model, so the card names them back. */
     private static final String DEFAULT_LOW = "#FECACA";
     private static final String DEFAULT_MID = "#FEF08A";
@@ -84,9 +88,9 @@ public class ColorScaleHandler implements ActionHandler {
     @Override
     public String describe(Map<String, Object> properties, StepTense tense) {
         String range = ActionDescriptions.range(properties, "range");
-        String minColor = ActionDescriptions.text(properties, "minColor");
-        String midColor = ActionDescriptions.text(properties, "midColor");
-        String maxColor = ActionDescriptions.text(properties, "maxColor");
+        String minColor = ActionDescriptions.text(properties, MIN_COLOR);
+        String midColor = ActionDescriptions.text(properties, MID_COLOR);
+        String maxColor = ActionDescriptions.text(properties, MAX_COLOR);
 
         // The card has to name every stop the rule will actually use, and which stops those are is
         // the same all-or-nothing question execute() answers — a middle colour the user never sees
@@ -113,8 +117,8 @@ public class ColorScaleHandler implements ActionHandler {
     private List<XSSFColor> stops(ColorScaleConfig cfg) {
         boolean chosen = notBlank(cfg.getMinColor()) || notBlank(cfg.getMidColor()) || notBlank(cfg.getMaxColor());
         if (!chosen) {
-            return List.of(CellStyles.color(DEFAULT_LOW, "minColor"), CellStyles.color(DEFAULT_MID, "midColor"),
-                    CellStyles.color(DEFAULT_HIGH, "maxColor"));
+            return List.of(CellStyles.color(DEFAULT_LOW, MIN_COLOR), CellStyles.color(DEFAULT_MID, MID_COLOR),
+                    CellStyles.color(DEFAULT_HIGH, MAX_COLOR));
         }
         if (!notBlank(cfg.getMinColor()) || !notBlank(cfg.getMaxColor())) {
             throw new IllegalArgumentException("A colour scale needs both ends — give \"minColor\""
@@ -122,11 +126,11 @@ public class ColorScaleHandler implements ActionHandler {
                     + " for the red-to-green default.");
         }
         List<XSSFColor> stops = new ArrayList<>(3);
-        stops.add(CellStyles.color(cfg.getMinColor(), "minColor"));
+        stops.add(CellStyles.color(cfg.getMinColor(), MIN_COLOR));
         if (notBlank(cfg.getMidColor())) {
-            stops.add(CellStyles.color(cfg.getMidColor(), "midColor"));
+            stops.add(CellStyles.color(cfg.getMidColor(), MID_COLOR));
         }
-        stops.add(CellStyles.color(cfg.getMaxColor(), "maxColor"));
+        stops.add(CellStyles.color(cfg.getMaxColor(), MAX_COLOR));
         return stops;
     }
 

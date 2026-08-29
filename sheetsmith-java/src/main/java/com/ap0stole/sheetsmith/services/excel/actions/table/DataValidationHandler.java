@@ -39,6 +39,10 @@ import java.util.Map;
 @Component
 public class DataValidationHandler implements ActionHandler {
 
+    /** The two spellings a dropdown arrives under, and the phrase every bound description uses. */
+    private static final String DROPDOWN = "dropdown";
+    private static final String AT_LEAST = "of at least";
+
     /** Excel's own ceiling on the stored list, including the separating commas. */
     private static final int MAX_LIST_LENGTH = 255;
 
@@ -60,7 +64,7 @@ public class DataValidationHandler implements ActionHandler {
 
         String type = CellStyles.keyword(cfg.getType()) == null ? "list" : CellStyles.keyword(cfg.getType());
         DataValidationConstraint constraint = switch (type) {
-            case "list", "dropdown" -> listConstraint(helper, cfg);
+            case "list", DROPDOWN -> listConstraint(helper, cfg);
             case "whole", "integer", "int" -> helper.createIntegerConstraint(
                     operator(cfg.getOperator()), bound(cfg.getMin(), cfg.getValue()), bound(cfg.getMax(), null));
             case "decimal", "number" -> helper.createDecimalConstraint(
@@ -108,7 +112,7 @@ public class DataValidationHandler implements ActionHandler {
         String type = CellStyles.keyword(ActionDescriptions.text(properties, "type"));
         String values = ActionDescriptions.text(properties, "values");
 
-        if (type == null || "list".equals(type) || "dropdown".equals(type)) {
+        if (type == null || "list".equals(type) || DROPDOWN.equals(type)) {
             return ActionDescriptions.verb(tense, "Limit", "Limited") + " " + where + " to a dropdown"
                     + (values == null ? "" : " of " + values.trim())
                     + ActionDescriptions.sheetSuffix(properties);
@@ -142,16 +146,16 @@ public class DataValidationHandler implements ActionHandler {
     /** How an operator reads in a sentence a reviewer is meant to check. */
     private String comparison(String operator, boolean impliedUpper) {
         if (operator == null) {
-            return impliedUpper ? "of at most" : "of at least";
+            return impliedUpper ? "of at most" : AT_LEAST;
         }
         return switch (operator) {
             case "greaterthan", "greater_than", ">" -> "greater than";
             case "lessthan", "less_than", "<" -> "less than";
-            case "greaterorequal", "at_least", ">=" -> "of at least";
+            case "greaterorequal", "at_least", ">=" -> AT_LEAST;
             case "lessorequal", "at_most", "<=" -> "of at most";
             case "equal", "equals", "=" -> "equal to";
             case "notequal", "not_equal", "!=" -> "other than";
-            default -> "of at least";
+            default -> AT_LEAST;
         };
     }
 
@@ -185,7 +189,7 @@ public class DataValidationHandler implements ActionHandler {
 
     /** The default error text says what is allowed, which is the only useful thing it can say. */
     private String message(String type, DataValidationConfig cfg) {
-        if ("list".equals(type) || "dropdown".equals(type)) {
+        if ("list".equals(type) || DROPDOWN.equals(type)) {
             return cfg.getValues() == null
                     ? "Pick one of the values in the list."
                     : "Pick one of: " + cfg.getValues().trim() + ".";

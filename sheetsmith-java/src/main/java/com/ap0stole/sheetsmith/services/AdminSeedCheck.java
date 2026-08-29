@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import com.ap0stole.sheetsmith.domain.entity.User;
 
 /**
  * Says, once per boot, that this instance still lets anyone in as {@code admin}/{@code admin}.
@@ -33,7 +34,7 @@ public class AdminSeedCheck {
             return;
         }
         userRepository.findByName("admin")
-                .filter(admin -> admin.isMustChangePassword())
+                .filter(User::isMustChangePassword)
                 .ifPresent(admin -> log.warn("The 'admin' account still has its seeded password. "
                         + "Anyone who can reach this instance can sign in as admin/admin — change it."));
     }

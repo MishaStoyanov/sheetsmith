@@ -85,7 +85,7 @@ class AggregateToolTest {
         QueryResult result = tool.execute(workbook, props);
         Map<String, Object> data = data(result);
 
-        assertThat(data.get("truncated")).isEqualTo(false);
+        assertThat(data).containsEntry("truncated", false);
         assertThat(groups(data)).extracting(g -> g.get("key"))
                 .containsExactly("Widget C", "Widget A", "Widget B");
         assertThat(groups(data)).extracting(g -> g.get("value"))
@@ -102,7 +102,7 @@ class AggregateToolTest {
         Map<String, Object> data = data(tool.execute(workbook, props));
 
         assertThat(groups(data)).hasSize(2);
-        assertThat(data.get("truncated")).isEqualTo(true);
+        assertThat(data).containsEntry("truncated", true);
     }
 
     @Test
