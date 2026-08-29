@@ -12,7 +12,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -68,20 +67,16 @@ public class SettingsController {
 
     @Operation(summary = "Choose the folder and the caps",
             description = "The folder is proved writable before it is saved. Null means unset, not zero: no cap, and the directories the instance started with. Changing the folder moves nothing.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "400", description = "A folder the server cannot create files in — proved by writing one, not by asking the filesystem — or a cap of zero, which would mean deleting every run as it finished.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
-    })
+    @ApiResponse(responseCode = "400", description = "A folder the server cannot create files in — proved by writing one, not by asking the filesystem — or a cap of zero, which would mean deleting every run as it finished.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     @PutMapping("/storage")
     public ResponseEntity<StorageSettingsDto> updateStorage(@RequestBody StorageSettingsDto.Update update) {
         return ResponseEntity.ok(storageSettingsService.update(update));
     }
 
     @Operation(summary = "Ask an Ollama server what it has")
-    @ApiResponses({
-            @ApiResponse(responseCode = "502", description = "That Ollama server could not be reached.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
-    })
+    @ApiResponse(responseCode = "502", description = "That Ollama server could not be reached.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     @GetMapping("/ollama/models")
     public ResponseEntity<OllamaModelsResponseDto> listOllamaModels(@RequestParam @NotBlank String baseUrl) {
         return ResponseEntity.ok(new OllamaModelsResponseDto(ollamaModelService.listModels(baseUrl)));

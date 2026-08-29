@@ -16,7 +16,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -51,10 +50,8 @@ public class AuthController {
 
     @Operation(summary = "Sign in",
             description = "Returns an access token in the body; the refresh token is an httpOnly SameSite=Strict cookie scoped to /api/auth. A wrong name and a wrong password are answered identically.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "401", description = "Wrong name, or wrong password. The two are answered identically: which half was right is not information a stranger should be able to collect.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
-    })
+    @ApiResponse(responseCode = "401", description = "Wrong name, or wrong password. The two are answered identically: which half was right is not information a stranger should be able to collect.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody @Valid LoginRequest request,
                                               HttpServletResponse response) {
@@ -64,10 +61,8 @@ public class AuthController {
 
     @Operation(summary = "Exchange the refresh cookie for a new access token",
             description = "The cookie is rotated on every use: the old one stops working, and presenting a used one ends every session of that account, because it means a copy is in circulation.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "401", description = "No refresh cookie, or one already used. A used token means a copy is in circulation, so every session of that account ends.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
-    })
+    @ApiResponse(responseCode = "401", description = "No refresh cookie, or one already used. A used token means a copy is in circulation, so every session of that account ends.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(
             @CookieValue(name = REFRESH_COOKIE, required = false) String refreshToken,

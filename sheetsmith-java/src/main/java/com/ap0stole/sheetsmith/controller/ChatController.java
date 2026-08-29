@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
@@ -64,10 +63,8 @@ public class ChatController {
     @PreAuthorize("@access.maySeeSession(#sessionId)")
     @Operation(summary = "Describe the document",
             description = "Sheets, schema, current revision. Somebody else’s session is refused.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "404", description = "No such session, or it has expired — the nightly cleanup removes documents left idle.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
-    })
+    @ApiResponse(responseCode = "404", description = "No such session, or it has expired — the nightly cleanup removes documents left idle.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     @GetMapping("/{sessionId}")
     public ResponseEntity<DocumentSessionDto> get(@PathVariable String sessionId) {
         return ResponseEntity.ok(sessionService.describe(sessionId));
@@ -76,10 +73,8 @@ public class ChatController {
     @PreAuthorize("@access.maySeeSession(#sessionId)")
     @Operation(summary = "The conversation so far",
             description = "Each answer carries the chain of steps that produced it.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "404", description = "No such session, or it has expired.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
-    })
+    @ApiResponse(responseCode = "404", description = "No such session, or it has expired.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     @GetMapping("/{sessionId}/messages")
     public ResponseEntity<List<ChatMessageDto>> history(@PathVariable String sessionId) {
         return ResponseEntity.ok(sessionService.history(sessionId));
@@ -88,10 +83,8 @@ public class ChatController {
     /** The current working copy — the frontend re-fetches this whenever a turn changed the sheet. */
     @PreAuthorize("@access.maySeeSession(#sessionId)")
     @Operation(summary = "Download the current working copy")
-    @ApiResponses({
-            @ApiResponse(responseCode = "404", description = "No such session, or its working copy is gone.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
-    })
+    @ApiResponse(responseCode = "404", description = "No such session, or its working copy is gone.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     @GetMapping("/{sessionId}/file")
     public ResponseEntity<Resource> file(@PathVariable String sessionId) {
         Resource resource = sessionService.currentFile(sessionId);
@@ -105,10 +98,8 @@ public class ChatController {
     @PreAuthorize("@access.maySeeSession(#sessionId)")
     @Operation(summary = "Commit cells typed in the grid",
             description = "One revision for the batch, so hand edits survive a refresh and can be undone like any other change.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "404", description = "No such session, or it has expired.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
-    })
+    @ApiResponse(responseCode = "404", description = "No such session, or it has expired.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     @PostMapping("/{sessionId}/edits")
     public ResponseEntity<Map<String, Integer>> edits(@PathVariable String sessionId,
                                                       @RequestBody @Valid CellEditsRequest request) {
@@ -117,10 +108,8 @@ public class ChatController {
 
     @PreAuthorize("@access.maySeeSession(#sessionId)")
     @Operation(summary = "Go back to an earlier revision")
-    @ApiResponses({
-            @ApiResponse(responseCode = "404", description = "No such session, or no such revision in its chain.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
-    })
+    @ApiResponse(responseCode = "404", description = "No such session, or no such revision in its chain.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     @PostMapping("/{sessionId}/revert")
     public ResponseEntity<Map<String, Integer>> revert(@PathVariable String sessionId,
                                                        @RequestBody @Valid RevertRequest request) throws IOException {

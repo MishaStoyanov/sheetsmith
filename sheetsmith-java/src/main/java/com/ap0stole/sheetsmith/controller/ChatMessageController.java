@@ -13,7 +13,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -52,14 +51,12 @@ public class ChatMessageController {
     @PreAuthorize("@access.maySeeSession(#sessionId)")
     @Operation(summary = "Send a message and wait for the answer",
             description = "A turn is a chain of tool calls; the reply carries the steps that produced it.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "402", description = "The spend limit for this account is used up.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
-            @ApiResponse(responseCode = "404", description = "No such session, or it has expired.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
-            @ApiResponse(responseCode = "502", description = "The model could not be reached or answered unusably.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
-    })
+    @ApiResponse(responseCode = "402", description = "The spend limit for this account is used up.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    @ApiResponse(responseCode = "404", description = "No such session, or it has expired.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    @ApiResponse(responseCode = "502", description = "The model could not be reached or answered unusably.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     @PostMapping("/{sessionId}/messages")
     public ResponseEntity<ChatTurnDto> send(@PathVariable String sessionId,
                                             @RequestBody @Valid SendMessageRequest request) {

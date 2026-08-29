@@ -20,7 +20,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -51,16 +50,14 @@ public class ExcelController {
     @PreAuthorize("@authz.signedIn()")
     @Operation(summary = "Submit a file and an instruction",
             description = "For automation: owns no session, so its result is not part of any revision chain. Returns a job id to poll.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "400", description = "Not a readable .xlsx.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
-            @ApiResponse(responseCode = "402", description = "The spend limit for this account is used up. It lifts on its own at the start of next month.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
-            @ApiResponse(responseCode = "413", description = "Larger than the 50 MB upload limit.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
-            @ApiResponse(responseCode = "502", description = "The model could not be reached, or answered with something unusable. The failure is somewhere else, and a retry may well work.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
-    })
+    @ApiResponse(responseCode = "400", description = "Not a readable .xlsx.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    @ApiResponse(responseCode = "402", description = "The spend limit for this account is used up. It lifts on its own at the start of next month.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    @ApiResponse(responseCode = "413", description = "Larger than the 50 MB upload limit.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    @ApiResponse(responseCode = "502", description = "The model could not be reached, or answered with something unusable. The failure is somewhere else, and a retry may well work.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     @PostMapping("/improve")
     public ResponseEntity<Map<String, Long>> improve(
             @RequestParam("file") MultipartFile file,
@@ -74,14 +71,12 @@ public class ExcelController {
     @PreAuthorize("@access.maySeeSession(#request.sessionId())")
     @Operation(summary = "Plan against a session",
             description = "Returns the steps in plain language for review. Nothing is written until /apply.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "402", description = "The spend limit for this account is used up.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
-            @ApiResponse(responseCode = "404", description = "No such session, or it has expired.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
-            @ApiResponse(responseCode = "502", description = "The model could not be reached or answered unusably.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
-    })
+    @ApiResponse(responseCode = "402", description = "The spend limit for this account is used up.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    @ApiResponse(responseCode = "404", description = "No such session, or it has expired.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    @ApiResponse(responseCode = "502", description = "The model could not be reached or answered unusably.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     @PostMapping("/plan")
     public ResponseEntity<PlanResponseDto> plan(@RequestBody @Valid PlanRequest request) {
         return ResponseEntity.ok(jobService.generatePlan(request));
@@ -96,14 +91,12 @@ public class ExcelController {
     @PreAuthorize("@access.maySeeSession(#request.sessionId())")
     @Operation(summary = "Ask what is worth improving",
             description = "Reads real cell values so the suggestions come from the data rather than the column names - which is why it is unavailable with the chat off.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "400", description = "This instance runs with the chat off, so suggestions — which read real cell values — are unavailable.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
-            @ApiResponse(responseCode = "402", description = "The spend limit for this account is used up.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
-            @ApiResponse(responseCode = "404", description = "No such session, or it has expired.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
-    })
+    @ApiResponse(responseCode = "400", description = "This instance runs with the chat off, so suggestions — which read real cell values — are unavailable.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    @ApiResponse(responseCode = "402", description = "The spend limit for this account is used up.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    @ApiResponse(responseCode = "404", description = "No such session, or it has expired.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     @PostMapping("/suggest")
     public ResponseEntity<PlanResponseDto> suggest(@RequestBody @Valid SuggestRequest request) {
         SuggestionService suggestions = suggestionService.getIfAvailable();
@@ -131,12 +124,10 @@ public class ExcelController {
     @PreAuthorize("@authz.signedIn()")
     @Operation(summary = "Apply a reviewed plan",
             description = "Runs the steps against the session’s current revision and commits the next one.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "400", description = "The plan token is unknown or has already been applied.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
-            @ApiResponse(responseCode = "402", description = "The spend limit for this account is used up.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
-    })
+    @ApiResponse(responseCode = "400", description = "The plan token is unknown or has already been applied.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    @ApiResponse(responseCode = "402", description = "The spend limit for this account is used up.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     @PostMapping("/apply")
     public ResponseEntity<Map<String, Long>> apply(@RequestBody ApplyPlanRequest request) {
         Long jobId = jobService.applyPlan(request);
@@ -150,14 +141,12 @@ public class ExcelController {
     @PreAuthorize("@authz.superadmin()")
     @Operation(summary = "Improve a file already on the server",
             description = "Disabled unless SHEETSMITH_PATH_ENDPOINT_ENABLED=true, and both paths must resolve inside a configured root, symlinks followed.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "400", description = "A path that resolves outside the configured roots, symlinks followed.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
-            @ApiResponse(responseCode = "403", description = "The endpoint is disabled. It is off unless SHEETSMITH_PATH_ENDPOINT_ENABLED=true.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse"))),
-            @ApiResponse(responseCode = "500", description = "Enabled without roots configured, which the application refuses to start with.",
-                    content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
-    })
+    @ApiResponse(responseCode = "400", description = "A path that resolves outside the configured roots, symlinks followed.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    @ApiResponse(responseCode = "403", description = "The endpoint is disabled. It is off unless SHEETSMITH_PATH_ENDPOINT_ENABLED=true.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    @ApiResponse(responseCode = "500", description = "Enabled without roots configured, which the application refuses to start with.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
     @PostMapping("/improve/path")
     public ResponseEntity<Map<String, Long>> improveByPath(
             @RequestBody @Valid ImproveByPathRequest request) {
