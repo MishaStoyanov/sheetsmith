@@ -167,7 +167,7 @@ public class NumberFormatHandler implements ActionHandler {
             // Both a number and a date, because a pattern valid for one can be nonsense for the
             // other, and this is the only chance to say so before the file reaches Excel.
             formatter.formatRawCellContents(1234.5678, -1, raw);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException _) {
             throw new IllegalArgumentException("\"" + raw + "\" is not a usable Excel number format"
                     + " — try a name like \"currency\" or \"percent\", or a pattern like"
                     + " \"#,##0.00\".");

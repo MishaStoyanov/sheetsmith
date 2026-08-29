@@ -29,6 +29,16 @@ import java.util.*;
 @RequiredArgsConstructor
 public class AnalyticsService {
 
+    // The column names this file reads back and filters on, and the fragment that builds an IN
+    // list. Named because they are the same names in nine places: a query that says user_id and a
+    // mapper that reads user_id have to agree, and a typo in one of them is a null nobody notices.
+    private static final String USER_ID = "user_id";
+    private static final String PROVIDER = "provider";
+    private static final String MODEL = "model";
+    private static final String RUNS = "runs";
+    private static final String DAY = "day";
+    private static final String IN_LIST = " in (";
+
     /** Postgres truncation units, allow-listed so the granularity cannot arrive as SQL. */
     private static final Map<String, String> BUCKETS = Map.of(
             "day", "day", "week", "week", "month", "month", "year", "year");
@@ -40,7 +50,7 @@ public class AnalyticsService {
 
     @Transactional(readOnly = true)
     public AnalyticsSummaryDto summary(AnalyticsQuery query) {
-        Where where = Where.from(query, visibility.forUserColumn("user_id"));
+        Where where = Where.from(query, visibility.forUserColumn(USER_ID));
         // Grouped by the rates as well as the model. A price that changed halfway through the range
         // makes two rows for one model, which is the point: collapsing them would need one figure
         // to stand for two different prices.
@@ -58,8 +68,8 @@ public class AnalyticsService {
                         """ + where.sql() + """
                          group by provider, model, user_id, input_per_million, output_per_million
                         """,
-                (rs, i) -> new Row(rs.getString("provider"), rs.getString("model"),
-                        rs.getObject("user_id") == null ? null : rs.getLong("user_id"),
+                (rs, i) -> new Row(rs.getString(PROVIDER), rs.getString(MODEL),
+                        rs.getObject(USER_ID) == null ? null : rs.getLong(USER_ID),
                         rs.getLong("calls"), rs.getLong("prompt_tokens"),
                         rs.getLong("completion_tokens"), rs.getLong("total_tokens"),
                         rs.getBigDecimal("input_per_million"), rs.getBigDecimal("output_per_million")),
@@ -157,7 +167,7 @@ public class AnalyticsService {
 
     /** The time rows as the database returned them, still carrying the owner. */
     private List<Row> overTimeRows(AnalyticsQuery query, Where where) {
-        String unit = BUCKETS.get(query.granularity() == null ? "day" : query.granularity().toLowerCase());
+        String unit = BUCKETS.get(query.granularity() == null ? DAY : query.granularity().toLowerCase());
         if (unit == null) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR,
                     "Cannot group by '" + query.granularity() + "'; try one of " + new TreeSet<>(BUCKETS.keySet()),
@@ -180,8 +190,8 @@ public class AnalyticsService {
                          group by bucket, provider, model, user_id, input_per_million, output_per_million
                          order by bucket
                         """,
-                (rs, i) -> new Row(rs.getString("provider"), rs.getString("model"),
-                        rs.getObject("user_id") == null ? null : rs.getLong("user_id"),
+                (rs, i) -> new Row(rs.getString(PROVIDER), rs.getString(MODEL),
+                        rs.getObject(USER_ID) == null ? null : rs.getLong(USER_ID),
                         rs.getLong("calls"), rs.getLong("prompt_tokens"),
                         rs.getLong("completion_tokens"), rs.getLong("total_tokens"),
                         rs.getBigDecimal("input_per_million"), rs.getBigDecimal("output_per_million"))
@@ -202,7 +212,7 @@ public class AnalyticsService {
         jdbc.query("select user_id, count(distinct session_id) as documents from llm_usage "
                         + where.sql() + " group by user_id",
                 rs -> {
-                    Long userId = rs.getObject("user_id") == null ? null : rs.getLong("user_id");
+                    Long userId = rs.getObject(USER_ID) == null ? null : rs.getLong(USER_ID);
                     counts.put(userId, rs.getLong("documents"));
                 },
                 where.args());
@@ -302,12 +312,12 @@ public class AnalyticsService {
      * second request could come back describing a different slice of time.
      */
     private AnalyticsSummaryDto.Runs runs(AnalyticsQuery query) {
-        Where where = Where.forRuns(query, "", visibility.forUserColumn("user_id"));
+        Where where = Where.forRuns(query, "", visibility.forUserColumn(USER_ID));
 
         List<AnalyticsSummaryDto.Count> byStatus = jdbc.query(
                 "select status, count(*) as runs from job_records " + where.sql()
                         + " group by status order by runs desc",
-                (rs, i) -> new AnalyticsSummaryDto.Count(rs.getString("status"), rs.getLong("runs")),
+                (rs, i) -> new AnalyticsSummaryDto.Count(rs.getString("status"), rs.getLong(RUNS)),
                 where.args());
 
         long total = byStatus.stream().mapToLong(AnalyticsSummaryDto.Count::count).sum();
@@ -339,7 +349,7 @@ public class AnalyticsService {
                 select a.action_type as label, count(*) as runs
                 from action_results a join job_records j on j.id = a.job_id
                 """ + joined.sql() + " group by label order by runs desc, label limit 8",
-                (rs, i) -> new AnalyticsSummaryDto.Count(rs.getString("label"), rs.getLong("runs")),
+                (rs, i) -> new AnalyticsSummaryDto.Count(rs.getString("label"), rs.getLong(RUNS)),
                 joined.args());
 
         List<AnalyticsSummaryDto.Count> topErrors = jdbc.query("""
@@ -347,7 +357,7 @@ public class AnalyticsService {
                        count(*) as runs
                 from action_results a join job_records j on j.id = a.job_id
                 """ + and(joined, "a.success = false") + " group by label order by runs desc, label limit 5",
-                (rs, i) -> new AnalyticsSummaryDto.Count(rs.getString("label"), rs.getLong("runs")),
+                (rs, i) -> new AnalyticsSummaryDto.Count(rs.getString("label"), rs.getLong(RUNS)),
                 joined.args());
 
         return new AnalyticsSummaryDto.Runs(total, byStatus, successRate, median, topActions, topErrors);
@@ -384,10 +394,6 @@ public class AnalyticsService {
                             .multiply(BigDecimal.valueOf(row.completionTokens())).divide(MILLION, 6, RoundingMode.HALF_UP));
         }
         return anyPriced ? sum.setScale(4, RoundingMode.HALF_UP) : null;
-    }
-
-    private static String key(String provider, String model) {
-        return (provider == null ? "" : provider.toUpperCase()) + " " + (model == null ? "" : model);
     }
 
     // ── Filters ───────────────────────────────────────────────────────────────
@@ -438,27 +444,27 @@ public class AnalyticsService {
             // every call on an instance without accounts belongs to nobody.
             boolean named = query.userIds() != null && !query.userIds().isEmpty();
             boolean unowned = Boolean.TRUE.equals(query.includeUnowned());
-            String userId = column.apply("user_id");
+            String userId = column.apply(USER_ID);
             if (named && unowned) {
-                clauses.add("(" + userId + " in (" + placeholders(query.userIds().size()) + ") or " + userId + " is null)");
+                clauses.add("(" + userId + IN_LIST + placeholders(query.userIds().size()) + ") or " + userId + " is null)");
                 args.addAll(query.userIds());
             } else if (named) {
-                clauses.add(userId + " in (" + placeholders(query.userIds().size()) + ")");
+                clauses.add(userId + IN_LIST + placeholders(query.userIds().size()) + ")");
                 args.addAll(query.userIds());
             } else if (unowned) {
                 clauses.add(userId + " is null");
             }
 
             if (notEmpty(query.providers())) {
-                clauses.add(column.apply("provider") + " in (" + placeholders(query.providers().size()) + ")");
+                clauses.add(column.apply(PROVIDER) + IN_LIST + placeholders(query.providers().size()) + ")");
                 args.addAll(query.providers());
             }
             if (notEmpty(query.models())) {
-                clauses.add(column.apply("model") + " in (" + placeholders(query.models().size()) + ")");
+                clauses.add(column.apply(MODEL) + IN_LIST + placeholders(query.models().size()) + ")");
                 args.addAll(query.models());
             }
             if (withKinds && notEmpty(query.kinds())) {
-                clauses.add(column.apply("kind") + " in (" + placeholders(query.kinds().size()) + ")");
+                clauses.add(column.apply("kind") + IN_LIST + placeholders(query.kinds().size()) + ")");
                 query.kinds().forEach(kind -> args.add(kind.name()));
             }
 

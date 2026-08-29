@@ -158,7 +158,7 @@ public class TransformColumnHandler implements ActionHandler {
             try {
                 cell.setCellValue(Double.parseDouble(value));
                 return;
-            } catch (NumberFormatException e) {
+            } catch (NumberFormatException _) {
                 // The rule promised a number and produced something else; text keeps the value
                 // visible rather than blanking the cell.
                 log.debug("Numeric transform produced non-numeric text: {}", value);

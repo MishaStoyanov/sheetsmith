@@ -195,7 +195,7 @@ public class PageSetupHandler implements ActionHandler {
         String cleaned = clean(raw);
         try {
             CellRangeAddress.valueOf(cleaned);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException _) {
             throw new IllegalArgumentException("\"printArea\" names the block to print, like"
                     + " \"A1:D40\", but was \"" + raw + "\".");
         }
@@ -206,7 +206,7 @@ public class PageSetupHandler implements ActionHandler {
         String cleaned = clean(raw);
         try {
             return CellRangeAddress.valueOf(cleaned.contains(":") ? cleaned : cleaned + ":" + cleaned);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException _) {
             throw new IllegalArgumentException("\"repeatHeaderRows\" names rows, like \"1:1\" for the"
                     + " top row or \"1:2\" for the first two, but was \"" + raw + "\".");
         }
@@ -216,7 +216,7 @@ public class PageSetupHandler implements ActionHandler {
         String cleaned = clean(raw);
         try {
             return CellRangeAddress.valueOf(cleaned.contains(":") ? cleaned : cleaned + ":" + cleaned);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException _) {
             throw new IllegalArgumentException("\"repeatHeaderColumns\" names columns, like \"A:A\""
                     + " for the first one, but was \"" + raw + "\".");
         }

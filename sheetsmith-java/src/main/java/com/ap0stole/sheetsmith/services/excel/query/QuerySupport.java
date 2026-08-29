@@ -91,7 +91,7 @@ final class QuerySupport {
         if (v instanceof String s && !s.isBlank()) {
             try {
                 return Integer.valueOf(s.trim());
-            } catch (NumberFormatException e) {
+            } catch (NumberFormatException _) {
                 return null;
             }
         }

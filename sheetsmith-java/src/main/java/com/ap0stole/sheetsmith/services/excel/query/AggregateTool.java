@@ -28,6 +28,16 @@ import java.util.Objects;
 @ConditionalOnChatEnabled
 public class AggregateTool implements QueryTool {
 
+    // The operation vocabulary, named because it is read in three separate switches — parsing what
+    // was asked for, computing it, and labelling the answer. A typo in one of the three is a branch
+    // that silently never matches, which is the kind of bug that reads as "the tool ignored me".
+    private static final String COUNT = "COUNT";
+    private static final String COUNT_DISTINCT = "COUNT_DISTINCT";
+    private static final String MEDIAN = "MEDIAN";
+
+    /** The key each group's computed figure is put under, and read back out of. */
+    private static final String VALUE = "value";
+
     private static final String OPERATIONS = "SUM|AVG|MIN|MAX|COUNT|COUNT_DISTINCT|MEDIAN";
     private static final String BLANK_KEY = "(blank)";
 
@@ -73,7 +83,7 @@ public class AggregateTool implements QueryTool {
                 values.add(QuerySupport.cellValue(sheet, r, column, evaluator));
             }
             Object value = compute(operation, values);
-            data.put("value", value);
+            data.put(VALUE, value);
 
             log.info("AGGREGATE {} of column {} over {} = {}", operation, column, range.formatAsString(), value);
             String summary = "%s of column %s = %s".formatted(
@@ -94,11 +104,11 @@ public class AggregateTool implements QueryTool {
         buckets.forEach((key, values) -> {
             Map<String, Object> group = new LinkedHashMap<>();
             group.put("key", key);
-            group.put("value", compute(operation, values));
+            group.put(VALUE, compute(operation, values));
             groups.add(group);
         });
         groups.sort(Comparator.comparing(
-                (Map<String, Object> g) -> QuerySupport.asNumber(g.get("value")),
+                (Map<String, Object> g) -> QuerySupport.asNumber(g.get(VALUE)),
                 Comparator.nullsLast(Comparator.reverseOrder())));
 
         int totalGroups = groups.size();
@@ -114,7 +124,7 @@ public class AggregateTool implements QueryTool {
         String summary = shown.isEmpty()
                 ? "No groups found in " + range.formatAsString()
                 : "%s — %s (highest of %d groups)".formatted(
-                shown.getFirst().get("key"), QuerySupport.fmt(shown.getFirst().get("value")), totalGroups);
+                shown.getFirst().get("key"), QuerySupport.fmt(shown.getFirst().get(VALUE)), totalGroups);
         return new QueryResult(QuerySupport.clip(summary, 120), data);
     }
 
@@ -133,7 +143,7 @@ public class AggregateTool implements QueryTool {
     private String normalizeOperation(String operation) {
         String op = operation == null ? "" : operation.trim().toUpperCase();
         return switch (op) {
-            case "SUM", "AVG", "MIN", "MAX", "COUNT", "COUNT_DISTINCT", "MEDIAN" -> op;
+            case "SUM", "AVG", "MIN", "MAX", COUNT, COUNT_DISTINCT, MEDIAN -> op;
             case "AVERAGE" -> "AVG";
             default -> throw new IllegalArgumentException(
                     "Unknown operation \"" + operation + "\" — use one of " + OPERATIONS + ".");
@@ -164,9 +174,9 @@ public class AggregateTool implements QueryTool {
                     : QuerySupport.round(numbers.stream().mapToDouble(Double::doubleValue).average().orElse(0));
             case "MIN" -> numbers.isEmpty() ? null : QuerySupport.round(numbers.getFirst());
             case "MAX" -> numbers.isEmpty() ? null : QuerySupport.round(numbers.getLast());
-            case "MEDIAN" -> numbers.isEmpty() ? null : QuerySupport.round(median(numbers));
-            case "COUNT" -> values.stream().filter(v -> !QuerySupport.isBlank(v)).count();
-            case "COUNT_DISTINCT" -> values.stream().filter(v -> !QuerySupport.isBlank(v))
+            case MEDIAN -> numbers.isEmpty() ? null : QuerySupport.round(median(numbers));
+            case COUNT -> values.stream().filter(v -> !QuerySupport.isBlank(v)).count();
+            case COUNT_DISTINCT -> values.stream().filter(v -> !QuerySupport.isBlank(v))
                     .map(QuerySupport::asText).distinct().count();
             default -> throw new IllegalArgumentException("Unsupported operation: " + operation);
         };
@@ -183,9 +193,9 @@ public class AggregateTool implements QueryTool {
             case "AVG" -> "Average";
             case "MIN" -> "Minimum";
             case "MAX" -> "Maximum";
-            case "COUNT" -> "Count";
-            case "COUNT_DISTINCT" -> "Distinct count";
-            case "MEDIAN" -> "Median";
+            case COUNT -> "Count";
+            case COUNT_DISTINCT -> "Distinct count";
+            case MEDIAN -> "Median";
             default -> operation;
         };
     }
@@ -198,9 +208,9 @@ public class AggregateTool implements QueryTool {
             case "AVG", "AVERAGE" -> QuerySupport.verb(tense, "Average", "Averaged");
             case "MIN" -> QuerySupport.verb(tense, "Take the minimum of", "Took the minimum of");
             case "MAX" -> QuerySupport.verb(tense, "Take the maximum of", "Took the maximum of");
-            case "COUNT" -> QuerySupport.verb(tense, "Count values in", "Counted values in");
-            case "COUNT_DISTINCT" -> QuerySupport.verb(tense, "Count distinct values in", "Counted distinct values in");
-            case "MEDIAN" -> QuerySupport.verb(tense, "Take the median of", "Took the median of");
+            case COUNT -> QuerySupport.verb(tense, "Count values in", "Counted values in");
+            case COUNT_DISTINCT -> QuerySupport.verb(tense, "Count distinct values in", "Counted distinct values in");
+            case MEDIAN -> QuerySupport.verb(tense, "Take the median of", "Took the median of");
             default -> QuerySupport.verb(tense, "Aggregate", "Aggregated");
         };
     }

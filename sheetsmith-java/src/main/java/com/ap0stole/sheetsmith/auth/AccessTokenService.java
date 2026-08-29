@@ -9,6 +9,8 @@ import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.spec.SecretKeySpec;
+
+import java.util.concurrent.atomic.AtomicReference;
 import java.time.Instant;
 
 /**
@@ -28,8 +30,11 @@ public class AccessTokenService {
     private final AuthConfig authConfig;
     private final JwtSecretProvider secretProvider;
 
-    private volatile JwtEncoder encoder;
-    private volatile JwtDecoder decoder;
+    // AtomicReference rather than a volatile field: volatile publishes the reference safely and
+    // says nothing about the object behind it, and these are built lazily and then shared by every
+    // request. The atomic also makes "build it once" the type's own job rather than a comment.
+    private final AtomicReference<JwtEncoder> encoder = new AtomicReference<>();
+    private final AtomicReference<JwtDecoder> decoder = new AtomicReference<>();
 
     public String issue(User user) {
         Instant now = Instant.now();
@@ -53,31 +58,18 @@ public class AccessTokenService {
     // database, and a bean graph that reaches the database while it is still being wired is a
     // startup failure waiting for the first person who runs against an empty one.
     private JwtEncoder encoder() {
-        JwtEncoder existing = encoder;
-        if (existing != null) {
-            return existing;
-        }
-        synchronized (this) {
-            if (encoder == null) {
-                encoder = new NimbusJwtEncoder(new ImmutableSecret<>(secretProvider.signingKey()));
-            }
-            return encoder;
-        }
+        // The whole double-checked dance the two of these used to spell out, in the one call the
+        // type exists for. Two threads racing here can both build an encoder; only one is kept, and
+        // building a spare costs a key read that has already happened.
+        return encoder.updateAndGet(existing -> existing != null ? existing
+                : new NimbusJwtEncoder(new ImmutableSecret<>(secretProvider.signingKey())));
     }
 
     private JwtDecoder decoder() {
-        JwtDecoder existing = decoder;
-        if (existing != null) {
-            return existing;
-        }
-        synchronized (this) {
-            if (decoder == null) {
-                decoder = NimbusJwtDecoder
+        return decoder.updateAndGet(existing -> existing != null ? existing
+                : NimbusJwtDecoder
                         .withSecretKey(new SecretKeySpec(secretProvider.signingKey(), ALGORITHM.getName()))
                         .macAlgorithm(ALGORITHM)
-                        .build();
-            }
-            return decoder;
-        }
+                        .build());
     }
 }

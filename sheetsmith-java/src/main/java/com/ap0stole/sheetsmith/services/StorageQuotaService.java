@@ -163,7 +163,7 @@ public class StorageQuotaService {
             Path parent = file.getParent();
             return parent != null && (parent.equals(settings.uploadDir().toAbsolutePath().normalize())
                     || parent.equals(settings.resultDir().toAbsolutePath().normalize()));
-        } catch (Exception e) {
+        } catch (Exception _) {
             return false;
         }
     }
@@ -174,7 +174,7 @@ public class StorageQuotaService {
         }
         try {
             return Files.size(Path.of(path));
-        } catch (Exception e) {
+        } catch (Exception _) {
             return 0;
         }
     }

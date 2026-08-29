@@ -46,7 +46,7 @@ public class AuthService {
             throw new ApiException(ErrorCode.UNAUTHORIZED, "Not signed in");
         }
         RefreshTokenService.Rotation rotation = refreshTokens.rotate(presentedToken);
-        return new SignedIn(response(rotation.user(), rotation.token()), rotation.token());
+        return new SignedIn(response(rotation.user()), rotation.token());
     }
 
     public void logout(String presentedToken) {
@@ -65,10 +65,11 @@ public class AuthService {
 
     private SignedIn issue(User user, boolean rememberMe) {
         RefreshTokenService.IssuedToken refreshToken = refreshTokens.issue(user, rememberMe);
-        return new SignedIn(response(user, refreshToken), refreshToken);
+        return new SignedIn(response(user), refreshToken);
     }
 
-    private AuthResponse response(User user, RefreshTokenService.IssuedToken refreshToken) {
+    /** The body only ever carries the access token; the refresh one leaves as a cookie. */
+    private AuthResponse response(User user) {
         return new AuthResponse(
                 accessTokens.issue(user),
                 authConfig.getAccessTokenTtl().toSeconds(),

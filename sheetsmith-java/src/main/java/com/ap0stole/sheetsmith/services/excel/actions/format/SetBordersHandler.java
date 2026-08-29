@@ -104,7 +104,7 @@ public class SetBordersHandler implements ActionHandler {
         try {
             style = style(ActionDescriptions.text(properties, "style"));
             sides = sides(ActionDescriptions.text(properties, "sides"));
-        } catch (RuntimeException e) {
+        } catch (RuntimeException _) {
             // describe() runs over whatever the model sent, including what execute() will reject.
             return ActionDescriptions.verb(tense, "Draw", "Drew") + " borders on " + where
                     + ActionDescriptions.sheetSuffix(properties);

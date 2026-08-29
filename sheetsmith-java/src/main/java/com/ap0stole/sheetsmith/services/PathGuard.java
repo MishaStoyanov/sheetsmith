@@ -65,7 +65,7 @@ public class PathGuard {
         Path candidate;
         try {
             candidate = canonicalise(Path.of(rawPath).toAbsolutePath());
-        } catch (InvalidPathException | IOException e) {
+        } catch (InvalidPathException | IOException _) {
             throw new ApiException(ErrorCode.PATH_TRAVERSAL,
                     "Path cannot be resolved: " + rawPath, field);
         }

@@ -195,7 +195,7 @@ public class ChatLlmService {
             return json.length() <= MAX_RESULT_CHARS
                     ? json
                     : json.substring(0, MAX_RESULT_CHARS) + "…(truncated — narrow your query)";
-        } catch (Exception e) {
+        } catch (Exception _) {
             return String.valueOf(data);
         }
     }

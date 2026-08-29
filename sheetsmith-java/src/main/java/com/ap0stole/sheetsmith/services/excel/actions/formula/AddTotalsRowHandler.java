@@ -122,7 +122,7 @@ public class AddTotalsRowHandler implements ActionHandler {
         String function;
         try {
             function = function(raw);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException _) {
             function = "SUM";
         }
         String reading = switch (function) {

@@ -22,7 +22,7 @@ public final class TransformOptions {
         if (value instanceof String s && !s.isBlank()) {
             try {
                 return Integer.parseInt(s.trim());
-            } catch (NumberFormatException e) {
+            } catch (NumberFormatException _) {
                 return fallback;
             }
         }

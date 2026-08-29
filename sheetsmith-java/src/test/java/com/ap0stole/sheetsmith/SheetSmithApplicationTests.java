@@ -24,7 +24,7 @@ class SheetSmithApplicationTests {
     static boolean dockerAvailable() {
         try {
             return DockerClientFactory.instance().isDockerAvailable();
-        } catch (Throwable t) {
+        } catch (Throwable _) {
             return false;
         }
     }

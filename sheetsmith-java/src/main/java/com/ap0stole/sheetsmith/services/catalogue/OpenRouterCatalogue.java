@@ -163,7 +163,7 @@ public class OpenRouterCatalogue implements ModelCatalogue {
                 return null;
             }
             return value.multiply(MILLION).setScale(4, RoundingMode.HALF_UP);
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException _) {
             return null;
         }
     }

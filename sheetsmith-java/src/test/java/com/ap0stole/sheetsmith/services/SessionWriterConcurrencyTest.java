@@ -256,7 +256,7 @@ class SessionWriterConcurrencyTest {
     private void awaitGate(CountDownLatch start) {
         try {
             start.await(10, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
         }
     }
@@ -267,7 +267,7 @@ class SessionWriterConcurrencyTest {
             if (condition.getAsBoolean()) return;
             try {
                 Thread.sleep(20);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException _) {
                 Thread.currentThread().interrupt();
                 break;
             }

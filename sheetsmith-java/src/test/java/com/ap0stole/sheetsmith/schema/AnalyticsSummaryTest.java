@@ -5,8 +5,6 @@ import com.ap0stole.sheetsmith.domain.dto.analytics.AnalyticsSummaryDto;
 import com.ap0stole.sheetsmith.domain.dto.price.UpsertPriceRequest;
 import com.ap0stole.sheetsmith.domain.enums.UsageKind;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
-import com.ap0stole.sheetsmith.llm.LlmEngine;
-import com.ap0stole.sheetsmith.llm.TokenUsage;
 import com.ap0stole.sheetsmith.services.AnalyticsService;
 import com.ap0stole.sheetsmith.services.ModelPriceService;
 import org.junit.jupiter.api.BeforeEach;
@@ -544,7 +542,7 @@ class AnalyticsSummaryTest {
     static boolean dockerAvailable() {
         try {
             return DockerClientFactory.instance().isDockerAvailable();
-        } catch (Throwable t) {
+        } catch (Throwable _) {
             return false;
         }
     }

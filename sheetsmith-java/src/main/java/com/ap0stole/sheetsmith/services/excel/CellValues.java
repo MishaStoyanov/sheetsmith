@@ -47,7 +47,7 @@ public final class CellValues {
         if (value instanceof String s && !s.isBlank()) {
             try {
                 return Double.valueOf(s.trim());
-            } catch (NumberFormatException e) {
+            } catch (NumberFormatException _) {
                 return null;
             }
         }
@@ -57,7 +57,7 @@ public final class CellValues {
     public static String errorText(int code) {
         try {
             return FormulaError.forInt((byte) code).getString();
-        } catch (RuntimeException e) {
+        } catch (RuntimeException _) {
             return "#ERROR";
         }
     }
@@ -67,7 +67,7 @@ public final class CellValues {
         if (evaluator != null) {
             try {
                 cv = evaluator.evaluate(cell);
-            } catch (RuntimeException e) {
+            } catch (RuntimeException _) {
                 cv = null;
             }
         }
@@ -93,7 +93,7 @@ public final class CellValues {
                 case BOOLEAN -> cell.getBooleanCellValue();
                 default -> null;
             };
-        } catch (RuntimeException e) {
+        } catch (RuntimeException _) {
             return null;
         }
     }
@@ -101,7 +101,7 @@ public final class CellValues {
     private static boolean isDateFormatted(Cell cell) {
         try {
             return DateUtil.isCellDateFormatted(cell);
-        } catch (RuntimeException e) {
+        } catch (RuntimeException _) {
             return false;
         }
     }

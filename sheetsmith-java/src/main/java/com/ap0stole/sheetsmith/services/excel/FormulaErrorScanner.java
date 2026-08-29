@@ -106,7 +106,7 @@ public class FormulaErrorScanner {
     private String text(int code) {
         try {
             return FormulaError.forInt((byte) code).getString();
-        } catch (RuntimeException e) {
+        } catch (RuntimeException _) {
             return "#ERROR";
         }
     }

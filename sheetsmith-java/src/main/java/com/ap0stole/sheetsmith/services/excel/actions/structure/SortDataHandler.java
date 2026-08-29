@@ -9,7 +9,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.util.CellRangeAddress;
@@ -128,7 +127,7 @@ public class SortDataHandler implements ActionHandler {
         if (a == null) return -1;
         if (b == null) return 1;
         if (a instanceof Comparable ca && b instanceof Comparable cb) {
-            try { return ca.compareTo(cb); } catch (ClassCastException e) { /* fall through */ }
+            try { return ca.compareTo(cb); } catch (ClassCastException _) { /* fall through */ }
         }
         return a.toString().compareTo(b.toString());
     }

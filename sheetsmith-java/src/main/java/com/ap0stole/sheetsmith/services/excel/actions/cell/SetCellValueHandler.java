@@ -142,7 +142,7 @@ public class SetCellValueHandler implements ActionHandler {
             Object raw = properties == null ? null : properties.get("value");
             Object resolved = resolve(raw, ActionDescriptions.text(properties, "valueType"));
             return resolved instanceof Double || resolved instanceof Boolean;
-        } catch (RuntimeException e) {
+        } catch (RuntimeException _) {
             // describe() runs over whatever the model sent, including values execute() will reject.
             return false;
         }
@@ -232,7 +232,7 @@ public class SetCellValueHandler implements ActionHandler {
         try {
             double parsed = Double.parseDouble(text);
             return String.valueOf(CellValues.tidy(parsed)).equals(text) ? (Object) parsed : text;
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException _) {
             return text;
         }
     }
@@ -246,7 +246,7 @@ public class SetCellValueHandler implements ActionHandler {
         double parsed;
         try {
             parsed = Double.parseDouble(text.trim());
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException _) {
             throw new IllegalArgumentException("\"" + text + "\" is not a number.");
         }
         if (!Double.isFinite(parsed)) {
@@ -268,12 +268,12 @@ public class SetCellValueHandler implements ActionHandler {
         String trimmed = text.trim();
         try {
             return LocalDate.parse(trimmed);
-        } catch (DateTimeParseException ignored) {
+        } catch (DateTimeParseException _) {
             // Not a plain date; a date-time is the only other form accepted.
         }
         try {
             return LocalDateTime.parse(trimmed);
-        } catch (DateTimeParseException e) {
+        } catch (DateTimeParseException _) {
             throw new IllegalArgumentException("\"" + text
                     + "\" is not an ISO date — use \"2026-01-31\" or \"2026-01-31T14:30:00\".");
         }
@@ -294,7 +294,7 @@ public class SetCellValueHandler implements ActionHandler {
         if (replacedFormula) {
             try {
                 cell.setBlank();
-            } catch (IllegalStateException e) {
+            } catch (IllegalStateException _) {
                 // Excel-authored files carry multi-cell array formulas, which POI refuses to break up
                 // one cell at a time — and its own message is not something to show a user.
                 throw new IllegalArgumentException(new CellAddress(cell).formatAsString()
@@ -344,7 +344,7 @@ public class SetCellValueHandler implements ActionHandler {
     private boolean alreadyDated(CellStyle style) {
         try {
             return DateUtil.isADateFormat(style.getDataFormat(), style.getDataFormatString());
-        } catch (RuntimeException e) {
+        } catch (RuntimeException _) {
             return false;
         }
     }

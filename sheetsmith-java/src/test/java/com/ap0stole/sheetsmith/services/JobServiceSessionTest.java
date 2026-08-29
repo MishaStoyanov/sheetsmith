@@ -427,7 +427,7 @@ class JobServiceSessionTest {
             if (condition.getAsBoolean()) return;
             try {
                 Thread.sleep(20);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException _) {
                 Thread.currentThread().interrupt();
                 break;
             }

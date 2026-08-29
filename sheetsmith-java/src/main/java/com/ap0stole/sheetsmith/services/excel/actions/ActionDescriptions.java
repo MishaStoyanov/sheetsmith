@@ -44,7 +44,7 @@ public final class ActionDescriptions {
         }
         try {
             return (int) Double.parseDouble(value);
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException _) {
             return null;
         }
     }

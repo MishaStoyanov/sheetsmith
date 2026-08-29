@@ -19,7 +19,6 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.TestPropertySource;
@@ -254,7 +253,7 @@ class WorkVisibilityTest {
     static boolean dockerAvailable() {
         try {
             return DockerClientFactory.instance().isDockerAvailable();
-        } catch (Throwable t) {
+        } catch (Throwable _) {
             return false;
         }
     }

@@ -149,7 +149,7 @@ public final class StructureShift {
         }
         try {
             return Integer.parseInt(digits);
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException _) {
             throw new IllegalArgumentException("\"" + raw + "\" does not name rows — use \"5:8\","
                     + " or \"at\" with \"count\".");
         }

@@ -318,7 +318,7 @@ public class ChatAgentService {
     private String writeArgs(Map<String, Object> args) {
         try {
             return objectMapper.writeValueAsString(args == null ? Map.of() : args);
-        } catch (Exception e) {
+        } catch (Exception _) {
             return "{}";
         }
     }

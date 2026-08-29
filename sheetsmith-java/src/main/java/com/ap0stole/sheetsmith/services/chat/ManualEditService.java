@@ -117,7 +117,7 @@ public class ManualEditService {
 
         try {
             cell.setCellValue(Double.parseDouble(value.replaceAll("[,$\\s]", "")));
-        } catch (NumberFormatException notANumber) {
+        } catch (NumberFormatException _) {
             cell.setCellValue(value);
         }
     }
@@ -125,7 +125,7 @@ public class ManualEditService {
     private int sheetIndex(String raw) {
         try {
             return Integer.parseInt(raw.trim());
-        } catch (RuntimeException e) {
+        } catch (RuntimeException _) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR,
                     "Sheet index must be a number, got \"" + raw + "\"", "sheetRenames");
         }

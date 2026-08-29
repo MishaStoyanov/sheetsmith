@@ -38,7 +38,7 @@ public class ToNumberTransform implements ColumnTransform {
             double parsed = Double.parseDouble(cleaned);
             // Accounting columns write a loss as (1 234), which parses positive without this.
             return Optional.of(String.valueOf(negative ? -Math.abs(parsed) : parsed));
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException _) {
             return Optional.empty();
         }
     }

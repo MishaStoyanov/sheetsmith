@@ -366,7 +366,7 @@ public class JobService {
         try {
             jobSemaphore.acquire();
             return true;
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             failJob(jobId, "Processing interrupted");
             return false;
