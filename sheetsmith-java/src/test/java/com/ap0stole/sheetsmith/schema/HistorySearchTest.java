@@ -70,10 +70,6 @@ class HistorySearchTest {
         return jobService.search(request).getContent().stream().map(JobHistoryDto::getInputFilename).toList();
     }
 
-    private HistorySearchRequest with(HistorySearchRequest base) {
-        return base;
-    }
-
     @Test
     @DisplayName("no filters is the whole history, newest first")
     void unfilteredIsEverything() {

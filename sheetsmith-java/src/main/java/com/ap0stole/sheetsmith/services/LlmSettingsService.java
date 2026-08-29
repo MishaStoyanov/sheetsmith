@@ -52,6 +52,11 @@ public class LlmSettingsService {
      */
     @Transactional(readOnly = true)
     public LlmSettingsDto active() {
+        return stored();
+    }
+
+    /** The same read, reachable from the methods in this class without going out through the proxy. */
+    private LlmSettingsDto stored() {
         return repository.findById(LlmSettingsEntity.GLOBAL_ID)
                 .map(this::deserialize)
                 .orElseGet(() -> LlmSettingsDto.defaults(configuredBaseUrl, configuredModel));
@@ -60,7 +65,7 @@ public class LlmSettingsService {
     /** The same settings for the screen: no keys, only which providers have one. */
     @Transactional(readOnly = true)
     public LlmSettingsDto getSettings() {
-        return withoutKeys(active());
+        return withoutKeys(stored());
     }
 
     /**
@@ -104,8 +109,9 @@ public class LlmSettingsService {
         if (cloud == null) {
             return dto;
         }
-        Map<String, String> stored = active().cloud() == null || active().cloud().apiKeys() == null
-                ? Map.of() : active().cloud().apiKeys();
+        LlmSettingsDto.CloudSettings saved = stored().cloud();
+        Map<String, String> stored = saved == null || saved.apiKeys() == null
+                ? Map.of() : saved.apiKeys();
         Map<String, String> keys = new HashMap<>(stored);
         if (cloud.apiKeys() != null) {
             cloud.apiKeys().forEach((provider, key) -> {

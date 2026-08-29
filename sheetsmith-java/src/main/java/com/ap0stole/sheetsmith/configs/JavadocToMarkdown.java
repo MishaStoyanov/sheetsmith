@@ -68,7 +68,7 @@ public class JavadocToMarkdown implements OpenApiCustomizer, Ordered {
                 .replaceAll("(?i)<code>", "`")
                 .replaceAll("(?i)</code>", "`")
                 .replaceAll("(?i)<br\\s*/?>", "\n")
-                .replaceAll("(?i)</?[a-z]+[^>]*>", "")
+                .replaceAll("(?i)</?[a-z][^>]*>", "")
                 // Javadoc wraps at a hundred characters and Swagger re-wraps to the panel, so the
                 // line breaks inside a paragraph are noise — but the blank line between paragraphs
                 // is the structure, and has to survive.

@@ -44,6 +44,9 @@ import java.util.Set;
 @Component
 public class HyperlinkHandler implements ActionHandler {
 
+    /** The scheme that turns a link into an email address rather than a page. */
+    private static final String MAILTO = "mailto:";
+
     /** Excel's own hyperlink blue. */
     private static final String LINK_BLUE = "#0563C1";
 
@@ -163,7 +166,7 @@ public class HyperlinkHandler implements ActionHandler {
         if (lower.startsWith("http://") || lower.startsWith("https://") || lower.startsWith("www.")) {
             return HyperlinkType.URL;
         }
-        if (lower.startsWith("mailto:") || (lower.contains("@") && !lower.contains("/"))) {
+        if (lower.startsWith(MAILTO) || (lower.contains("@") && !lower.contains("/"))) {
             return HyperlinkType.EMAIL;
         }
         if (lower.startsWith("#") || lower.matches("^'?[^/\\\\]+'?![a-z]+\\d+$")) {
@@ -178,8 +181,8 @@ public class HyperlinkHandler implements ActionHandler {
         if (type == HyperlinkType.URL && lower.startsWith("www.")) {
             return "https://" + address;
         }
-        if (type == HyperlinkType.EMAIL && !lower.startsWith("mailto:")) {
-            return "mailto:" + address;
+        if (type == HyperlinkType.EMAIL && !lower.startsWith(MAILTO)) {
+            return MAILTO + address;
         }
         if (type == HyperlinkType.DOCUMENT && address.startsWith("#")) {
             return address.substring(1);

@@ -13,6 +13,9 @@ import com.ap0stole.sheetsmith.domain.dto.LlmSettingsDto;
  */
 public record LlmEngine(String providerMode, String provider, String model) {
 
+    /** The mode that means a vendor over the network rather than a model on this machine. */
+    public static final String CLOUD = "CLOUD";
+
     public static final LlmEngine UNKNOWN = new LlmEngine(null, null, null);
 
     /**
@@ -23,13 +26,13 @@ public record LlmEngine(String providerMode, String provider, String model) {
         if (settings == null) {
             return UNKNOWN;
         }
-        if ("CLOUD".equals(settings.providerMode())) {
+        if (CLOUD.equals(settings.providerMode())) {
             LlmSettingsDto.CloudSettings cloud = settings.cloud();
             if (cloud == null) {
-                return new LlmEngine("CLOUD", null, null);
+                return new LlmEngine(CLOUD, null, null);
             }
             String model = cloud.models() == null ? null : cloud.models().get(cloud.activeProvider());
-            return new LlmEngine("CLOUD", cloud.activeProvider(), model);
+            return new LlmEngine(CLOUD, cloud.activeProvider(), model);
         }
         LlmSettingsDto.LocalSettings local = settings.local();
         // The vendor of a local run is its runtime. Naming it keeps the column answerable for every

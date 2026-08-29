@@ -27,6 +27,9 @@ import java.util.Base64;
 @RequiredArgsConstructor
 public class JwtSecretProvider {
 
+    /** Kept rather than built per call: seeding is the expensive part, and it only happens once. */
+    private static final SecureRandom RANDOM = new SecureRandom();
+
     private static final String SECRET_NAME = "jwt-signing-key";
     private static final int KEY_BYTES = 32;
 
@@ -56,7 +59,7 @@ public class JwtSecretProvider {
 
     private String generateAndStore() {
         byte[] key = new byte[KEY_BYTES];
-        new SecureRandom().nextBytes(key);
+        RANDOM.nextBytes(key);
         String encoded = Base64.getEncoder().encodeToString(key);
         secrets.save(AuthSecret.of(SECRET_NAME, encoded));
 

@@ -51,12 +51,10 @@ public record LlmSettingsDto(
      * start Ollama, pull the model into it, and the app would then ask a completely different
      * server for a completely different model. Found by actually running
      * {@code docker compose up} rather than reading it.
+     *
+     * @param baseUrl where Ollama listens, from the configuration this instance started with
+     * @param model   the tag to ask that server for
      */
-    /** Only for callers with no configuration to hand — a parse failure recovering mid-request. */
-    public static LlmSettingsDto defaults() {
-        return defaults("http://localhost:11434", "llama3.1");
-    }
-
     public static LlmSettingsDto defaults(String baseUrl, String model) {
         return new LlmSettingsDto(
                 "LOCAL",
@@ -68,5 +66,10 @@ public record LlmSettingsDto(
                         "DEEPSEEK", "deepseek-chat"
                 ))
         );
+    }
+
+    /** Only for callers with no configuration to hand — a parse failure recovering mid-request. */
+    public static LlmSettingsDto defaults() {
+        return defaults("http://localhost:11434", "llama3.1");
     }
 }

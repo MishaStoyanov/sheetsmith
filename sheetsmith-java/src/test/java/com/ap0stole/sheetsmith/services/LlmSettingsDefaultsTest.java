@@ -32,8 +32,8 @@ class LlmSettingsDefaultsTest {
     void theBareDefaultsMatchTheYaml() {
         LlmSettingsDto settings = LlmSettingsDto.defaults();
 
-        // application-ollama.yaml: base-url ${OLLAMA_BASE_URL:http://localhost:11434}
-        //                          model    ${OLLAMA_MODEL:llama3.1}
+        // These two are the fallbacks written in application-ollama.yaml, for OLLAMA_BASE_URL and
+        // OLLAMA_MODEL respectively. If that file changes, this test is the one that should fail.
         assertThat(settings.local().baseUrl()).isEqualTo("http://localhost:11434");
         assertThat(settings.local().model()).isEqualTo("llama3.1");
     }

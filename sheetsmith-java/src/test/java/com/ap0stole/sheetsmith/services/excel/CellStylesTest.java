@@ -97,7 +97,7 @@ class CellStylesTest {
 
     @Test
     @DisplayName("bolding a header keeps the typeface and size someone chose")
-    void boldingKeepsTheRestOfTheFont() throws Exception {
+    void boldingKeepsTheRestOfTheFont() {
         XSSFCellStyle chosen = workbook.createCellStyle();
         var font = workbook.createFont();
         font.setFontName("Georgia");
@@ -120,7 +120,7 @@ class CellStylesTest {
 
     @Test
     @DisplayName("a bold header stays bold when it is only being coloured")
-    void anUnmentionedFacetIsNotReset() throws Exception {
+    void anUnmentionedFacetIsNotReset() {
         StyleConfig bolding = new StyleConfig();
         bolding.setRange("A1:C1");
         bolding.setBold(true);

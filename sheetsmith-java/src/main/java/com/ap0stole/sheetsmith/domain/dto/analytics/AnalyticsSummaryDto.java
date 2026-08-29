@@ -106,14 +106,11 @@ public record AnalyticsSummaryDto(
     }
 
     /**
-     * The same buckets, split by whose call it was.
+     * The same buckets, split by whose call it was — a slice that also says whose it was.
      * <p>
      * Flat rather than nested inside the bucket, so a screen drawing only the total never walks
      * past a dimension it is not using. Empty when every call in range belongs to the same person
      * (or to nobody), because a stack of one segment is a plain bar wearing a legend.
-     */
-    /**
-     * A slice that also says whose it was.
      *
      * @param label       the time bucket or category this belongs to
      * @param userId      the account, or null for work nobody owns — everything from before

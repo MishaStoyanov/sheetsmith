@@ -46,6 +46,10 @@ import java.util.Map;
 @Component
 public class GroupByHandler implements ActionHandler {
 
+    /** The two functions this step offers, each read in four separate switches. */
+    private static final String COUNT = "count";
+    private static final String AVERAGE = "average";
+
     private final ObjectMapper mapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
@@ -70,7 +74,7 @@ public class GroupByHandler implements ActionHandler {
 
         String function = function(cfg.getFunction());
         int keyColumn = column(cfg.getGroupBy(), "groupBy", area);
-        int valueColumn = "count".equals(function) && isBlank(cfg.getValueColumn())
+        int valueColumn = COUNT.equals(function) && isBlank(cfg.getValueColumn())
                 ? keyColumn : column(cfg.getValueColumn(), "valueColumn", area);
 
         Map<String, Object> groups = distinctKeys(data, keyColumn, firstDataRow, area.getLastRow());
@@ -119,8 +123,8 @@ public class GroupByHandler implements ActionHandler {
         String target = ActionDescriptions.text(properties, "targetSheet");
 
         String what = switch (function == null ? "sum" : function) {
-            case "count" -> "counting the rows";
-            case "average", "avg", "mean" -> value == null ? "averaging the values" : "averaging column " + value;
+            case COUNT -> "counting the rows";
+            case AVERAGE, "avg", "mean" -> value == null ? "averaging the values" : "averaging column " + value;
             default -> value == null ? "totalling the values" : "totalling column " + value;
         };
 
@@ -133,10 +137,10 @@ public class GroupByHandler implements ActionHandler {
 
     private String formula(String function, String keyRange, String criteria, String valueRange) {
         return switch (function) {
-            case "count" -> "COUNTIF(" + keyRange + "," + criteria + ")";
+            case COUNT -> "COUNTIF(" + keyRange + "," + criteria + ")";
             // Every key comes from the data, so its COUNTIF is at least one and this cannot divide
             // by zero — which is why it is written plainly rather than guarded.
-            case "average" -> "SUMIF(" + keyRange + "," + criteria + "," + valueRange + ")"
+            case AVERAGE -> "SUMIF(" + keyRange + "," + criteria + "," + valueRange + ")"
                     + "/COUNTIF(" + keyRange + "," + criteria + ")";
             default -> "SUMIF(" + keyRange + "," + criteria + "," + valueRange + ")";
         };
@@ -149,8 +153,8 @@ public class GroupByHandler implements ActionHandler {
         }
         return switch (keyword) {
             case "sum", "total" -> "sum";
-            case "count", "how many" -> "count";
-            case "average", "avg", "mean" -> "average";
+            case COUNT, "how many" -> COUNT;
+            case AVERAGE, "avg", "mean" -> AVERAGE;
             case "min", "minimum", "max", "maximum" -> throw new IllegalArgumentException(
                     "\"function\" \"" + raw + "\" cannot be written as a formula Excel will read"
                             + " back — MINIFS and MAXIFS need a prefix POI does not write. Use sum,"
@@ -188,14 +192,14 @@ public class GroupByHandler implements ActionHandler {
         String keyName = hasHeader ? headerOf(data, keyColumn) : null;
         String valueName = hasHeader ? headerOf(data, valueColumn) : null;
         String label = switch (function) {
-            case "count" -> "Count";
-            case "average" -> "Average";
+            case COUNT -> "Count";
+            case AVERAGE -> "Average";
             default -> "Total";
         };
         cell(target, start.getRow(), start.getCol()).setCellValue(
                 keyName == null ? "Group" : keyName);
         cell(target, start.getRow(), start.getCol() + 1).setCellValue(
-                valueName == null || "count".equals(function) ? label : label + " of " + valueName);
+                valueName == null || COUNT.equals(function) ? label : label + " of " + valueName);
     }
 
     private String headerOf(XSSFSheet sheet, int column) {
@@ -237,7 +241,7 @@ public class GroupByHandler implements ActionHandler {
     private String qualified(XSSFSheet sheet, int column, int firstRow, int lastRow) {
         String letter = ActionDescriptions.columnLetter(column);
         String name = sheet.getSheetName();
-        String prefix = name.matches("[A-Za-z0-9_]+") ? name : "'" + name.replace("'", "''") + "'";
+        String prefix = name.matches("\\w+") ? name : "'" + name.replace("'", "''") + "'";
         return prefix + "!$" + letter + "$" + (firstRow + 1) + ":$" + letter + "$" + (lastRow + 1);
     }
 

@@ -183,7 +183,7 @@ public class JobService {
             step.setType(dto.type());
             step.getProperties().putAll(dto.properties());
             return step;
-        }).collect(Collectors.toList());
+        }).toList();
 
         AutomationRequest filteredPlan = new AutomationRequest();
         filteredPlan.setActions(steps);

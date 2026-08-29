@@ -30,6 +30,9 @@ import java.util.Map;
 @Component
 public class GroupRowsHandler implements ActionHandler {
 
+    /** The action that undoes the grouping, named for the places that recognise it. */
+    private static final String UNGROUP = "ungroup";
+
     private final ObjectMapper mapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
@@ -49,12 +52,12 @@ public class GroupRowsHandler implements ActionHandler {
         boolean ungrouping = Boolean.TRUE.equals(cfg.getUngroup());
 
         if (sheet.getPhysicalNumberOfRows() == 0) {
-            return "the sheet is empty, so there was nothing to " + (ungrouping ? "ungroup" : "group");
+            return "the sheet is empty, so there was nothing to " + (ungrouping ? UNGROUP : "group");
         }
         int lastRow = sheet.getLastRowNum();
         if (first > lastRow) {
             return "the sheet ends at row " + (lastRow + 1) + ", so there was nothing to "
-                    + (ungrouping ? "ungroup" : "group");
+                    + (ungrouping ? UNGROUP : "group");
         }
         int clamped = Math.min(last, lastRow);
 
@@ -82,7 +85,7 @@ public class GroupRowsHandler implements ActionHandler {
 
     @Override
     public String describe(Map<String, Object> properties, StepTense tense) {
-        boolean ungrouping = ActionDescriptions.flag(properties, "ungroup", false);
+        boolean ungrouping = ActionDescriptions.flag(properties, UNGROUP, false);
         String what = ActionDescriptions.rowSpan(properties);
 
         if (ungrouping) {

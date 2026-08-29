@@ -24,6 +24,16 @@ import java.util.Map;
  */
 public final class JobSearch {
 
+    // The sortable columns, each written in the allowlist and again in the specification that
+    // reads it: a pair that stops agreeing sorts by something else and says nothing.
+    private static final String CREATED_AT = "createdAt";
+    private static final String STATUS = "status";
+    private static final String INPUT_FILENAME = "inputFilename";
+    private static final String TOTAL_TOKENS = "totalTokens";
+    private static final String MODEL = "model";
+    private static final String PROVIDER = "provider";
+    private static final String STARTED_BY = "startedBy";
+
     /**
      * What a caller may order by, mapped from the name the API uses to the property it means.
      * <p>
@@ -32,13 +42,13 @@ public final class JobSearch {
      * could be ordered by the owner's password hash — and the order alone leaks something.
      */
     private static final Map<String, String> SORTABLE = Map.of(
-            "createdAt", "createdAt",
-            "status", "status",
-            "inputFilename", "inputFilename",
-            "totalTokens", "totalTokens",
-            "model", "model",
-            "provider", "provider",
-            "startedBy", "startedBy.name",
+            CREATED_AT, CREATED_AT,
+            STATUS, STATUS,
+            INPUT_FILENAME, INPUT_FILENAME,
+            TOTAL_TOKENS, TOTAL_TOKENS,
+            MODEL, MODEL,
+            PROVIDER, PROVIDER,
+            STARTED_BY, "startedBy.name",
             "duration", "processingFinishedAt");
 
     private static final int MAX_PAGE_SIZE = 200;
@@ -54,13 +64,13 @@ public final class JobSearch {
                 String like = "%" + request.keyword().trim().toLowerCase() + "%";
                 and.add(cb.or(
                         cb.like(cb.lower(root.get("instruction")), like),
-                        cb.like(cb.lower(root.get("inputFilename")), like)));
+                        cb.like(cb.lower(root.get(INPUT_FILENAME)), like)));
             }
             if (request.from() != null) {
-                and.add(cb.greaterThanOrEqualTo(root.get("createdAt"), request.from()));
+                and.add(cb.greaterThanOrEqualTo(root.get(CREATED_AT), request.from()));
             }
             if (request.to() != null) {
-                and.add(cb.lessThanOrEqualTo(root.get("createdAt"), request.to()));
+                and.add(cb.lessThanOrEqualTo(root.get(CREATED_AT), request.to()));
             }
 
             // Owner and "no owner" are one question with two halves. Asking for both means "these
@@ -69,28 +79,28 @@ public final class JobSearch {
             boolean unowned = Boolean.TRUE.equals(request.includeUnowned());
             boolean named = request.userIds() != null && !request.userIds().isEmpty();
             if (named && unowned) {
-                and.add(cb.or(root.get("startedBy").get("id").in(request.userIds()),
-                        cb.isNull(root.get("startedBy"))));
+                and.add(cb.or(root.get(STARTED_BY).get("id").in(request.userIds()),
+                        cb.isNull(root.get(STARTED_BY))));
             } else if (named) {
-                and.add(root.get("startedBy").get("id").in(request.userIds()));
+                and.add(root.get(STARTED_BY).get("id").in(request.userIds()));
             } else if (unowned) {
-                and.add(cb.isNull(root.get("startedBy")));
+                and.add(cb.isNull(root.get(STARTED_BY)));
             }
 
             if (notEmpty(request.statuses())) {
-                and.add(root.get("status").in(request.statuses()));
+                and.add(root.get(STATUS).in(request.statuses()));
             }
             if (Boolean.TRUE.equals(request.failedOnly())) {
-                and.add(cb.equal(root.get("status"), JobStatus.FAILED));
+                and.add(cb.equal(root.get(STATUS), JobStatus.FAILED));
             }
             if (notEmpty(request.providers())) {
-                and.add(root.get("provider").in(request.providers()));
+                and.add(root.get(PROVIDER).in(request.providers()));
             }
             if (notEmpty(request.models())) {
-                and.add(root.get("model").in(request.models()));
+                and.add(root.get(MODEL).in(request.models()));
             }
             if (request.minTokens() != null) {
-                and.add(cb.greaterThanOrEqualTo(root.get("totalTokens"), request.minTokens()));
+                and.add(cb.greaterThanOrEqualTo(root.get(TOTAL_TOKENS), request.minTokens()));
             }
             if (request.minDurationMs() != null) {
                 // A run still going has no finish time, so it is neither long enough nor short
@@ -114,7 +124,7 @@ public final class JobSearch {
         int page = request.page() == null ? 0 : Math.max(0, request.page());
         int size = request.size() == null ? 20 : Math.clamp(request.size(), 1, MAX_PAGE_SIZE);
 
-        String asked = request.sort() == null ? "createdAt" : request.sort();
+        String asked = request.sort() == null ? CREATED_AT : request.sort();
         String property = SORTABLE.get(asked);
         if (property == null) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR,
@@ -123,7 +133,7 @@ public final class JobSearch {
 
         // Newest first is the default because a history is read from the end.
         Sort.Direction direction = request.direction() == null
-                ? ("createdAt".equals(asked) ? Sort.Direction.DESC : Sort.Direction.ASC)
+                ? (CREATED_AT.equals(asked) ? Sort.Direction.DESC : Sort.Direction.ASC)
                 : ("desc".equalsIgnoreCase(request.direction()) ? Sort.Direction.DESC : Sort.Direction.ASC);
 
         return PageRequest.of(page, size, Sort.by(direction, property));

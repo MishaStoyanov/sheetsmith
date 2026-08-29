@@ -199,18 +199,23 @@ class ManualEditServiceTest {
     void concurrentFlushesDoNotCollide() throws Exception {
         // Models the database: require() snapshots whatever is committed at the moment it is called,
         // which is what makes reading outside the lock observable.
-        java.util.concurrent.atomic.AtomicInteger committed = new java.util.concurrent.atomic.AtomicInteger(0);
+        java.util.concurrent.atomic.AtomicInteger committedRevision = new java.util.concurrent.atomic.AtomicInteger(0);
         when(sessionService.require(anyString())).thenAnswer(call -> {
             DocumentSession snapshot = DocumentSession.create("sales.xlsx", session.getDirectory());
-            snapshot.setCurrentRevision(committed.get());
+            snapshot.setCurrentRevision(committedRevision.get());
             return snapshot;
         });
         when(sessionService.currentPath(any())).thenReturn(current);
         when(sessionService.commitRevision(any(), any())).thenAnswer(call -> {
             DocumentSession s = call.getArgument(0);
-            Thread.sleep(120);                       // a big workbook takes seconds; this is the window
+            // The sleep is the subject, not a workaround: a big workbook takes seconds to write,
+            // and this is the window in which a reader outside the lock can observe a half-done
+            // revision. Awaiting a condition instead would remove the very thing under test.
+            @SuppressWarnings("java:S2925")
+            long window = 120;
+            Thread.sleep(window);
             int next = s.getCurrentRevision() + 1;
-            committed.set(next);
+            committedRevision.set(next);
             return next;
         });
 
@@ -235,6 +240,6 @@ class ManualEditServiceTest {
         b.join();
 
         assertThat(revisions).containsExactlyInAnyOrder(1, 2);
-        assertThat(committed.get()).isEqualTo(2);
+        assertThat(committedRevision.get()).isEqualTo(2);
     }
 }

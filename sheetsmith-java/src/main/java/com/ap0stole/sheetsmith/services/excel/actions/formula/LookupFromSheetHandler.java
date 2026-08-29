@@ -255,7 +255,7 @@ public class LookupFromSheetHandler implements ActionHandler {
     }
 
     private String quotedSheet(String name) {
-        return name.matches("[A-Za-z0-9_]+") ? name : "'" + name.replace("'", "''") + "'";
+        return name.matches("\\w+") ? name : "'" + name.replace("'", "''") + "'";
     }
 
     private String sheetPrefix(String raw) {
@@ -266,7 +266,7 @@ public class LookupFromSheetHandler implements ActionHandler {
         if (bang < 0) {
             return null;
         }
-        return raw.substring(0, bang).trim().replaceAll("^'|'$", "").replace("''", "'");
+        return raw.substring(0, bang).trim().replaceAll("(?:^')|(?:'$)", "").replace("''", "'");
     }
 
     private String stripSheet(String raw) {

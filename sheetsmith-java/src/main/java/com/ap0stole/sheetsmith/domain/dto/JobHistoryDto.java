@@ -73,7 +73,7 @@ public class JobHistoryDto {
     public static JobHistoryDto fromDetail(JobRecord job) {
         List<AppliedActionDto> actions = job.getActions().stream()
                 .map(AppliedActionDto::from)
-                .collect(Collectors.toList());
+                .toList();
         return new JobHistoryDto(job.getId(), job.getCreatedAt(), job.getStatus(),
                 truncate(job.getInstruction()), job.getInputFilename(), actions, job.getErrorMessage(), job);
     }
