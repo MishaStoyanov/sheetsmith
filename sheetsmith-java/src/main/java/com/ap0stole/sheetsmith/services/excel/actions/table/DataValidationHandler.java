@@ -21,6 +21,7 @@ import org.springframework.stereotype.Component;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.io.IOException;
 
 /**
  * Constrains what may be typed into a range — a dropdown of allowed values, or a number, date or
@@ -55,7 +56,7 @@ public class DataValidationHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         DataValidationConfig cfg = mapper.convertValue(properties, DataValidationConfig.class);
 
         XSSFSheet sheet = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());

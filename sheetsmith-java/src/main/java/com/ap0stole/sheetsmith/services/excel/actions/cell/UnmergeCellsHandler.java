@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.io.IOException;
 
 /**
  * Splits merged cells back apart — the undo MERGE_CELLS never had, and the fix for a sheet that
@@ -44,7 +45,7 @@ public class UnmergeCellsHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         MergeConfig cfg = mapper.convertValue(properties, MergeConfig.class);
 
         XSSFSheet sheet = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());

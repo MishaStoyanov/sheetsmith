@@ -14,6 +14,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.io.IOException;
 
 @Slf4j
 @Component
@@ -28,7 +29,7 @@ public class FilterDataHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         FilterConfig cfg = mapper.convertValue(properties, FilterConfig.class);
 
         XSSFSheet sheet = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());

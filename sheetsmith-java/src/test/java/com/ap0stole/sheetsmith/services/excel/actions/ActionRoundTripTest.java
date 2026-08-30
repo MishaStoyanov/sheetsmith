@@ -50,6 +50,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTTableColumn;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -140,7 +141,7 @@ class ActionRoundTripTest {
 
         assertThat(DateUtil.isCellDateFormatted(reopened)).isTrue();
         assertThat(reopened.getCellStyle().getDataFormatString()).isEqualTo("yyyy-mm-dd");
-        assertThat(reopened.getLocalDateTimeCellValue().toLocalDate().toString()).isEqualTo("2026-01-31");
+        assertThat(reopened.getLocalDateTimeCellValue().toLocalDate()).hasToString("2026-01-31");
         assertThat(reopened.getCellStyle().getFillForegroundColor())
                 .as("keeping the fill is the whole reason the style is cloned rather than replaced")
                 .isEqualTo(IndexedColors.YELLOW.getIndex());
@@ -332,7 +333,7 @@ class ActionRoundTripTest {
         assertThat(reopened.getTables()).hasSize(1);
         assertThat(reopened.getTables().getFirst().getName()).isEqualTo("Sales");
         assertThat(reopened.getTables().getFirst().getCTTable().getTableColumns().getTableColumnList())
-                .extracting(column -> column.getName())
+                .extracting(CTTableColumn::getName)
                 .as("a table whose columns are Column1, Column2 names nothing a formula can use")
                 .containsExactly("r0c0", "r0c1", "r0c2");
     }

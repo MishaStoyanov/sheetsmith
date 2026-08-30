@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.io.IOException;
 
 /**
  * Makes room sideways: the named column and everything right of it move right.
@@ -37,7 +38,7 @@ public class InsertColumnsHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         ColumnShiftConfig cfg = mapper.convertValue(properties, ColumnShiftConfig.class);
 
         XSSFSheet sheet = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());

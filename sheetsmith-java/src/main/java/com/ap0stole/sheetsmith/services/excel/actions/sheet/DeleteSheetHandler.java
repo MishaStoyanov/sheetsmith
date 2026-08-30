@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.io.IOException;
 
 /**
  * Removes a whole sheet — the counterpart ADD_SHEET never had.
@@ -39,7 +40,7 @@ public class DeleteSheetHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         SheetTargetConfig cfg = mapper.convertValue(properties, SheetTargetConfig.class);
 
         String name = cfg.getName() != null && !cfg.getName().isBlank()

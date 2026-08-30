@@ -4,6 +4,7 @@ import com.ap0stole.sheetsmith.services.excel.StepTense;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.util.Map;
+import java.io.IOException;
 
 /**
  * A read-only counterpart to {@link com.ap0stole.sheetsmith.services.excel.ActionHandler}:
@@ -23,7 +24,7 @@ public interface QueryTool {
      */
     String promptSpec();
 
-    QueryResult execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception;
+    QueryResult execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException;
 
     /** The past-tense reading — what the chat's "how I got there" chain shows. */
     default String describe(Map<String, Object> properties) {

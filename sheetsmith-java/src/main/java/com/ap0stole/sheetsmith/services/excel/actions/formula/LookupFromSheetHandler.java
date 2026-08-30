@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.io.IOException;
 
 /**
  * Pulls a column across from another sheet by matching a key — the "add the price to each order
@@ -56,7 +57,7 @@ public class LookupFromSheetHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         LookupConfig cfg = mapper.convertValue(properties, LookupConfig.class);
 
         XSSFSheet sheet = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());

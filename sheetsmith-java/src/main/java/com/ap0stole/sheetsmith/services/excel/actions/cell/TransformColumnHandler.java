@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.Optional;
+import java.io.IOException;
 
 /**
  * Rewrites every value of one column by a named rule.
@@ -43,7 +44,7 @@ public class TransformColumnHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         String operation = ActionDescriptions.text(properties, "operation");
         ColumnTransform transform = transforms.find(operation);
         if (transform == null) {

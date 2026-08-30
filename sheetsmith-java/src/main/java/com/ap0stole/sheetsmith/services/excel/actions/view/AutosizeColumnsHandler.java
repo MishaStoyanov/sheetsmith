@@ -21,6 +21,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.io.IOException;
 
 /**
  * Widens columns to fit what is in them.
@@ -50,7 +51,7 @@ public class AutosizeColumnsHandler implements ActionHandler {
     private static final int UNITS_PER_CHARACTER = 256;
 
     /** POI's own measurement runs slightly narrow, which shows up as a numeric column rendering ###. */
-    private static final double EXTRA_WIDTH = 2 * UNITS_PER_CHARACTER;
+    private static final double EXTRA_WIDTH = 2.0 * UNITS_PER_CHARACTER;
 
     private static final String WHOLE_COLUMNS = "(?i)[A-Z]{1,3}(:[A-Z]{1,3})?";
 
@@ -65,7 +66,7 @@ public class AutosizeColumnsHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         AutosizeColumnsConfig cfg = mapper.convertValue(properties, AutosizeColumnsConfig.class);
 
         XSSFSheet sheet = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());

@@ -34,9 +34,9 @@ class ActionCatalogPromptTest {
         assertThat(prompt)
                 .containsPattern("(?m)^ *[0-9]+[.] TRANSFORM_COLUMN$")
                 .contains("PHONE_US").contains("TRIM").contains("TO_NUMBER")
-                .contains("+1 (555) 123-4567");
-        // The 13 that were there before must survive the assembly.
-        assertThat(prompt).contains("1. FORMAT_CELLS").contains("13. RENAME_CHART_AXIS");
+                .contains("+1 (555) 123-4567")
+                // The 13 that were there before must survive the assembly.
+                .contains("1. FORMAT_CELLS").contains("13. RENAME_CHART_AXIS");
     }
 
     /**
@@ -54,9 +54,9 @@ class ActionCatalogPromptTest {
             numbers.add(Integer.parseInt(matcher.group(1)));
         }
 
-        assertThat(numbers).as("the catalog documents at least the actions it started with")
-                .hasSizeGreaterThanOrEqualTo(13);
         assertThat(numbers)
+                .as("the catalog documents at least the actions it started with")
+                .hasSizeGreaterThanOrEqualTo(13)
                 .as("1..N with no gap and no repeat — the count itself is nobody's to maintain")
                 .containsExactlyElementsOf(IntStream.rangeClosed(1, numbers.size()).boxed().toList());
     }
@@ -86,8 +86,8 @@ class ActionCatalogPromptTest {
 
         assertThat(lines)
                 .as("an action in the full catalog but not the index is invisible to the chat")
-                .hasSize((int) fullEntries);
-        assertThat(lines).allSatisfy(line -> assertThat(line.length()).isLessThan(140));
+                .hasSize((int) fullEntries)
+                .allSatisfy(line -> assertThat(line.length()).isLessThan(140));
     }
 
     /**
@@ -101,13 +101,14 @@ class ActionCatalogPromptTest {
         String prompt = catalog.mutatingActions();
 
         // A quoted number that does not round-trip stays text.
-        assertThat(prompt).contains("42.0").containsIgnoringCase("text");
-        // Writing over a formula destroys it.
-        assertThat(prompt).containsIgnoringCase("formula");
-        // Counts rather than indices, and the way back.
-        assertThat(prompt).containsIgnoringCase("counts").containsIgnoringCase("unfreez");
-        // A column range, not a row range.
-        assertThat(prompt).containsIgnoringCase("columns");
+        assertThat(prompt)
+                .contains("42.0").containsIgnoringCase("text")
+                // Writing over a formula destroys it.
+                .containsIgnoringCase("formula")
+                // Counts rather than indices, and the way back.
+                .containsIgnoringCase("counts").containsIgnoringCase("unfreez")
+                // A column range, not a row range.
+                .containsIgnoringCase("columns");
     }
 
     @Test

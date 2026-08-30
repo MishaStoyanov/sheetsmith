@@ -21,6 +21,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.io.IOException;
 
 /**
  * Where a value sits in its cell, and whether a long one wraps instead of running off the edge.
@@ -62,7 +63,7 @@ public class AlignCellsHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         AlignCellsConfig cfg = mapper.convertValue(properties, AlignCellsConfig.class);
 
         XSSFSheet sheet = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());

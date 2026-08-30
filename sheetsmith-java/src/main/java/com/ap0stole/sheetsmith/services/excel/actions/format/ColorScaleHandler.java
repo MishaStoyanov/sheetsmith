@@ -24,6 +24,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.io.IOException;
 
 /**
  * Shades a range so each cell's colour is its value's place between the smallest and the largest —
@@ -56,7 +57,7 @@ public class ColorScaleHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         ColorScaleConfig cfg = mapper.convertValue(properties, ColorScaleConfig.class);
 
         XSSFSheet sheet = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());

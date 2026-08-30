@@ -21,6 +21,7 @@ import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.io.IOException;
 
 /**
  * Draws the lines that turn a block of values into a table someone can read.
@@ -55,7 +56,7 @@ public class SetBordersHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         BordersConfig cfg = mapper.convertValue(properties, BordersConfig.class);
 
         XSSFSheet sheet = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());

@@ -16,6 +16,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.io.IOException;
 
 /**
  * Stops a finished sheet being typed over by accident — the last step of a cleanup, after the
@@ -45,7 +46,7 @@ public class ProtectSheetHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         ProtectSheetConfig cfg = mapper.convertValue(properties, ProtectSheetConfig.class);
 
         XSSFSheet sheet = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());

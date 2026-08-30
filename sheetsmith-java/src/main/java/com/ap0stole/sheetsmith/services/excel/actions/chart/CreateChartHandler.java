@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Locale;
 import java.util.Map;
+import java.io.IOException;
 
 @Component
 public class CreateChartHandler implements ActionHandler {
@@ -24,7 +25,7 @@ public class CreateChartHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         ChartConfig cfg = mapper.convertValue(properties, ChartConfig.class);
         new ChartHandler().execute(workbook, cfg);
 

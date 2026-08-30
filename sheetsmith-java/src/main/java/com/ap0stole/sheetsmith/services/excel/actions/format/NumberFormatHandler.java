@@ -20,6 +20,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.io.IOException;
 
 /**
  * Changes how numbers read — currency, percent, thousands, dates — without touching the numbers.
@@ -57,7 +58,7 @@ public class NumberFormatHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         NumberFormatConfig cfg = mapper.convertValue(properties, NumberFormatConfig.class);
 
         XSSFSheet sheet = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());

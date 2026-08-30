@@ -92,7 +92,7 @@ public class BarChartStrategy implements ChartStrategy {
             byte[] rgb = (i < TOP_20_COLORS.length) ? TOP_20_COLORS[i] : generateColor(i, pointCount);
 
             CTDPt dPt = ctBarSer.addNewDPt();
-            dPt.addNewIdx().setVal((long) i);
+            dPt.addNewIdx().setVal(i);
 
             CTShapeProperties spPr = dPt.addNewSpPr();
             spPr.addNewSolidFill().addNewSrgbClr().setVal(rgb);

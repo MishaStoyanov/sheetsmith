@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.io.IOException;
 
 /**
  * Makes a cell clickable — a web address, an email, a file, or another sheet in the same workbook.
@@ -59,7 +60,7 @@ public class HyperlinkHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         HyperlinkConfig cfg = mapper.convertValue(properties, HyperlinkConfig.class);
 
         XSSFSheet sheet = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());

@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.io.IOException;
 
 /**
  * Answers "how much per region" — one row per distinct value of a column, with the numbers beside it
@@ -59,7 +60,7 @@ public class GroupByHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         GroupByConfig cfg = mapper.convertValue(properties, GroupByConfig.class);
 
         XSSFSheet data = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());

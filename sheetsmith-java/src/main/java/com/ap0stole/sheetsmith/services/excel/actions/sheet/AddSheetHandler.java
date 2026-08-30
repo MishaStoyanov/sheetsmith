@@ -12,6 +12,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.io.IOException;
 
 @Slf4j
 @Component
@@ -26,7 +27,7 @@ public class AddSheetHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         SheetConfig cfg = mapper.convertValue(properties, SheetConfig.class);
         String name = cfg.getName();
         if (name == null || name.isBlank()) {

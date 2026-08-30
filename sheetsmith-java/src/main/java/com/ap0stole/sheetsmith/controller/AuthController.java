@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
+import java.time.ZoneId;
 
 
 /**
@@ -98,7 +100,10 @@ public class AuthController {
 
     private ResponseEntity<AuthResponse> answer(AuthService.SignedIn signedIn, HttpServletResponse response) {
         RefreshTokenService.IssuedToken token = signedIn.refreshToken();
-        Duration life = Duration.between(LocalDateTime.now(), token.expiresAt());
+        // Anchored to a zone on both ends: a duration between two bare local times is off by an
+        // hour across a daylight-saving change, and this one becomes the cookie's max-age.
+        ZoneId zone = ZoneId.systemDefault();
+        Duration life = Duration.between(ZonedDateTime.now(zone), token.expiresAt().atZone(zone));
         response.addHeader(HttpHeaders.SET_COOKIE, cookie(token.value(), life).toString());
         return ResponseEntity.ok(signedIn.response());
     }

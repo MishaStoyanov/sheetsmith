@@ -14,6 +14,7 @@ import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.xmlbeans.XmlCursor;
+import org.apache.xmlbeans.XmlException;
 import org.apache.xmlbeans.XmlObject;
 import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTExtension;
 import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTExtensionList;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Locale;
 import java.util.Map;
+import java.io.IOException;
 
 /**
  * Draws a one-cell chart from a row of numbers — the shape of a year of sales inside the cell at the
@@ -70,7 +72,7 @@ public class SparklineHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         SparklineConfig cfg = mapper.convertValue(properties, SparklineConfig.class);
 
         XSSFSheet sheet = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());
@@ -120,7 +122,14 @@ public class SparklineHandler implements ActionHandler {
                     .append("</xm:sqref></x14:sparkline>");
         }
 
-        addGroup(sheet, group(type, colour, cfg, sparklines.toString()));
+        try {
+            addGroup(sheet, group(type, colour, cfg, sparklines.toString()));
+        } catch (XmlException e) {
+            // The XML is built in this class from values already validated above, so a parse
+            // failure is a bug here rather than anything the caller did — but it is checked, and
+            // the step contract is IOException, so it is reported as what it is.
+            throw new IllegalStateException("Could not build the sparkline group XML", e);
+        }
 
         log.info("SPARKLINES drew {} {} sparkline(s) in {} on '{}'",
                 count, type, targets.formatAsString(), sheet.getSheetName());
@@ -176,7 +185,7 @@ public class SparklineHandler implements ActionHandler {
      * that actually decided recognition, though, was the uri's casing — see
      * {@link #SPARKLINE_EXT_URI}.
      */
-    private void addGroup(XSSFSheet sheet, String groupsXml) throws Exception {
+    private void addGroup(XSSFSheet sheet, String groupsXml) throws XmlException {
         CTWorksheet worksheet = sheet.getCTWorksheet();
         CTExtensionList extensions = worksheet.isSetExtLst()
                 ? worksheet.getExtLst() : worksheet.addNewExtLst();

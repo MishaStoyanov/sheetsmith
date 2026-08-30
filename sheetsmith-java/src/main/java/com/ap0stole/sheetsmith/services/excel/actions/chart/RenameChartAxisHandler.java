@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Locale;
 import java.util.Map;
+import java.io.IOException;
 
 @Component
 public class RenameChartAxisHandler implements ActionHandler {
@@ -24,7 +25,7 @@ public class RenameChartAxisHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         RenameChartAxisConfig cfg = mapper.convertValue(properties, RenameChartAxisConfig.class);
         new ChartHandler().renameAxis(workbook, cfg);
 

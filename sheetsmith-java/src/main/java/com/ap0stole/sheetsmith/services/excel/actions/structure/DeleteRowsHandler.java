@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.io.IOException;
 
 /**
  * Removes rows and closes the gap — the counterpart to INSERT_ROWS, and the more dangerous half.
@@ -42,7 +43,7 @@ public class DeleteRowsHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         RowShiftConfig cfg = mapper.convertValue(properties, RowShiftConfig.class);
 
         XSSFSheet sheet = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());

@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.io.IOException;
 
 /**
  * Keeps the first of each repeated row and removes the rest.
@@ -54,7 +55,7 @@ public class RemoveDuplicatesHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         RemoveDuplicatesConfig cfg = mapper.convertValue(properties, RemoveDuplicatesConfig.class);
 
         XSSFSheet sheet = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());

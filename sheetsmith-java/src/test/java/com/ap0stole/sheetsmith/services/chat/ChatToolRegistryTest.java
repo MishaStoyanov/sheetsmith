@@ -95,9 +95,10 @@ class ChatToolRegistryTest {
         String compact = registry.toolCatalogPrompt(false);
 
         // Every action must still be pickable, and the query specs are untouched.
-        assertThat(compact).contains("FORMAT_CELLS").contains("RENAME_CHART_AXIS").contains("3. STUB_QUERY");
-        // The bulk — per-action prose and the colour table — is what a question turn should not pay for.
-        assertThat(compact).doesNotContain("COLOR REFERENCE");
+        assertThat(compact)
+                .contains("FORMAT_CELLS").contains("RENAME_CHART_AXIS").contains("3. STUB_QUERY")
+                // The bulk — per-action prose and the colour table — is what a question turn should not pay for.
+                .doesNotContain("COLOR REFERENCE");
         assertThat(compact.length()).isLessThan(full.length() / 2);
     }
 

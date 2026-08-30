@@ -10,6 +10,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.io.IOException;
 
 @Component
 public class FormatCellsHandler implements ActionHandler {
@@ -23,7 +24,7 @@ public class FormatCellsHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         StyleConfig cfg = mapper.convertValue(properties, StyleConfig.class);
         new StyleHandler().execute(workbook, cfg);
 

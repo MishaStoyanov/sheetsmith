@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.io.IOException;
 
 /**
  * Turns a block of cells into a real Excel table: banded rows, filter arrows, and a name the rest of
@@ -55,7 +56,7 @@ public class CreateTableHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         CreateTableConfig cfg = mapper.convertValue(properties, CreateTableConfig.class);
 
         XSSFSheet sheet = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());

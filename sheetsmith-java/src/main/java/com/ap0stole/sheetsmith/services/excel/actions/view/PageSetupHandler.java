@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.io.IOException;
 
 /**
  * How the sheet comes out of a printer or a PDF: which way round the page is, how much is squeezed
@@ -47,7 +48,7 @@ public class PageSetupHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         PageSetupConfig cfg = mapper.convertValue(properties, PageSetupConfig.class);
 
         XSSFSheet sheet = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());

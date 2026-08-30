@@ -3,6 +3,7 @@ package com.ap0stole.sheetsmith.services.excel;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.util.Map;
+import java.io.IOException;
 
 public interface ActionHandler {
     String getType();
@@ -15,7 +16,7 @@ public interface ActionHandler {
      * of its input — a transform that skipped values it could not convert — must report that here,
      * or a partial result reaches the user as an unqualified success.
      */
-    String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception;
+    String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException;
 
     /** The past-tense reading — what the chat's "how I got there" chain and the job history show. */
     default String describe(Map<String, Object> properties) {

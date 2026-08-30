@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.io.IOException;
 
 /**
  * The row every spreadsheet ends with: a label and a total under each column of numbers.
@@ -52,7 +53,7 @@ public class AddTotalsRowHandler implements ActionHandler {
     }
 
     @Override
-    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws Exception {
+    public String execute(XSSFWorkbook workbook, Map<String, Object> properties) throws IOException {
         TotalsRowConfig cfg = mapper.convertValue(properties, TotalsRowConfig.class);
 
         XSSFSheet sheet = SheetResolver.resolve(workbook, cfg.getSheetName(), cfg.getSheetIndex());
