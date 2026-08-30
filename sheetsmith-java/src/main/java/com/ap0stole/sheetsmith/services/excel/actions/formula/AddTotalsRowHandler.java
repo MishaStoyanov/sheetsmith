@@ -72,12 +72,7 @@ public class AddTotalsRowHandler implements ActionHandler {
                 skipped.add(CellReference.convertNumToColString(c));
                 continue;
             }
-            String column = CellReference.convertNumToColString(c);
-            Cell cell = row.getCell(c) == null ? row.createCell(c) : row.getCell(c);
-            cell.setCellFormula(function + "(" + column + (area.getFirstRow() + 1)
-                    + ":" + column + (area.getLastRow() + 1) + ")");
-            emphasise(workbook, sheet, totalsRow, c);
-            totalled.add(column);
+            totalled.add(total(workbook, sheet, row, area, c, function, totalsRow));
         }
 
         if (totalled.isEmpty()) {
@@ -203,5 +198,16 @@ public class AddTotalsRowHandler implements ActionHandler {
             default -> throw new IllegalArgumentException("Unknown \"function\" \"" + raw
                     + "\" — use sum, average, count, min or max.");
         };
+    }
+
+    /** Writes one column's total and makes it look like one. Returns the column it totalled. */
+    private String total(XSSFWorkbook workbook, XSSFSheet sheet, Row row, CellRangeAddress area,
+                         int columnIndex, String function, int totalsRow) {
+        String column = CellReference.convertNumToColString(columnIndex);
+        Cell cell = row.getCell(columnIndex) == null ? row.createCell(columnIndex) : row.getCell(columnIndex);
+        cell.setCellFormula(function + "(" + column + (area.getFirstRow() + 1)
+                + ":" + column + (area.getLastRow() + 1) + ")");
+        emphasise(workbook, sheet, totalsRow, columnIndex);
+        return column;
     }
 }

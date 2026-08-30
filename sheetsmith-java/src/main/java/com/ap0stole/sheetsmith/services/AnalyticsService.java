@@ -27,6 +27,16 @@ import java.util.*;
  */
 @Service
 @RequiredArgsConstructor
+// Two things are interpolated into the SQL in this file, and neither is anybody's text.
+//
+// The first is Where.sql(): every value it filters on is a "?" and travels in Where.args(), so what
+// is concatenated is the shape of the clause and never its contents. The second is the time bucket,
+// which is looked up in BUCKETS and refused with a message naming the allowed words if it is not
+// there — so the only strings that reach the query are "day", "week", "month" and "year", written
+// in this file.
+//
+// The alternative would be binding an identifier as a parameter, which SQL does not allow.
+@SuppressWarnings("java:S2077")
 public class AnalyticsService {
 
     // The column names this file reads back and filters on, and the fragment that builds an IN

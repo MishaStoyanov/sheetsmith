@@ -103,14 +103,17 @@ public class AuthController {
         return ResponseEntity.ok(signedIn.response());
     }
 
+    @SuppressWarnings("java:S2092")
     private ResponseCookie cookie(String value, Duration life) {
         return ResponseCookie.from(REFRESH_COOKIE, value)
                 .httpOnly(true)
                 .sameSite("Strict")
-                // Secure would be correct on the public internet and wrong here: this app is
-                // normally reached over plain http on localhost, where a secure cookie is simply
-                // never sent and the session silently fails to persist. SameSite=Strict is what
-                // carries the weight.
+                // Sonar java:S2092 asks for Secure here, and this is the answer rather than the
+                // rule switched off quietly: Secure is correct on the public internet and wrong on
+                // this deployment, which is normally reached over plain http on localhost — where
+                // the browser simply never sends a secure cookie and the session fails to survive a
+                // reload, silently. SameSite=Strict is what carries the weight here, and putting
+                // this behind TLS is the documented step for anywhere else.
                 .secure(false)
                 .path(COOKIE_PATH)
                 .maxAge(life.isNegative() ? Duration.ZERO : life)

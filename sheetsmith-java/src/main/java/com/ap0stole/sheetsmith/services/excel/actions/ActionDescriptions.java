@@ -241,21 +241,11 @@ public final class ActionDescriptions {
         double max = Math.max(r, Math.max(g, b));
         double min = Math.min(r, Math.min(g, b));
         double delta = max - min;
+
         if (delta < 0.09) {
-            double lightness = (max + min) / 2;
-            if (lightness > 0.9) {
-                return "white";
-            }
-            return lightness < 0.1 ? "black" : "grey";
+            return greyName((max + min) / 2);
         }
-        double hue;
-        if (max == r) {
-            hue = 60 * (((g - b) / delta + 6) % 6);
-        } else if (max == g) {
-            hue = 60 * ((b - r) / delta + 2);
-        } else {
-            hue = 60 * ((r - g) / delta + 4);
-        }
+        double hue = hue(r, g, b, max, delta);
         if (hue < 15 || hue >= 345) return "red";
         if (hue < 45) return "orange";
         if (hue < 70) return "yellow";
@@ -264,5 +254,24 @@ public final class ActionDescriptions {
         if (hue < 260) return "blue";
         if (hue < 290) return "purple";
         return "pink";
+    }
+
+    /** A colour with no colour in it is only ever three names. */
+    private static String greyName(double lightness) {
+        if (lightness > 0.9) {
+            return "white";
+        }
+        return lightness < 0.1 ? "black" : "grey";
+    }
+
+    /** Degrees around the colour wheel, from whichever channel is the brightest. */
+    private static double hue(double r, double g, double b, double max, double delta) {
+        if (max == r) {
+            return 60 * (((g - b) / delta + 6) % 6);
+        }
+        if (max == g) {
+            return 60 * ((b - r) / delta + 2);
+        }
+        return 60 * ((r - g) / delta + 4);
     }
 }
