@@ -129,22 +129,13 @@ public class CreateTableHandler implements ActionHandler {
             row = sheet.createRow(headerRow);
         }
 
+        Repairs repairs = new Repairs();
         Set<String> taken = new HashSet<>();
-        int blanks = 0;
-        int renamed = 0;
 
         for (int c = area.getFirstColumn(); c <= area.getLastColumn(); c++) {
             Cell cell = row.getCell(c);
-            String header = cell == null ? "" : cell.toString().trim();
-            if (header.isEmpty()) {
-                header = "Column " + CellReference.convertNumToColString(c);
-                blanks++;
-            }
-            String unique = header;
-            for (int suffix = 2; !taken.add(unique.toLowerCase(Locale.ROOT)); suffix++) {
-                unique = header + " " + suffix;
-                renamed++;
-            }
+            String header = heading(cell, c, repairs);
+            String unique = unique(header, taken, repairs);
             if (cell == null) {
                 cell = row.createCell(c);
             }
@@ -152,21 +143,52 @@ public class CreateTableHandler implements ActionHandler {
                 cell.setCellValue(unique);
             }
         }
+        return repairs.report();
+    }
 
-        if (blanks == 0 && renamed == 0) {
-            return null;
+    /** What the cell says, or a name for a column that says nothing. */
+    private String heading(Cell cell, int column, Repairs repairs) {
+        String header = cell == null ? "" : cell.toString().trim();
+        if (!header.isEmpty()) {
+            return header;
         }
-        StringBuilder text = new StringBuilder("Excel needs every column of a table named and no two"
-                + " the same, so ");
-        if (blanks > 0) {
-            text.append(blanks).append(blanks == 1 ? " blank heading was" : " blank headings were")
-                    .append(" filled in");
+        repairs.blanks++;
+        return "Column " + CellReference.convertNumToColString(column);
+    }
+
+    /** The same heading with a number after it, where that heading has already been used. */
+    private String unique(String header, Set<String> taken, Repairs repairs) {
+        String unique = header;
+        for (int suffix = 2; !taken.add(unique.toLowerCase(Locale.ROOT)); suffix++) {
+            unique = header + " " + suffix;
+            repairs.renamed++;
         }
-        if (renamed > 0) {
-            text.append(blanks > 0 ? " and " : "").append(renamed)
-                    .append(renamed == 1 ? " repeated one was" : " repeated ones were").append(" numbered");
+        return unique;
+    }
+
+    /** What had to be changed to make the header row legal, and how to say it. */
+    private static final class Repairs {
+
+        private int blanks;
+        private int renamed;
+
+        /** Null when nothing needed changing: a step with nothing to report reports nothing. */
+        String report() {
+            if (blanks == 0 && renamed == 0) {
+                return null;
+            }
+            StringBuilder text = new StringBuilder("Excel needs every column of a table named and no"
+                    + " two the same, so ");
+            if (blanks > 0) {
+                text.append(blanks).append(blanks == 1 ? " blank heading was" : " blank headings were")
+                        .append(" filled in");
+            }
+            if (renamed > 0) {
+                text.append(blanks > 0 ? " and " : "").append(renamed)
+                        .append(renamed == 1 ? " repeated one was" : " repeated ones were").append(" numbered");
+            }
+            return text.toString();
         }
-        return text.toString();
     }
 
     /**

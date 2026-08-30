@@ -95,70 +95,93 @@ public class AutosizeColumnsHandler implements ActionHandler {
         long budget = processingConfig.getMaxAutosizeCells();
         FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
 
-        int attempted = 0;
-        int resized = 0;
-        int unchanged = 0;
-        int clamped = 0;
-        int unmeasurable = 0;
-        int overBudget = 0;
+        Sized sized = sizeColumns(sheet, evaluator, first, last, ceiling, rows, budget);
+
+        log.info("AUTOSIZE_COLUMNS on '{}' columns {}-{}: {} resized, {} unchanged, {} clamped,"
+                        + " {} unmeasurable, {} over budget",
+                sheet.getSheetName(), first, last, sized.resized, sized.unchanged, sized.clamped,
+                sized.unmeasurable, sized.overBudget);
+
+        if (sized.attempted > 0 && sized.unmeasurable == sized.attempted) {
+            throw new IllegalStateException("None of the " + sized.attempted + " column(s) could be measured:"
+                    + " this JVM cannot measure text (no fonts available), so widths cannot be computed.");
+        }
+        return detail(sized.resized, sized.unchanged, sized.clamped, sized.unmeasurable,
+                sized.overBudget, maxWidth);
+    }
+
+    /** What one pass over the columns did, in the five ways a column can end up. */
+    private static final class Sized {
+
+        private int attempted;
+        private int resized;
+        private int unchanged;
+        private int clamped;
+        private int unmeasurable;
+        private int overBudget;
+    }
+
+    /**
+     * Measures and widens each column in turn, within the cell budget.
+     * <p>
+     * Refusing the whole step when the budget runs out was worse than useless: the bound is per
+     * step, so a model told "narrow the range" simply issues A:J then K:T and does the identical
+     * work. Spending the budget and saying what is left over bounds the time honestly.
+     */
+    private Sized sizeColumns(XSSFSheet sheet, FormulaEvaluator evaluator, int first, int last,
+                              int ceiling, long rows, long budget) {
+        Sized sized = new Sized();
         long measured = 0;
 
         double previousExtra = sheet.getArbitraryExtraWidth();
         sheet.setArbitraryExtraWidth(EXTRA_WIDTH);
         try {
             for (int c = first; c <= last; c++) {
-                // Refusing the whole step was worse than useless: the bound is per-step, so a model
-                // told "narrow the range" simply issues A:J then K:T and does the identical work.
-                // Spending the budget and saying what is left over bounds the time honestly.
                 if (measured + rows > budget) {
-                    overBudget = last - c + 1;
+                    sized.overBudget = last - c + 1;
                     break;
                 }
                 measured += rows;
-                attempted++;
-
-                refreshFormulas(sheet, c, evaluator);
-
-                int before = sheet.getColumnWidth(c);
-                try {
-                    // Merged regions are excluded on purpose: a merged title spanning A:E would
-                    // otherwise stretch column A to the width of the whole title.
-                    sheet.autoSizeColumn(c);
-                } catch (RuntimeException | LinkageError e) {
-                    // A JRE with no fonts fails inside AWT text measurement as a LinkageError
-                    // (NoClassDefFoundError / UnsatisfiedLinkError), not an exception, so both have
-                    // to be caught to keep one bad column from killing the step.
-                    log.warn("Could not measure column {} on '{}': {}", c, sheet.getSheetName(), e.toString());
-                    unmeasurable++;
-                    continue;
-                }
-                int after = sheet.getColumnWidth(c);
-                if (after > ceiling) {
-                    sheet.setColumnWidth(c, ceiling);
-                    after = ceiling;
-                    clamped++;
-                }
-                // POI leaves an empty column untouched, so "sized" would otherwise count columns
-                // nothing happened to — a false number in a record the user is meant to audit.
-                if (after == before) {
-                    unchanged++;
-                } else {
-                    resized++;
-                }
+                sized.attempted++;
+                sizeOne(sheet, evaluator, c, ceiling, sized);
             }
         } finally {
             sheet.setArbitraryExtraWidth(previousExtra);
         }
+        return sized;
+    }
 
-        log.info("AUTOSIZE_COLUMNS on '{}' columns {}-{}: {} resized, {} unchanged, {} clamped,"
-                        + " {} unmeasurable, {} over budget",
-                sheet.getSheetName(), first, last, resized, unchanged, clamped, unmeasurable, overBudget);
+    /** One column: measured if this JVM can, clamped if it came out too wide, counted either way. */
+    private void sizeOne(XSSFSheet sheet, FormulaEvaluator evaluator, int column, int ceiling, Sized sized) {
+        refreshFormulas(sheet, column, evaluator);
 
-        if (attempted > 0 && unmeasurable == attempted) {
-            throw new IllegalStateException("None of the " + attempted + " column(s) could be measured:"
-                    + " this JVM cannot measure text (no fonts available), so widths cannot be computed.");
+        int before = sheet.getColumnWidth(column);
+        try {
+            // Merged regions are excluded on purpose: a merged title spanning A:E would otherwise
+            // stretch column A to the width of the whole title.
+            sheet.autoSizeColumn(column);
+        } catch (RuntimeException | LinkageError e) {
+            // A JRE with no fonts fails inside AWT text measurement as a LinkageError
+            // (NoClassDefFoundError / UnsatisfiedLinkError), not an exception, so both have to be
+            // caught to keep one bad column from killing the step.
+            log.warn("Could not measure column {} on '{}': {}", column, sheet.getSheetName(), e.toString());
+            sized.unmeasurable++;
+            return;
         }
-        return detail(resized, unchanged, clamped, unmeasurable, overBudget, maxWidth);
+
+        int after = sheet.getColumnWidth(column);
+        if (after > ceiling) {
+            sheet.setColumnWidth(column, ceiling);
+            after = ceiling;
+            sized.clamped++;
+        }
+        // POI leaves an empty column untouched, so "sized" would otherwise count columns nothing
+        // happened to — a false number in a record the user is meant to audit.
+        if (after == before) {
+            sized.unchanged++;
+        } else {
+            sized.resized++;
+        }
     }
 
     @Override

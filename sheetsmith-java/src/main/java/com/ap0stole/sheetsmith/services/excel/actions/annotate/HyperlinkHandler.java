@@ -75,8 +75,42 @@ public class HyperlinkHandler implements ActionHandler {
                     + " \"cell\", or a \"range\" whose cells already hold the addresses.");
         }
 
+        Linked linked = link(workbook, sheet, helper, area, cfg, linkifying);
+
+        log.info("HYPERLINK linked {} cell(s) in {} on '{}'",
+                linked.cells().size(), area.formatAsString(), sheet.getSheetName());
+
+        return linked.report();
+    }
+
+    /** What one pass over the range did: the cells that got a link, and the ones that had nothing. */
+    private record Linked(Set<Long> cells, int skipped) {
+
+        /** Null when everything worked, because a step with nothing to say says nothing. */
+        String report() {
+            if (cells.isEmpty()) {
+                return "no cell in the range held an address, so nothing was linked";
+            }
+            if (skipped == 0) {
+                return null;
+            }
+            return skipped + (skipped == 1 ? " cell held no address and was" : " cells held no address and were")
+                    + " left alone";
+        }
+    }
+
+    /**
+     * Walks the range once, attaching a link to every cell that has an address to attach.
+     * <p>
+     * Two shapes share this loop: an explicit address written into every cell of a range, and a
+     * range whose cells already hold the addresses. They differ only in where the address comes
+     * from, which is why the flag rather than two nearly identical loops.
+     */
+    private Linked link(XSSFWorkbook workbook, XSSFSheet sheet, CreationHelper helper,
+                        CellRangeAddress area, HyperlinkConfig cfg, boolean linkifying) {
         Set<Long> touched = new HashSet<>();
         int skipped = 0;
+
         for (int r = area.getFirstRow(); r <= area.getLastRow(); r++) {
             XSSFRow row = sheet.getRow(r);
             for (int c = area.getFirstColumn(); c <= area.getLastColumn(); c++) {
@@ -87,9 +121,7 @@ public class HyperlinkHandler implements ActionHandler {
                     continue;
                 }
                 if (cell == null) {
-                    if (row == null) {
-                        row = sheet.createRow(r);
-                    }
+                    row = row == null ? sheet.createRow(r) : row;
                     cell = row.createCell(c);
                 }
                 attach(helper, cell, address, linkifying ? null : cfg.getText(), cfg.getLinkType());
@@ -100,16 +132,7 @@ public class HyperlinkHandler implements ActionHandler {
         if (!touched.isEmpty()) {
             style(workbook, sheet, area, touched);
         }
-
-        log.info("HYPERLINK linked {} cell(s) in {} on '{}'",
-                touched.size(), area.formatAsString(), sheet.getSheetName());
-
-        if (touched.isEmpty()) {
-            return "no cell in the range held an address, so nothing was linked";
-        }
-        return skipped == 0 ? null
-                : skipped + (skipped == 1 ? " cell held no address and was" : " cells held no address and were")
-                + " left alone";
+        return new Linked(touched, skipped);
     }
 
     @Override
@@ -123,7 +146,7 @@ public class HyperlinkHandler implements ActionHandler {
             return ActionDescriptions.verb(tense, "Make", "Made") + " the addresses in " + range
                     + " clickable" + ActionDescriptions.sheetSuffix(properties);
         }
-        String where = cell != null ? cell : range != null ? range : "the cell";
+        String where = where(cell, range);
         return ActionDescriptions.verb(tense, "Link", "Linked") + " " + where + " to "
                 + (address == null ? "an address" : address)
                 + (text == null ? "" : ", showing " + ActionDescriptions.quoted(text))
@@ -232,5 +255,13 @@ public class HyperlinkHandler implements ActionHandler {
 
     private boolean notBlank(String value) {
         return value != null && !value.isBlank();
+    }
+
+    /** Whichever of the two the step named, or a word for "wherever it is" when neither. */
+    private static String where(String cell, String range) {
+        if (cell != null) {
+            return cell;
+        }
+        return range != null ? range : "the cell";
     }
 }

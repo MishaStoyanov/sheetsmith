@@ -50,20 +50,7 @@ public class DeleteSheetHandler implements ActionHandler {
                     + " something to do to whichever sheet happens to be first.");
         }
 
-        int target;
-        if (name != null && !name.isBlank()) {
-            target = workbook.getSheetIndex(name.trim());
-            if (target < 0) {
-                throw new IllegalArgumentException("There is no sheet named \"" + name.trim()
-                        + "\" — the workbook has " + names(workbook) + ".");
-            }
-        } else {
-            if (index < 0 || index >= workbook.getNumberOfSheets()) {
-                throw new IllegalArgumentException("Sheet index " + index + " is out of bounds —"
-                        + " the workbook has " + workbook.getNumberOfSheets() + " sheet(s).");
-            }
-            target = index;
-        }
+        int target = resolve(workbook, name, index);
 
         if (workbook.getNumberOfSheets() == 1) {
             throw new IllegalArgumentException("\"" + workbook.getSheetName(target)
@@ -145,5 +132,28 @@ public class DeleteSheetHandler implements ActionHandler {
             text.append(i > 0 ? ", " : "").append('"').append(workbook.getSheetName(i)).append('"');
         }
         return text.toString();
+    }
+
+    /**
+     * Which sheet the step means, by name where it gave one and by position otherwise.
+     * <p>
+     * Both misses are named rather than reported as "not found": a name that is not there is worth
+     * listing the workbook's sheets for, and an index past the end is worth saying how many there
+     * are — the model that got it wrong is the one reading the answer.
+     */
+    private int resolve(XSSFWorkbook workbook, String name, Integer index) {
+        if (name != null && !name.isBlank()) {
+            int found = workbook.getSheetIndex(name.trim());
+            if (found < 0) {
+                throw new IllegalArgumentException("There is no sheet named \"" + name.trim()
+                        + "\" — the workbook has " + names(workbook) + ".");
+            }
+            return found;
+        }
+        if (index < 0 || index >= workbook.getNumberOfSheets()) {
+            throw new IllegalArgumentException("Sheet index " + index + " is out of bounds —"
+                    + " the workbook has " + workbook.getNumberOfSheets() + " sheet(s).");
+        }
+        return index;
     }
 }

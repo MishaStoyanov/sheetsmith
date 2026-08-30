@@ -60,6 +60,75 @@ public class DescribeColumnTool implements QueryTool {
         FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
 
         int column = cfg.getColumnIndex();
+        Tally tally = read(sheet, range, column, evaluator);
+        int count = tally.count();
+        Set<String> distinct = tally.distinct();
+        String type = tally.type();
+        Double min = tally.min();
+
+        Map<String, Object> data = tally.asData();
+
+        log.info("DESCRIBE_COLUMN {} over {} — {} value(s), {} distinct, type {}",
+                QuerySupport.colName(column), range.formatAsString(), count, distinct.size(), type);
+
+        StringBuilder summary = new StringBuilder("Column %s — %d value(s) (%s), %d distinct"
+                .formatted(QuerySupport.colName(column), count, type, distinct.size()));
+        if (tally.hasNumericBounds()) {
+            summary.append(", min ").append(QuerySupport.fmt(QuerySupport.round(tally.min())))
+                    .append(", max ").append(QuerySupport.fmt(QuerySupport.round(tally.max())));
+        }
+        return new QueryResult(QuerySupport.clip(summary.toString(), 120), data);
+    }
+
+    @Override
+    public String describe(Map<String, Object> properties, StepTense tense) {
+        String range = QuerySupport.propString(properties, "range");
+        Integer column = QuerySupport.propInt(properties, "columnIndex");
+        return QuerySupport.verb(tense, "Describe", "Described") + " column " + QuerySupport.colName(column)
+                + (range == null ? "" : " over " + range) + QuerySupport.sheetSuffix(properties);
+    }
+
+    /**
+     * One pass over the column, and everything that pass learned.
+     * <p>
+     * A record rather than seven locals threaded through the method that reports them: the reading
+     * and the describing are two jobs, and only the first one needs to know that a blank is not a
+     * value and that the samples stop at a limit.
+     */
+    private record Tally(int count, int blanks, int numerics, Double min, Double max,
+                         Set<String> distinct, List<Object> samples) {
+
+        /** What the column holds, in one word. */
+        String type() {
+            if (count == 0) {
+                return "empty";
+            }
+            if (numerics == count) {
+                return "numeric";
+            }
+            return numerics == 0 ? "text" : "mixed";
+        }
+
+        /** Bounds are worth printing only where some of the values were numbers. */
+        boolean hasNumericBounds() {
+            return numerics > 0 && min != null;
+        }
+
+        Map<String, Object> asData() {
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("count", count);
+            data.put("blanks", blanks);
+            data.put("distinct", distinct.size());
+            data.put("type", type());
+            data.put("min", hasNumericBounds() ? QuerySupport.round(min) : null);
+            data.put("max", hasNumericBounds() ? QuerySupport.round(max) : null);
+            data.put("sampleValues", samples);
+            return data;
+        }
+    }
+
+    /** Reads the column once: what is there, how much of it, and a few examples. */
+    private Tally read(XSSFSheet sheet, CellRangeAddress range, int column, FormulaEvaluator evaluator) {
         int count = 0;
         int blanks = 0;
         int numerics = 0;
@@ -85,36 +154,6 @@ public class DescribeColumnTool implements QueryTool {
                 max = max == null ? number : Math.max(max, number);
             }
         }
-
-        String type = count == 0 ? "empty" : numerics == count ? "numeric" : numerics == 0 ? "text" : "mixed";
-        boolean numericBounds = "numeric".equals(type) || "mixed".equals(type);
-
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("count", count);
-        data.put("blanks", blanks);
-        data.put("distinct", distinct.size());
-        data.put("type", type);
-        data.put("min", numericBounds && min != null ? QuerySupport.round(min) : null);
-        data.put("max", numericBounds && max != null ? QuerySupport.round(max) : null);
-        data.put("sampleValues", samples);
-
-        log.info("DESCRIBE_COLUMN {} over {} — {} value(s), {} distinct, type {}",
-                QuerySupport.colName(column), range.formatAsString(), count, distinct.size(), type);
-
-        StringBuilder summary = new StringBuilder("Column %s — %d value(s) (%s), %d distinct"
-                .formatted(QuerySupport.colName(column), count, type, distinct.size()));
-        if (numericBounds && min != null) {
-            summary.append(", min ").append(QuerySupport.fmt(QuerySupport.round(min)))
-                    .append(", max ").append(QuerySupport.fmt(QuerySupport.round(max)));
-        }
-        return new QueryResult(QuerySupport.clip(summary.toString(), 120), data);
-    }
-
-    @Override
-    public String describe(Map<String, Object> properties, StepTense tense) {
-        String range = QuerySupport.propString(properties, "range");
-        Integer column = QuerySupport.propInt(properties, "columnIndex");
-        return QuerySupport.verb(tense, "Describe", "Described") + " column " + QuerySupport.colName(column)
-                + (range == null ? "" : " over " + range) + QuerySupport.sheetSuffix(properties);
+        return new Tally(count, blanks, numerics, min, max, distinct, samples);
     }
 }
