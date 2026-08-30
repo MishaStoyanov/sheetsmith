@@ -96,7 +96,7 @@ public class ChatAgentService {
         sessionService.touch(session);
 
         String history = sessionService.recentHistoryPrompt(sessionId, chatConfig.getHistoryMessages());
-        sessionService.record(session, ChatRole.USER, text, null);
+        sessionService.note(session, ChatRole.USER, text, null);
 
         // Most turns are questions, so the model starts with the compact action index and only
         // gets the full editing rules if it actually reaches for an action — unless the deployment
@@ -314,7 +314,7 @@ public class ChatAgentService {
 
     private ChatTurnDto persist(DocumentSession session, Turn turn, int revision, boolean mutated) {
 
-        ChatMessage message = sessionService.record(session, ChatRole.ASSISTANT, turn.answer,
+        ChatMessage message = sessionService.note(session, ChatRole.ASSISTANT, turn.answer,
                 mutated ? revision : null);
 
         List<ChatStep> steps = new ArrayList<>();

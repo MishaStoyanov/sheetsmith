@@ -74,7 +74,7 @@ class ManualEditServiceTest {
 
         assertThat(revision).isEqualTo(1);
         verify(sessionService, times(1)).commitRevision(eq(session), any());
-        verify(sessionService).record(eq(session), eq(ChatRole.SYSTEM), contains("2 cells"), eq(1));
+        verify(sessionService).note(eq(session), eq(ChatRole.SYSTEM), contains("2 cells"), eq(1));
 
         try (XSSFWorkbook result = open(committed)) {
             assertThat(cell(result, 1, 0).getStringCellValue()).isEqualTo("Widget B");

@@ -39,6 +39,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ExcelController {
 
+    /** The one field a submitted job answers with, named for the three endpoints that answer it. */
+    private static final String JOB_ID = "jobId";
+
     private final JobService jobService;
     private final DocumentSessionService sessionService;
     /**
@@ -64,7 +67,7 @@ public class ExcelController {
             @RequestParam("instruction") @NotBlank @Size(max = 2000) String instruction) throws IOException {
 
         Long jobId = jobService.createAndSubmit(file, instruction);
-        return ResponseEntity.accepted().body(Map.of("jobId", jobId));
+        return ResponseEntity.accepted().body(Map.of(JOB_ID, jobId));
     }
 
     /** Plans against a session's current revision; {@code /apply} then commits the next one. */
@@ -131,7 +134,7 @@ public class ExcelController {
     @PostMapping("/apply")
     public ResponseEntity<Map<String, Long>> apply(@RequestBody ApplyPlanRequest request) {
         Long jobId = jobService.applyPlan(request);
-        return ResponseEntity.accepted().body(Map.of("jobId", jobId));
+        return ResponseEntity.accepted().body(Map.of(JOB_ID, jobId));
     }
 
     /**
@@ -152,6 +155,6 @@ public class ExcelController {
             @RequestBody @Valid ImproveByPathRequest request) {
 
         Long jobId = jobService.createAndSubmitByPath(request);
-        return ResponseEntity.accepted().body(Map.of("jobId", jobId));
+        return ResponseEntity.accepted().body(Map.of(JOB_ID, jobId));
     }
 }

@@ -10,8 +10,6 @@ import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.repository.ChatMessageRepository;
 import com.ap0stole.sheetsmith.repository.DocumentSessionRepository;
 import com.ap0stole.sheetsmith.repository.ChatStepRepository;
-import com.ap0stole.sheetsmith.services.SchemaExtractorService;
-import com.ap0stole.sheetsmith.services.SessionSchemaCache;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;

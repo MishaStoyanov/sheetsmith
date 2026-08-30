@@ -126,7 +126,7 @@ public class SetCellValueHandler implements ActionHandler {
 
         StringBuilder text = new StringBuilder(ActionDescriptions.verb(tense, "Write", "Wrote"))
                 .append(' ')
-                .append(value == null ? "a value" : bare(properties) ? value : ActionDescriptions.quoted(value))
+                .append(written(value, properties))
                 .append(" into ")
                 .append(where == null ? "the cell" : where);
         return text.append(ActionDescriptions.sheetSuffix(properties)).toString();
@@ -161,9 +161,7 @@ public class SetCellValueHandler implements ActionHandler {
         }
         StringBuilder text = new StringBuilder(written + (written == 1 ? " cell set" : " cells set"));
         if (formulas > 0) {
-            text.append(written == 1 && formulas == 1
-                    ? ", replacing the formula it held"
-                    : ", replacing " + formulas + (formulas == 1 ? " formula" : " formulas"));
+            text.append(replaced(written, formulas));
         }
         if (hidden > 0) {
             text.append(", ").append(hidden)
@@ -357,5 +355,21 @@ public class SetCellValueHandler implements ActionHandler {
             }
         }
         return false;
+    }
+
+    /** The value as the card should show it: quoted, bare where the step asked for that, or unnamed. */
+    private String written(String value, Map<String, Object> properties) {
+        if (value == null) {
+            return "a value";
+        }
+        return bare(properties) ? value : ActionDescriptions.quoted(value);
+    }
+
+    /** What was overwritten, in words — one formula is worth naming as the one it held. */
+    private static String replaced(int written, int formulas) {
+        if (written == 1 && formulas == 1) {
+            return ", replacing the formula it held";
+        }
+        return ", replacing " + formulas + (formulas == 1 ? " formula" : " formulas");
     }
 }

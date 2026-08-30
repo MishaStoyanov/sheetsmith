@@ -1,6 +1,5 @@
 package com.ap0stole.sheetsmith.domain.dto;
 
-import com.ap0stole.sheetsmith.domain.dto.ChartDefinitionDto;
 
 import java.util.List;
 

@@ -62,7 +62,9 @@ public class DocumentSessionService {
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
-    @Transactional
+    // rollbackFor because the method throws a checked exception: without it Spring commits the
+    // row and leaves the half-written upload on disk described by a session nobody can open.
+    @Transactional(rollbackFor = IOException.class)
     public DocumentSessionDto create(MultipartFile file) throws IOException {
         validateXlsx(file);
 
@@ -84,8 +86,19 @@ public class DocumentSessionService {
         return describe(session, 0, schema);
     }
 
+    /**
+     * The session, or a refusal naming it.
+     * <p>
+     * Annotated for callers in other beans; the methods in this class call {@link #sessionOf}
+     * directly, because a call through {@code this} never reaches the proxy and an annotation that
+     * does nothing where it is written is one the next reader will believe.
+     */
     @Transactional(readOnly = true)
     public DocumentSession require(String sessionId) {
+        return sessionOf(sessionId);
+    }
+
+    private DocumentSession sessionOf(String sessionId) {
         return sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ApiException(ErrorCode.SESSION_NOT_FOUND,
                         "Chat session not found or expired: " + sessionId));
@@ -93,7 +106,7 @@ public class DocumentSessionService {
 
     @Transactional(readOnly = true)
     public DocumentSessionDto describe(String sessionId) {
-        DocumentSession session = require(sessionId);
+        DocumentSession session = sessionOf(sessionId);
         return describe(session, session.getCurrentRevision(), schema(session));
     }
 
@@ -114,7 +127,7 @@ public class DocumentSessionService {
      */
     @Transactional
     public void delete(String sessionId) {
-        DocumentSession session = require(sessionId);
+        DocumentSession session = sessionOf(sessionId);
         deleteQuietly(session);
         log.info("Chat session {} deleted", sessionId);
     }
@@ -150,7 +163,7 @@ public class DocumentSessionService {
      * Writes the edited workbook as the next revision. Formulas are evaluated first so the
      * preview grid — which reads cached values — shows numbers rather than blanks.
      */
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
     public int commitRevision(DocumentSession session, XSSFWorkbook workbook) throws IOException {
         int next = session.getCurrentRevision() + 1;
         try {
@@ -187,15 +200,15 @@ public class DocumentSessionService {
         session.touch();
         sessionRepository.save(session);
 
-        record(session, ChatRole.SYSTEM, note, next);
+        write(session, ChatRole.SYSTEM, note, next);
         log.info("Chat session {} advanced to externally written revision {}", session.getId(), next);
         return next;
     }
 
     /** Undo is append-only: reverting copies an old revision forward instead of deleting history. */
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
     public int revert(String sessionId, int revision) throws IOException {
-        DocumentSession session = require(sessionId);
+        DocumentSession session = sessionOf(sessionId);
         if (revision < 0 || revision > session.getCurrentRevision()) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR,
                     "No such revision: " + revision, "revision");
@@ -211,14 +224,14 @@ public class DocumentSessionService {
         session.touch();
         sessionRepository.save(session);
 
-        record(session, ChatRole.SYSTEM, "Undone — the sheet is back to the state it had at step " + revision + ".", next);
+        write(session, ChatRole.SYSTEM, "Undone — the sheet is back to the state it had at step " + revision + ".", next);
         log.info("Chat session {} reverted to revision {} (as {})", sessionId, revision, next);
         return next;
     }
 
     @Transactional(readOnly = true)
     public Resource currentFile(String sessionId) {
-        DocumentSession session = require(sessionId);
+        DocumentSession session = sessionOf(sessionId);
         Path path = currentPath(session);
         if (!Files.exists(path)) {
             throw new ApiException(ErrorCode.FILE_NOT_FOUND, "Working copy missing for session " + sessionId);
@@ -228,8 +241,19 @@ public class DocumentSessionService {
 
     // ── Messages ──────────────────────────────────────────────────────────────
 
+    /**
+     * Writes one message into the session's history.
+     * <p>
+     * Named {@code note} rather than {@code record}: the shorter name is a restricted identifier
+     * now that the language has records, and this class declares none — which is exactly the kind
+     * of collision that reads fine until somebody adds one.
+     */
     @Transactional
-    public ChatMessage record(DocumentSession session, ChatRole role, String content, Integer revisionAfter) {
+    public ChatMessage note(DocumentSession session, ChatRole role, String content, Integer revisionAfter) {
+        return write(session, role, content, revisionAfter);
+    }
+
+    private ChatMessage write(DocumentSession session, ChatRole role, String content, Integer revisionAfter) {
         ChatMessage message = ChatMessage.of(session, role, content);
         message.setRevisionAfter(revisionAfter);
         return messageRepository.save(message);
@@ -242,7 +266,7 @@ public class DocumentSessionService {
 
     @Transactional(readOnly = true)
     public List<ChatMessageDto> history(String sessionId) {
-        require(sessionId);
+        sessionOf(sessionId);
         List<ChatMessage> messages = messageRepository.findBySessionIdOrderByIdAsc(sessionId);
         if (messages.isEmpty()) return List.of();
 

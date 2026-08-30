@@ -73,7 +73,7 @@ class ChatAgentServiceTest {
         when(sessionService.recentHistoryPrompt(anyString(), anyInt())).thenReturn("");
         when(sessionService.tableContext(session)).thenReturn("Sheet 0: \"Sales\"");
         when(sessionService.currentPath(session)).thenReturn(workbookPath);
-        when(sessionService.record(any(), any(), anyString(), any())).thenAnswer(call -> {
+        when(sessionService.note(any(), any(), anyString(), any())).thenAnswer(call -> {
             ChatMessage message = ChatMessage.of(call.getArgument(0), call.getArgument(1), call.getArgument(2));
             message.setRevisionAfter(call.getArgument(3));
             return message;
@@ -295,8 +295,8 @@ class ChatAgentServiceTest {
 
         agent.send(SESSION_ID, "hello there");
 
-        verify(sessionService).record(session, ChatRole.USER, "hello there", null);
-        verify(sessionService).record(eq(session), eq(ChatRole.ASSISTANT), eq("Hi."), any());
+        verify(sessionService).note(session, ChatRole.USER, "hello there", null);
+        verify(sessionService).note(eq(session), eq(ChatRole.ASSISTANT), eq("Hi."), any());
     }
 
     @Test

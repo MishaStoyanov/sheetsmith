@@ -99,7 +99,7 @@ public class FillFormulaHandler implements ActionHandler {
         for (int c = area.getFirstColumn(); c <= area.getLastColumn(); c++) {
             String source = source(sheet, area.getFirstRow(), c, formula, area);
             for (int r = area.getFirstRow() + 1; r <= area.getLastRow(); r++) {
-                write(workbook, sheet, r, c, shifted(workbook, sheet, source,
+                write(sheet, r, c, shifted(workbook, sheet, source,
                         area.getFirstRow(), c, r - area.getFirstRow(), 0));
                 filled++;
             }
@@ -112,7 +112,7 @@ public class FillFormulaHandler implements ActionHandler {
         String source = source(sheet, row, area.getFirstColumn(), formula, area);
         int filled = 0;
         for (int c = area.getFirstColumn() + 1; c <= area.getLastColumn(); c++) {
-            write(workbook, sheet, row, c, shifted(workbook, sheet, source,
+            write(sheet, row, c, shifted(workbook, sheet, source,
                     row, area.getFirstColumn(), 0, c - area.getFirstColumn()));
             filled++;
         }
@@ -168,7 +168,7 @@ public class FillFormulaHandler implements ActionHandler {
      * A formula that shifted off the sheet renders as {@code #REF!}, which POI will not parse back
      * as a formula. Writing it as an error value is what Excel shows in the same situation.
      */
-    private void write(XSSFWorkbook workbook, XSSFSheet sheet, int row, int column, String formula) {
+    private void write(XSSFSheet sheet, int row, int column, String formula) {
         Cell cell = cellAt(sheet, row, column);
         try {
             cell.setCellFormula(formula);

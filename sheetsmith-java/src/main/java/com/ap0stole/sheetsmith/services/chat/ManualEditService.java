@@ -56,7 +56,7 @@ public class ManualEditService {
                 }
 
                 int revision = sessionService.commitRevision(session, workbook);
-                sessionService.record(session, ChatRole.SYSTEM, summarise(request), revision);
+                sessionService.note(session, ChatRole.SYSTEM, summarise(request), revision);
                 log.info("Session {} took {} manual cell edit(s) as revision {}",
                         sessionId, request.safeCells().size(), revision);
                 return revision;

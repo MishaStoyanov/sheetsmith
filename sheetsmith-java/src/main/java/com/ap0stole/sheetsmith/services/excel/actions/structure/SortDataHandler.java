@@ -115,10 +115,12 @@ public class SortDataHandler implements ActionHandler {
     }
 
     private void setCellValue(Cell cell, Object value) {
-        if (value == null) { cell.setBlank(); return; }
-        if (value instanceof Double d) cell.setCellValue(d);
-        else if (value instanceof Boolean b) cell.setCellValue(b);
-        else cell.setCellValue(value.toString());
+        switch (value) {
+            case null -> cell.setBlank();
+            case Double d -> cell.setCellValue(d);
+            case Boolean b -> cell.setCellValue(b);
+            default -> cell.setCellValue(value.toString());
+        }
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

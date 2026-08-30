@@ -38,6 +38,10 @@ import java.util.Set;
 @Component
 public class SetBordersHandler implements ActionHandler {
 
+    /** The two composite sides, named because the switch, the validation and the card all say them. */
+    private static final String OUTLINE = "outline";
+    private static final String INSIDE = "inside";
+
     private enum Edge {TOP, BOTTOM, LEFT, RIGHT}
 
     private static final String DEFAULT_COLOR = "#000000";
@@ -121,42 +125,59 @@ public class SetBordersHandler implements ActionHandler {
     /** Which edges of one cell the requested sides come down to. */
     private Set<Edge> edges(Set<String> sides, CellRangeAddress area, int row, int column) {
         Set<Edge> edges = EnumSet.noneOf(Edge.class);
-        boolean firstRow = row == area.getFirstRow();
-        boolean lastRow = row == area.getLastRow();
-        boolean firstColumn = column == area.getFirstColumn();
-        boolean lastColumn = column == area.getLastColumn();
+        Position position = new Position(
+                row == area.getFirstRow(), row == area.getLastRow(),
+                column == area.getFirstColumn(), column == area.getLastColumn());
 
         for (String side : sides) {
-            switch (side) {
-                case "all" -> edges.addAll(EnumSet.allOf(Edge.class));
-                case "outline" -> {
-                    if (firstRow) edges.add(Edge.TOP);
-                    if (lastRow) edges.add(Edge.BOTTOM);
-                    if (firstColumn) edges.add(Edge.LEFT);
-                    if (lastColumn) edges.add(Edge.RIGHT);
-                }
-                case "inside" -> {
-                    if (!firstRow) edges.add(Edge.TOP);
-                    if (!lastRow) edges.add(Edge.BOTTOM);
-                    if (!firstColumn) edges.add(Edge.LEFT);
-                    if (!lastColumn) edges.add(Edge.RIGHT);
-                }
-                case "top" -> {
-                    if (firstRow) edges.add(Edge.TOP);
-                }
-                case "bottom" -> {
-                    if (lastRow) edges.add(Edge.BOTTOM);
-                }
-                case "left" -> {
-                    if (firstColumn) edges.add(Edge.LEFT);
-                }
-                case "right" -> {
-                    if (lastColumn) edges.add(Edge.RIGHT);
-                }
-                default -> throw new IllegalArgumentException("Unknown side \"" + side
-                        + "\" — use all, outline, inside, top, bottom, left or right.");
-            }
+            edges.addAll(edgesFor(side, position));
         }
+        return edges;
+    }
+
+    /** Where one cell sits in the range, which is all the sides below need to know about it. */
+    private record Position(boolean firstRow, boolean lastRow, boolean firstColumn, boolean lastColumn) {
+    }
+
+    /**
+     * One named side, as the edges it means for a cell in this position.
+     * <p>
+     * OUTLINE and INSIDE are the pair worth reading twice: the outline of a range is the edges
+     * that face outwards, so a cell in the middle contributes none of them — and INSIDE is the
+     * same test negated, which is why they are written as each other's mirror rather than as two
+     * unrelated lists.
+     */
+    private Set<Edge> edgesFor(String side, Position at) {
+        return switch (side) {
+            case "all" -> EnumSet.allOf(Edge.class);
+            case OUTLINE -> outward(at);
+            case INSIDE -> inward(at);
+            case "top" -> at.firstRow() ? EnumSet.of(Edge.TOP) : EnumSet.noneOf(Edge.class);
+            case "bottom" -> at.lastRow() ? EnumSet.of(Edge.BOTTOM) : EnumSet.noneOf(Edge.class);
+            case "left" -> at.firstColumn() ? EnumSet.of(Edge.LEFT) : EnumSet.noneOf(Edge.class);
+            case "right" -> at.lastColumn() ? EnumSet.of(Edge.RIGHT) : EnumSet.noneOf(Edge.class);
+            default -> throw new IllegalArgumentException("Unknown side \"" + side
+                    + "\" — use all, outline, inside, top, bottom, left or right.");
+        };
+    }
+
+    /** The edges of this cell that face out of the range. */
+    private Set<Edge> outward(Position at) {
+        Set<Edge> edges = EnumSet.noneOf(Edge.class);
+        if (at.firstRow()) edges.add(Edge.TOP);
+        if (at.lastRow()) edges.add(Edge.BOTTOM);
+        if (at.firstColumn()) edges.add(Edge.LEFT);
+        if (at.lastColumn()) edges.add(Edge.RIGHT);
+        return edges;
+    }
+
+    /** The edges that face another cell of the same range. */
+    private Set<Edge> inward(Position at) {
+        Set<Edge> edges = EnumSet.noneOf(Edge.class);
+        if (!at.firstRow()) edges.add(Edge.TOP);
+        if (!at.lastRow()) edges.add(Edge.BOTTOM);
+        if (!at.firstColumn()) edges.add(Edge.LEFT);
+        if (!at.lastColumn()) edges.add(Edge.RIGHT);
         return edges;
     }
 
@@ -203,9 +224,9 @@ public class SetBordersHandler implements ActionHandler {
 
     private String alias(String side) {
         return switch (side) {
-            case "box", "border", "around", "perimeter" -> "outline";
+            case "box", "border", "around", "perimeter" -> OUTLINE;
             case "everything", "grid" -> "all";
-            case "internal", "inner" -> "inside";
+            case "internal", "inner" -> INSIDE;
             default -> side;
         };
     }
@@ -247,8 +268,8 @@ public class SetBordersHandler implements ActionHandler {
         }
         if (sides.size() == 1) {
             return switch (sides.iterator().next()) {
-                case "outline" -> "a " + weight + " border around the outside";
-                case "inside" -> weight + " borders between the cells";
+                case OUTLINE -> "a " + weight + " border around the outside";
+                case INSIDE -> weight + " borders between the cells";
                 case "top" -> "a " + weight + " line above";
                 case "bottom" -> "a " + weight + " line underneath";
                 case "left" -> "a " + weight + " line down the left";
