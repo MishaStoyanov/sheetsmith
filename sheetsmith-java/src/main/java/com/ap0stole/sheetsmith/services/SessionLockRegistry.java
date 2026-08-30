@@ -5,7 +5,6 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Supplier;
 
 /**
  * One lock per session, taken by everything that appends to a session's revision chain.
@@ -23,20 +22,27 @@ public class SessionLockRegistry {
 
     private final ConcurrentMap<String, ReentrantLock> locks = new ConcurrentHashMap<>();
 
-    /** Locks the session and hands the lock back; callers must unlock it in a {@code finally} block. */
-    public ReentrantLock acquire(String sessionId) {
+    /**
+     * Runs the work with this session's lock held, and releases it either way.
+     * <p>
+     * The only way in. Handing a locked lock back to a caller and trusting them to release it in a
+     * finally worked — both callers did — but it is a rule that lives in prose, and the next caller
+     * reads the prose only if they think to. Here the release is the method's own job.
+     */
+    public <T, E extends Exception> T withSession(String sessionId, Work<T, E> work) throws E {
         ReentrantLock lock = locks.computeIfAbsent(sessionId, id -> new ReentrantLock());
         lock.lock();
-        return lock;
-    }
-
-    /** The safe form, for work that throws nothing checked. */
-    public <T> T withSession(String sessionId, Supplier<T> work) {
-        ReentrantLock lock = acquire(sessionId);
         try {
-            return work.get();
+            return work.run();
         } finally {
             lock.unlock();
         }
+    }
+
+    /** Work that may throw whatever its caller throws — an upload reads files, and files fail. */
+    @FunctionalInterface
+    public interface Work<T, E extends Exception> {
+
+        T run() throws E;
     }
 }

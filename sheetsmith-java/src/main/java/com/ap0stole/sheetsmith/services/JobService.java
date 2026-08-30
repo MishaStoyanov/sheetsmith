@@ -40,7 +40,6 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 /**
@@ -337,26 +336,27 @@ public class JobService {
     private void processSessionJob(Long jobId, String sessionId, String instruction, AutomationRequest prePlan) {
         if (!acquireSlot(jobId)) return;
 
-        ReentrantLock lock = sessionLocks.acquire(sessionId);
         try {
-            DocumentSession session = documentSessionService.require(sessionId);
-            String inputPath = documentSessionService.currentPath(session).toString();
-            String resultPath = documentSessionService.nextRevisionPath(session).toString();
+            sessionLocks.withSession(sessionId, () -> {
+                DocumentSession session = documentSessionService.require(sessionId);
+                String inputPath = documentSessionService.currentPath(session).toString();
+                String resultPath = documentSessionService.nextRevisionPath(session).toString();
 
-            JobRecord job = startJob(jobId, inputPath);
-            List<ActionResult> results = runPlan(job, inputPath, resultPath, instruction, prePlan);
-            JobStatus status = finalizeJob(job, results, resultPath);
+                JobRecord job = startJob(jobId, inputPath);
+                List<ActionResult> results = runPlan(job, inputPath, resultPath, instruction, prePlan);
+                JobStatus status = finalizeJob(job, results, resultPath);
 
-            // A job that changed nothing must not spend a revision — undo would step over a no-op.
-            if (status != JobStatus.FAILED) {
-                documentSessionService.commitExternalRevision(session,
-                        "Applied outside the chat: \"" + instruction + "\" — I'm now working with the new version.");
-            }
+                // A job that changed nothing must not spend a revision — undo would step over a no-op.
+                if (status != JobStatus.FAILED) {
+                    documentSessionService.commitExternalRevision(session,
+                            "Applied outside the chat: \"" + instruction + "\" — I'm now working with the new version.");
+                }
+                return null;
+            });
         } catch (Exception e) {
             log.error("Job {} failed with exception", jobId, e);
             failJob(jobId, e.getMessage());
         } finally {
-            lock.unlock();
             jobSemaphore.release();
         }
     }

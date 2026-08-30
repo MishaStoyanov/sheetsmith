@@ -43,6 +43,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SchemaExtractorService {
 
+    /** What every "I cannot tell" answer in this file says, so they all say the same thing. */
+    private static final String UNKNOWN = "unknown";
+
     private final ChatConfig chatConfig;
 
     public ExcelSchemaDto extract(String filePath) {
@@ -193,11 +196,11 @@ public class SchemaExtractorService {
             else if (axis instanceof XDDFValueAxis) axes.add("value axis");
         }
 
-        String type = "unknown";
+        String type = UNKNOWN;
         List<ChartSeriesDto> series = new ArrayList<>();
         for (XDDFChartData data : chart.getChartSeries()) {
             String kind = chartType(data);
-            if (!"unknown".equals(kind) && "unknown".equals(type)) type = kind;
+            if (!UNKNOWN.equals(kind) && UNKNOWN.equals(type)) type = kind;
             for (int s = 0; s < data.getSeriesCount(); s++) {
                 try {
                     series.add(describeSeries(data.getSeries(s)));
@@ -243,14 +246,14 @@ public class SchemaExtractorService {
 
     private String chartType(XDDFChartData data) {
         return switch (data) {
-            case XDDFBarChartData ignored -> "bar";
-            case XDDFBar3DChartData ignored -> "bar";
-            case XDDFPieChartData ignored -> "pie";
-            case XDDFPie3DChartData ignored -> "pie";
-            case XDDFDoughnutChartData ignored -> "pie";
-            case XDDFLineChartData ignored -> "line";
-            case XDDFLine3DChartData ignored -> "line";
-            default -> "unknown";
+            case XDDFBarChartData _ -> "bar";
+            case XDDFBar3DChartData _ -> "bar";
+            case XDDFPieChartData _ -> "pie";
+            case XDDFPie3DChartData _ -> "pie";
+            case XDDFDoughnutChartData _ -> "pie";
+            case XDDFLineChartData _ -> "line";
+            case XDDFLine3DChartData _ -> "line";
+            default -> UNKNOWN;
         };
     }
 

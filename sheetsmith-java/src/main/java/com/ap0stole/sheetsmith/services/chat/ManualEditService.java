@@ -19,7 +19,6 @@ import java.io.FileInputStream;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Commits edits the user typed into the preview grid.
@@ -41,8 +40,8 @@ public class ManualEditService {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "No edits to save");
         }
 
-        ReentrantLock lock = sessionLocks.acquire(sessionId);
-        try {
+        return sessionLocks.withSession(sessionId, () -> {
+            try {
             // The session is read INSIDE the lock on purpose. Reading first and locking second lets
             // two flushes queued behind a slow write both see the same current revision and derive
             // the same "next" one — the second then overwrites the first instead of appending.
@@ -62,14 +61,13 @@ public class ManualEditService {
                         sessionId, request.safeCells().size(), revision);
                 return revision;
             }
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Manual edits failed for session {}", sessionId, e);
-            throw new ApiException(ErrorCode.PROCESSING_ERROR, "Could not save the edits: " + e.getMessage());
-        } finally {
-            lock.unlock();
-        }
+            } catch (ApiException e) {
+              throw e;
+            } catch (Exception e) {
+              log.error("Manual edits failed for session {}", sessionId, e);
+              throw new ApiException(ErrorCode.PROCESSING_ERROR, "Could not save the edits: " + e.getMessage());
+            }
+        });
     }
 
     private void renameSheets(XSSFWorkbook workbook, Map<String, String> renames) {
