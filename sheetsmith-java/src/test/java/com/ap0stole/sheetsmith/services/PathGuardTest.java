@@ -70,7 +70,8 @@ class PathGuardTest {
         String traversal = root.resolve("..").resolve("etc").resolve("passwd").toString();
 
         assertThat(Files.exists(Path.of(traversal))).isTrue();
-        assertThatThrownBy(() -> guard(true, root).resolveInput(traversal, "inputPath"))
+        var guardUnderTest = guard(true, root);
+        assertThatThrownBy(() -> guardUnderTest.resolveInput(traversal, "inputPath"))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getErrorCode())
                 .isEqualTo(ErrorCode.PATH_TRAVERSAL);

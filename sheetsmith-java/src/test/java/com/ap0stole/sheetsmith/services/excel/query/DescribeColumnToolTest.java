@@ -118,7 +118,8 @@ class DescribeColumnToolTest {
 
     @Test
     void requiresAColumnIndex() {
-        assertThatThrownBy(() -> tool.execute(workbook, Map.of("range", "A2:D6")))
+        Map<String, Object> arguments = Map.of("range", "A2:D6");
+        assertThatThrownBy(() -> tool.execute(workbook, arguments))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("columnIndex");
     }

@@ -59,6 +59,11 @@ import static org.mockito.Mockito.when;
  * lifecycle rather than the Excel work: which revision a job reads, which one it writes, and what
  * survives when the job record is deleted. The POI work itself is stubbed.
  */
+/**
+ * java:S2925: the sleep in here is a stand-in for a job that takes time, which is the thing the
+ * revision chain has to survive. Waiting for a condition instead would remove it.
+ */
+@SuppressWarnings("java:S2925")
 class JobServiceSessionTest {
 
     private static final String JOB_SHEET = "JobEdit";

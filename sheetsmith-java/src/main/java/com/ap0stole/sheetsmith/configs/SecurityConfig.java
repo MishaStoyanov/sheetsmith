@@ -61,7 +61,19 @@ public class SecurityConfig {
     private final SecurityProperties securityProperties;
     private final JwtAuthenticationFilter jwtFilter;
 
+    /**
+     * java:S4502 asks about the disabled CSRF protection below, and this is the answer rather than
+     * the rule turned off somewhere nobody reads.
+     * <p>
+     * CSRF matters when a browser attaches authority to a request by itself. Here the access token
+     * is put in an Authorization header by the application's own code, which a cross-site form post
+     * cannot do; there is no session cookie at all, and the one cookie that exists — the refresh
+     * token — is {@code SameSite=Strict} and scoped to {@code /api/auth}, so it is not sent on a
+     * request another site caused. Enabling CSRF would mean issuing and threading a token through
+     * an API whose only cookie is already unusable cross-site.
+     */
     @Bean
+    @SuppressWarnings("java:S4502")
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))

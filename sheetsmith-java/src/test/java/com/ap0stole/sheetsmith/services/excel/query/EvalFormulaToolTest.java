@@ -120,7 +120,8 @@ class EvalFormulaToolTest {
         XSSFSheet sales = workbook.getSheet("Sales");
         int lastRowBefore = sales.getLastRowNum();
 
-        assertThatThrownBy(() -> tool.execute(workbook, Map.of("formula", "SUM(")))
+        Map<String, Object> arguments = Map.of("formula", "SUM(");
+        assertThatThrownBy(() -> tool.execute(workbook, arguments))
                 .isInstanceOf(RuntimeException.class);
 
         assertThat(sales.getLastRowNum()).isEqualTo(lastRowBefore);
@@ -137,7 +138,8 @@ class EvalFormulaToolTest {
 
     @Test
     void requiresAFormula() {
-        assertThatThrownBy(() -> tool.execute(workbook, Map.of("formula", "  ")))
+        Map<String, Object> arguments2 = Map.of("formula", " ");
+        assertThatThrownBy(() -> tool.execute(workbook, arguments2))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("formula");
     }

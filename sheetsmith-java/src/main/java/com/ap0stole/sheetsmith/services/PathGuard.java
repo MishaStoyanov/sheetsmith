@@ -127,20 +127,28 @@ public class PathGuard {
 
         Path resolved = existing.toRealPath();
         for (Path segment : tail) {
-            String name = segment.toString();
-            if (".".equals(name)) {
-                continue;
-            }
-            if ("..".equals(name)) {
-                Path parent = resolved.getParent();
-                resolved = (parent != null) ? parent : resolved;
-                continue;
-            }
-            resolved = resolved.resolve(segment);
-            if (Files.exists(resolved, LinkOption.NOFOLLOW_LINKS)) {
-                resolved = resolved.toRealPath();
-            }
+            resolved = step(resolved, segment);
         }
         return resolved;
+    }
+
+    /**
+     * One segment of the path that does not exist yet, resolved against what does.
+     * <p>
+     * "." goes nowhere and ".." goes up, both without touching the filesystem; anything else is
+     * appended, and resolved through any symlink it turns out to be — which is the whole point of
+     * walking the tail by hand rather than calling toRealPath on the lot.
+     */
+    private static Path step(Path resolved, Path segment) throws IOException {
+        String name = segment.toString();
+        if (".".equals(name)) {
+            return resolved;
+        }
+        if ("..".equals(name)) {
+            Path parent = resolved.getParent();
+            return parent != null ? parent : resolved;
+        }
+        Path next = resolved.resolve(segment);
+        return Files.exists(next, LinkOption.NOFOLLOW_LINKS) ? next.toRealPath() : next;
     }
 }

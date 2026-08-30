@@ -91,7 +91,8 @@ class ReadRangeToolTest {
 
     @Test
     void rejectsRangesOverTheCellBudget() {
-        assertThatThrownBy(() -> tool.execute(workbook, Map.of("range", "A1:Z9999")))
+        Map<String, Object> arguments = Map.of("range", "A1:Z9999");
+        assertThatThrownBy(() -> tool.execute(workbook, arguments))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("covers 259974 cells")
                 .hasMessageContaining("limit is 300")
@@ -103,7 +104,8 @@ class ReadRangeToolTest {
         chatConfig.setMaxCells(4);
 
         assertThat(tool.execute(workbook, Map.of("range", "A1:B2"))).isNotNull();
-        assertThatThrownBy(() -> tool.execute(workbook, Map.of("range", "A1:C2")))
+        Map<String, Object> arguments2 = Map.of("range", "A1:C2");
+        assertThatThrownBy(() -> tool.execute(workbook, arguments2))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("limit is 4");
     }

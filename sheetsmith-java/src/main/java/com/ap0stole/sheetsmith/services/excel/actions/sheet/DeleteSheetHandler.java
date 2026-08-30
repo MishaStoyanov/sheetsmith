@@ -105,23 +105,31 @@ public class DeleteSheetHandler implements ActionHandler {
         List<String> found = new java.util.ArrayList<>();
 
         for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
-            if (i == deleted) {
-                continue;
-            }
-            for (org.apache.poi.ss.usermodel.Row row : workbook.getSheetAt(i)) {
-                for (org.apache.poi.ss.usermodel.Cell cell : row) {
-                    if (cell.getCellType() != org.apache.poi.ss.usermodel.CellType.FORMULA) {
-                        continue;
-                    }
-                    String formula = cell.getCellFormula().toLowerCase(java.util.Locale.ROOT);
-                    if (formula.contains(bare) || formula.contains(quoted)) {
-                        found.add(workbook.getSheetName(i) + "!"
-                                + new org.apache.poi.ss.util.CellReference(cell).formatAsString(false));
-                    }
-                }
+            if (i != deleted) {
+                collectReferences(workbook, i, bare, quoted, found);
             }
         }
         return found;
+    }
+
+    /** Every formula on one sheet that names the sheet about to go, as "Sheet!A1". */
+    private void collectReferences(XSSFWorkbook workbook, int sheetIndex,
+                                   String bare, String quoted, List<String> found) {
+        for (org.apache.poi.ss.usermodel.Row row : workbook.getSheetAt(sheetIndex)) {
+            for (org.apache.poi.ss.usermodel.Cell cell : row) {
+                if (cell.getCellType() == org.apache.poi.ss.usermodel.CellType.FORMULA
+                        && names(cell, bare, quoted)) {
+                    found.add(workbook.getSheetName(sheetIndex) + "!"
+                            + new org.apache.poi.ss.util.CellReference(cell).formatAsString(false));
+                }
+            }
+        }
+    }
+
+    /** Both spellings of the reference, since a name with a space in it arrives quoted. */
+    private boolean names(org.apache.poi.ss.usermodel.Cell cell, String bare, String quoted) {
+        String formula = cell.getCellFormula().toLowerCase(java.util.Locale.ROOT);
+        return formula.contains(bare) || formula.contains(quoted);
     }
 
     private String names(XSSFWorkbook workbook) {

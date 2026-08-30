@@ -113,20 +113,12 @@ public class HyperlinkHandler implements ActionHandler {
         int skipped = 0;
 
         for (int r = area.getFirstRow(); r <= area.getLastRow(); r++) {
-            XSSFRow row = sheet.getRow(r);
             for (int c = area.getFirstColumn(); c <= area.getLastColumn(); c++) {
-                XSSFCell cell = row == null ? null : row.getCell(c);
-                String address = linkifying ? textOf(cell) : cfg.getAddress().trim();
-                if (!notBlank(address)) {
+                if (linkOne(sheet, helper, cfg, linkifying, r, c)) {
+                    touched.add(at(r, c));
+                } else {
                     skipped++;
-                    continue;
                 }
-                if (cell == null) {
-                    row = row == null ? sheet.createRow(r) : row;
-                    cell = row.createCell(c);
-                }
-                attach(helper, cell, address, linkifying ? null : cfg.getText(), cfg.getLinkType());
-                touched.add(at(r, c));
             }
         }
 
@@ -134,6 +126,27 @@ public class HyperlinkHandler implements ActionHandler {
             style(workbook, sheet, area, touched);
         }
         return new Linked(touched, skipped);
+    }
+
+    /**
+     * One cell: link it if there is an address for it.
+     *
+     * @return true when a link was attached, false when the cell had nothing to link
+     */
+    private boolean linkOne(XSSFSheet sheet, CreationHelper helper, HyperlinkConfig cfg,
+                            boolean linkifying, int row, int column) {
+        XSSFRow sheetRow = sheet.getRow(row);
+        XSSFCell cell = sheetRow == null ? null : sheetRow.getCell(column);
+        String address = linkifying ? textOf(cell) : cfg.getAddress().trim();
+        if (!notBlank(address)) {
+            return false;
+        }
+        if (cell == null) {
+            sheetRow = sheetRow == null ? sheet.createRow(row) : sheetRow;
+            cell = sheetRow.createCell(column);
+        }
+        attach(helper, cell, address, linkifying ? null : cfg.getText(), cfg.getLinkType());
+        return true;
     }
 
     @Override
