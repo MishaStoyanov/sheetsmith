@@ -232,7 +232,8 @@ class SpendLimitTest {
     void plainUsersCannotSetLimits() {
         as(danaId, "budget-dana");
 
-        assertThatThrownBy(() -> userService.setMonthlyBudget(seededId, new BigDecimal("99.00"), danaId))
+        var amount = new BigDecimal("99.00");
+        assertThatThrownBy(() -> userService.setMonthlyBudget(seededId, amount, danaId))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("Only the superadmin");
     }
@@ -398,7 +399,8 @@ class SpendLimitTest {
         Long boss = jdbc.queryForObject("select id from users where name = 'budget-boss-two'", Long.class);
         as(boss, "budget-boss-two");
 
-        assertThatThrownBy(() -> userService.setMonthlyBudget(boss, new BigDecimal("99.00"), boss))
+        var amount2 = new BigDecimal("99.00");
+        assertThatThrownBy(() -> userService.setMonthlyBudget(boss, amount2, boss))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("your own spend limit");
     }
@@ -441,7 +443,8 @@ class SpendLimitTest {
         Long boss = insertAdmin("budget-boss-three");
         as(boss, "budget-boss-three");
 
-        assertThatThrownBy(() -> userService.setMonthlyBudget(seededId, new BigDecimal("5.00"), boss))
+        var amount3 = new BigDecimal("5.00");
+        assertThatThrownBy(() -> userService.setMonthlyBudget(seededId, amount3, boss))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("Only the superadmin");
 

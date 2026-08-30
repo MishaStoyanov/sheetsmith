@@ -42,6 +42,10 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class StorageSettingsService {
 
+    /** The two folders under a chosen root, named here because three places have to agree on them. */
+    private static final String UPLOADS = "uploads";
+    private static final String RESULTS = "results";
+
     private final StorageSettingsRepository repository;
     private final FileStorageConfig config;
 
@@ -58,14 +62,14 @@ public class StorageSettingsService {
      * bare {@code .} left in the middle of it — a path that works and reads like a mistake.
      */
     public Path uploadDir() {
-        return chosenRoot().map(root -> root.resolve("uploads"))
+        return chosenRoot().map(root -> root.resolve(UPLOADS))
                 .orElseGet(() -> Path.of(config.getUploadDir()))
                 .toAbsolutePath().normalize();
     }
 
     /** Where results are written now. Absolute and normalised for the same reason. */
     public Path resultDir() {
-        return chosenRoot().map(root -> root.resolve("results"))
+        return chosenRoot().map(root -> root.resolve(RESULTS))
                 .orElseGet(() -> Path.of(config.getResultDir()))
                 .toAbsolutePath().normalize();
     }
@@ -181,9 +185,9 @@ public class StorageSettingsService {
     /** Creates the folder and its two children, and proves a file can be written into them. */
     private void prepare(Path root) {
         try {
-            Files.createDirectories(root.resolve("uploads"));
-            Files.createDirectories(root.resolve("results"));
-            Path probe = Files.createTempFile(root.resolve("uploads"), "sheetsmith-", ".probe");
+            Files.createDirectories(root.resolve(UPLOADS));
+            Files.createDirectories(root.resolve(RESULTS));
+            Path probe = Files.createTempFile(root.resolve(UPLOADS), "sheetsmith-", ".probe");
             Files.deleteIfExists(probe);
         } catch (Exception e) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR,

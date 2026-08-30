@@ -140,11 +140,13 @@ class ManualEditServiceTest {
     @Test
     @DisplayName("a duplicate or empty sheet name is refused rather than silently ignored")
     void rejectsBadSheetNames() {
-        assertThatThrownBy(() -> service.apply("s1", new CellEditsRequest(null, Map.of("1", "Sales"))))
+        var cellEditsRequest = new CellEditsRequest(null, Map.of("1", "Sales"));
+        assertThatThrownBy(() -> service.apply("s1", cellEditsRequest))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("already exists");
 
-        assertThatThrownBy(() -> service.apply("s1", new CellEditsRequest(null, Map.of("0", "  "))))
+        var cellEditsRequest2 = new CellEditsRequest(null, Map.of("0", " "));
+        assertThatThrownBy(() -> service.apply("s1", cellEditsRequest2))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("cannot be empty");
     }
@@ -152,8 +154,8 @@ class ManualEditServiceTest {
     @Test
     @DisplayName("an unknown sheet index is refused with a message that says what is wrong")
     void rejectsUnknownSheetIndex() {
-        assertThatThrownBy(() -> service.apply("s1",
-                new CellEditsRequest(List.of(new CellEdit(9, 0, 0, "x")), null)))
+        var cellEditsRequest3 = new CellEditsRequest(List.of(new CellEdit(9, 0, 0, "x")), null);
+        assertThatThrownBy(() -> service.apply("s1",cellEditsRequest3))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("no sheet 9");
     }
@@ -161,7 +163,8 @@ class ManualEditServiceTest {
     @Test
     @DisplayName("an empty payload is refused — there is nothing to commit")
     void rejectsEmptyPayload() {
-        assertThatThrownBy(() -> service.apply("s1", new CellEditsRequest(List.of(), Map.of())))
+        var cellEditsRequest4 = new CellEditsRequest(List.of(), Map.of());
+        assertThatThrownBy(() -> service.apply("s1", cellEditsRequest4))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("No edits");
 

@@ -36,8 +36,9 @@ public record TokenUsage(Long promptTokens, Long completionTokens, Long totalTok
         }
 
         // A provider that reports the two halves but no total is common enough to be worth adding
-        // up here rather than leaving a hole in the column the UI sorts on.
-        if (total == null && (prompt != null || completion != null)) {
+        // up here rather than leaving a hole in the column the UI sorts on. No need to ask whether
+        // either half is present: the guard above returned when all three were missing.
+        if (total == null) {
             total = zeroIfNull(prompt) + zeroIfNull(completion);
         }
         return new TokenUsage(prompt, completion, total);

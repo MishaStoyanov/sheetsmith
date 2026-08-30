@@ -156,8 +156,8 @@ class HistorySearchTest {
 
         // A Sort built from the caller's string reaches any property of the entity and its
         // relations — including the owner's password hash, whose order alone would say something.
-        assertThatThrownBy(() -> jobService.search(new HistorySearchRequest(null, null, null, null, null,
-                null, null, null, null, null, null, null, null, "startedBy.passwordHash", "asc")))
+        var historySearchRequest = new HistorySearchRequest(null, null, null, null, null, null, null, null, null, null, null, null, null, "startedBy.passwordHash", "asc");
+        assertThatThrownBy(() -> jobService.search(historySearchRequest))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("Cannot sort runs by");
     }

@@ -51,13 +51,13 @@ public class UsageRecorder {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void improve(JobRecord job, User owner, String prompt,
                         TokenUsage tokens, LlmEngine engine, LocalDateTime startedAt) {
-        record(UsageKind.IMPROVE, owner, job, null, prompt, tokens, engine, startedAt);
+        save(new Entry(UsageKind.IMPROVE, owner, job, null, prompt, tokens, engine, startedAt));
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void chat(String sessionId, User owner, String prompt,
                      TokenUsage tokens, LlmEngine engine, LocalDateTime startedAt) {
-        record(UsageKind.CHAT, owner, null, sessionId, prompt, tokens, engine, startedAt);
+        save(new Entry(UsageKind.CHAT, owner, null, sessionId, prompt, tokens, engine, startedAt));
     }
 
     /**
@@ -69,34 +69,47 @@ public class UsageRecorder {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void chatlessPlan(String sessionId, User owner, String prompt,
                              TokenUsage tokens, LlmEngine engine, LocalDateTime startedAt) {
-        record(UsageKind.IMPROVE, owner, null, sessionId, prompt, tokens, engine, startedAt);
+        save(new Entry(UsageKind.IMPROVE, owner, null, sessionId, prompt, tokens, engine, startedAt));
     }
 
-    private void record(UsageKind kind, User owner, JobRecord job, String sessionId, String prompt,
-                        TokenUsage tokens, LlmEngine engine, LocalDateTime startedAt) {
+    /**
+     * One row of the audit, as its eight facts.
+     * <p>
+     * A record rather than eight parameters: they are always passed together, they are always in
+     * the same order, and two of them are nullable in a way only the call site knows about — which
+     * is exactly the shape that gets transposed by accident.
+     *
+     * @param job       the run this call belongs to, or null when it belongs to a chat turn
+     * @param sessionId the document, for a chat turn — null for a run
+     */
+    private record Entry(UsageKind kind, User owner, JobRecord job, String sessionId, String prompt,
+                         TokenUsage tokens, LlmEngine engine, LocalDateTime startedAt) {
+    }
+
+    private void save(Entry entry) {
         try {
             LlmUsage row = new LlmUsage();
-            row.setKind(kind);
-            row.setUser(owner);
-            row.setJob(job);
-            row.setSessionId(sessionId);
-            row.setPrompt(prompt);
+            row.setKind(entry.kind());
+            row.setUser(entry.owner());
+            row.setJob(entry.job());
+            row.setSessionId(entry.sessionId());
+            row.setPrompt(entry.prompt());
 
-            if (tokens != null) {
-                row.setPromptTokens(tokens.promptTokens());
-                row.setCompletionTokens(tokens.completionTokens());
-                row.setTotalTokens(tokens.totalTokens());
+            if (entry.tokens() != null) {
+                row.setPromptTokens(entry.tokens().promptTokens());
+                row.setCompletionTokens(entry.tokens().completionTokens());
+                row.setTotalTokens(entry.tokens().totalTokens());
             }
-            if (engine != null) {
-                row.setProviderMode(engine.providerMode());
-                row.setProvider(engine.provider());
-                row.setModel(engine.model());
+            if (entry.engine() != null) {
+                row.setProviderMode(entry.engine().providerMode());
+                row.setProvider(entry.engine().provider());
+                row.setModel(entry.engine().model());
 
                 // The price as it stands now, stamped onto the row. Only for a cloud call: a model
                 // on this machine bills nothing, so it has no rate to record whatever the price
                 // list happens to say about it.
-                if ("CLOUD".equals(engine.providerMode()) && engine.provider() != null && engine.model() != null) {
-                    prices.findByProviderAndModel(engine.provider().toUpperCase(), engine.model())
+                if ("CLOUD".equals(entry.engine().providerMode()) && entry.engine().provider() != null && entry.engine().model() != null) {
+                    prices.findByProviderAndModel(entry.engine().provider().toUpperCase(), entry.engine().model())
                             .ifPresent(price -> {
                                 row.setInputPerMillion(price.getInputPerMillion());
                                 row.setOutputPerMillion(price.getOutputPerMillion());
@@ -104,11 +117,11 @@ public class UsageRecorder {
                 }
             }
 
-            row.setStartedAt(startedAt == null ? LocalDateTime.now() : startedAt);
+            row.setStartedAt(entry.startedAt() == null ? LocalDateTime.now() : entry.startedAt());
             row.setFinishedAt(LocalDateTime.now());
             usage.save(row);
         } catch (Exception e) {
-            log.warn("Could not record what a {} call cost; the call itself is unaffected", kind, e);
+            log.warn("Could not record what a {} call cost; the call itself is unaffected", entry.kind(), e);
         }
     }
 }

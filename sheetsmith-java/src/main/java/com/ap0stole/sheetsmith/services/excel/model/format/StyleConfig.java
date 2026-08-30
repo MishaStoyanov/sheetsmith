@@ -37,8 +37,8 @@ public class StyleConfig {
         if (fonts == null) {
             return;
         }
-        if (fonts.get("bold") instanceof Boolean bold) {
-            this.bold = bold;
+        if (fonts.get("bold") instanceof Boolean boldValue) {
+            this.bold = boldValue;
         }
         if (fonts.get("color") instanceof String color) {
             this.fontColor = color;

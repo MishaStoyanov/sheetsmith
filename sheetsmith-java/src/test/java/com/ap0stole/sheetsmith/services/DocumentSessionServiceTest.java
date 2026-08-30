@@ -157,7 +157,8 @@ class DocumentSessionServiceTest {
     void rejectsUnknownRevision() throws Exception {
         DocumentSession session = openSession();
 
-        assertThatThrownBy(() -> service.revert(session.getId(), 7))
+        var sessionId = session.getId();
+        assertThatThrownBy(() -> service.revert(sessionId, 7))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("No such revision");
     }

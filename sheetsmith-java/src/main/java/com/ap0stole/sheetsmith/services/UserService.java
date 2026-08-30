@@ -119,12 +119,10 @@ public class UserService {
             // Changing your own password means proving you are the one sitting there. Someone who
             // found the screen unlocked must not be able to lock the owner out of their account.
             // An administrator resetting somebody else's has no such value to supply.
-            if (id.equals(callerId)) {
-                if (request.currentPassword() == null
-                        || !passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
-                    throw new ApiException(ErrorCode.VALIDATION_ERROR,
-                            "Your current password is wrong", "currentPassword");
-                }
+            if (id.equals(callerId) && (request.currentPassword() == null
+                    || !passwordEncoder.matches(request.currentPassword(), user.getPasswordHash()))) {
+                throw new ApiException(ErrorCode.VALIDATION_ERROR,
+                        "Your current password is wrong", "currentPassword");
             }
             setPassword(user, request.password());
         }
@@ -261,13 +259,6 @@ public class UserService {
         // administrator setting a limit for a user, or the superadmin for anybody.
         return UserDto.from(saved, isFirstUser(id),
                 budget == null ? null : budgets.spentThisMonth(id), true);
-    }
-
-    /** The half of a check that could not live on the method, because the other caller is yourself. */
-    private void requireAdmin(String what) {
-        if (!authz.admin()) {
-            throw new ApiException(ErrorCode.FORBIDDEN, "You do not have permission to " + what);
-        }
     }
 
     /**

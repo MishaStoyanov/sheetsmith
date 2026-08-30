@@ -200,7 +200,8 @@ class JobServiceSessionTest {
         when(planningService.generatePlan(anyString(), anyString()))
                 .thenReturn(new PlanningResult(new AutomationRequest(), TokenUsage.NONE, LlmEngine.UNKNOWN));
 
-        assertThatThrownBy(() -> jobService.generatePlan(new PlanRequest(session.getId(), "make it nicer")))
+        var planRequest = new PlanRequest(session.getId(), "make it nicer");
+        assertThatThrownBy(() -> jobService.generatePlan(planRequest))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("did not propose any changes");
     }
@@ -215,7 +216,8 @@ class JobServiceSessionTest {
         // 200 with review cards reading "Unknown step" — a plan nobody can act on or diagnose.
         when(planningService.generatePlan(anyString(), anyString())).thenReturn(planWith(null));
 
-        assertThatThrownBy(() -> jobService.generatePlan(new PlanRequest(session.getId(), "tidy it")))
+        var planRequest2 = new PlanRequest(session.getId(), "tidy it");
+        assertThatThrownBy(() -> jobService.generatePlan(planRequest2))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("could not read");
     }

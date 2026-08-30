@@ -299,8 +299,8 @@ class AnalyticsSummaryTest {
     @Test
     @DisplayName("the granularity is an allowlist, not something handed to SQL")
     void granularityCannotBeAnything() {
-        assertThatThrownBy(() -> analytics.summary(
-                new AnalyticsQuery(null, null, null, null, null, null, null, "day'); drop table llm_usage; --")))
+        var analyticsQuery = new AnalyticsQuery(null, null, null, null, null, null, null, "day'); drop table llm_usage; --");
+        assertThatThrownBy(() -> analytics.summary(analyticsQuery))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("Cannot group by");
 

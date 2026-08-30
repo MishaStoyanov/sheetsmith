@@ -64,7 +64,6 @@ public class DescribeColumnTool implements QueryTool {
         int count = tally.count();
         Set<String> distinct = tally.distinct();
         String type = tally.type();
-        Double min = tally.min();
 
         Map<String, Object> data = tally.asData();
 

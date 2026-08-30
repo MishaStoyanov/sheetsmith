@@ -198,10 +198,13 @@ class BudgetRequestTest {
 
         as(bossId, "ask-boss");
 
-        assertThatThrownBy(() -> budgetRequests.decide(asked.getId(), true, new BigDecimal("10.00"), bossId))
+        var askedId = asked.getId();
+        var amount = new BigDecimal("10.00");
+        assertThatThrownBy(() -> budgetRequests.decide(askedId, true, amount, bossId))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("has to be higher");
-        assertThatThrownBy(() -> budgetRequests.decide(asked.getId(), true, null, bossId))
+        var askedId2 = asked.getId();
+        assertThatThrownBy(() -> budgetRequests.decide(askedId2, true, null, bossId))
                 .isInstanceOf(ApiException.class);
     }
 
@@ -233,7 +236,9 @@ class BudgetRequestTest {
         as(bossId, "ask-boss");
         budgetRequests.decide(asked.getId(), false, null, bossId);
 
-        assertThatThrownBy(() -> budgetRequests.decide(asked.getId(), true, new BigDecimal("50.00"), bossId))
+        var askedId3 = asked.getId();
+        var amount2 = new BigDecimal("50.00");
+        assertThatThrownBy(() -> budgetRequests.decide(askedId3, true, amount2, bossId))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("already been answered");
     }
@@ -249,7 +254,9 @@ class BudgetRequestTest {
         as(bossId, "ask-boss");
         BudgetRequest asked = budgetRequests.ask(bossId);
 
-        assertThatThrownBy(() -> budgetRequests.decide(asked.getId(), true, new BigDecimal("50.00"), bossId))
+        var askedId4 = asked.getId();
+        var amount3 = new BigDecimal("50.00");
+        assertThatThrownBy(() -> budgetRequests.decide(askedId4, true, amount3, bossId))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("your own request");
     }
@@ -262,7 +269,9 @@ class BudgetRequestTest {
         as(danaId, "ask-dana");
         BudgetRequest asked = budgetRequests.ask(danaId);
 
-        assertThatThrownBy(() -> budgetRequests.decide(asked.getId(), true, new BigDecimal("50.00"), danaId))
+        var askedId5 = asked.getId();
+        var amount4 = new BigDecimal("50.00");
+        assertThatThrownBy(() -> budgetRequests.decide(askedId5, true, amount4, danaId))
                 .isInstanceOf(ApiException.class);
         // Who may read the queue at all is a rule about the endpoint rather than about a row, so it
         // sits on the handler and is asked there: see SecurityMatrixTest.

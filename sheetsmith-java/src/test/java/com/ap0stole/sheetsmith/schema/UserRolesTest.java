@@ -95,7 +95,8 @@ class UserRolesTest {
         // Creating and deleting are rules about the endpoint, and are asked at it - see
         // SecurityMatrixTest. What is asked here is the rule that needs the row: who the caller is
         // pointing at, which no path can answer.
-        assertThatThrownBy(() -> userService.update(adminId, new PatchUserRequest("renamed", null, null), plainId))
+        var patchUserRequest = new PatchUserRequest("renamed", null, null);
+        assertThatThrownBy(() -> userService.update(adminId, patchUserRequest, plainId))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("permission");
     }

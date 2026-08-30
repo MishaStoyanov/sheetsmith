@@ -68,7 +68,6 @@ class StorageLimitTest {
     Path elsewhere;
 
     private Long superId;
-    private Long danaId;
 
     @BeforeEach
     void seed() {
@@ -81,7 +80,6 @@ class StorageLimitTest {
 
         jdbc.update("insert into users (name, password_hash, must_change_password, role) "
                 + "values ('store-dana', 'x', false, 'ADMIN')");
-        danaId = jdbc.queryForObject("select id from users where name = 'store-dana'", Long.class);
     }
 
     @AfterEach

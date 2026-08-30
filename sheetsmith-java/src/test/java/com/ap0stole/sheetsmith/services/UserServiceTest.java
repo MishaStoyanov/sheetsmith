@@ -101,7 +101,9 @@ class UserServiceTest {
     @Test
     @DisplayName("the default account cannot be deleted — it is the way back in")
     void theDefaultAccountIsProtected() {
-        assertThatThrownBy(() -> service.delete(defaultAdmin.getId(), dana.getId()))
+        var defaultAdminId = defaultAdmin.getId();
+        var danaId = dana.getId();
+        assertThatThrownBy(() -> service.delete(defaultAdminId, danaId))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("cannot be deleted");
 
@@ -114,14 +116,18 @@ class UserServiceTest {
         // A rule a rename can switch off is not a rule.
         service.replace(defaultAdmin.getId(), new ReplaceUserRequest("owner", "new-password"));
 
-        assertThatThrownBy(() -> service.delete(defaultAdmin.getId(), dana.getId()))
+        var defaultAdminId2 = defaultAdmin.getId();
+        var danaId2 = dana.getId();
+        assertThatThrownBy(() -> service.delete(defaultAdminId2, danaId2))
                 .isInstanceOf(ApiException.class);
     }
 
     @Test
     @DisplayName("you cannot delete the account you are signed in with")
     void youCannotDeleteYourself() {
-        assertThatThrownBy(() -> service.delete(dana.getId(), dana.getId()))
+        var danaId3 = dana.getId();
+        var danaId4 = dana.getId();
+        assertThatThrownBy(() -> service.delete(danaId3, danaId4))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("signed in with");
     }
@@ -143,13 +149,17 @@ class UserServiceTest {
     @DisplayName("changing your own password needs the current one")
     void changingYourOwnPasswordNeedsProof() {
         // Someone who found the screen unlocked must not be able to lock the owner out.
-        assertThatThrownBy(() -> service.update(dana.getId(),
-                new PatchUserRequest(null, "hijacked", null), dana.getId()))
+        var danaId5 = dana.getId();
+        var patchUserRequest = new PatchUserRequest(null, "hijacked", null);
+        var danaId6 = dana.getId();
+        assertThatThrownBy(() -> service.update(danaId5,patchUserRequest, danaId6))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("current password");
 
-        assertThatThrownBy(() -> service.update(dana.getId(),
-                new PatchUserRequest(null, "hijacked", "wrong"), dana.getId()))
+        var danaId7 = dana.getId();
+        var patchUserRequest2 = new PatchUserRequest(null, "hijacked", "wrong");
+        var danaId8 = dana.getId();
+        assertThatThrownBy(() -> service.update(danaId7,patchUserRequest2, danaId8))
                 .isInstanceOf(ApiException.class);
 
         service.update(dana.getId(), new PatchUserRequest(null, "chosen", "correct-horse"), dana.getId());
@@ -198,7 +208,8 @@ class UserServiceTest {
     @Test
     @DisplayName("two people cannot share a name, and keeping your own is not a clash")
     void namesStayUnique() {
-        assertThatThrownBy(() -> service.create(new CreateUserRequest("dana", "pw")))
+        var createUserRequest = new CreateUserRequest("dana", "pw");
+        assertThatThrownBy(() -> service.create(createUserRequest))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("already called");
 
@@ -223,7 +234,8 @@ class UserServiceTest {
     void sortFieldsAreLimited() {
         // A Sort built from user input reaches any property of the entity — here that would mean
         // ordering the user list by password hash and learning something from the order.
-        assertThatThrownBy(() -> service.search(new UserSearchRequest(null, 0, 20, "passwordHash", "asc")))
+        var userSearchRequest = new UserSearchRequest(null, 0, 20, "passwordHash", "asc");
+        assertThatThrownBy(() -> service.search(userSearchRequest))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("Cannot sort users by");
 
