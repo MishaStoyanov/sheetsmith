@@ -121,7 +121,8 @@ class AccessTokenServiceTest {
                                 .build()))
                 .getTokenValue();
 
-        assertThatThrownBy(() -> service().decode(stale)).isInstanceOf(JwtException.class);
+        var serviceUnderTest = service();
+        assertThatThrownBy(() -> serviceUnderTest.decode(stale)).isInstanceOf(JwtException.class);
     }
 
     /** The key the provider settled on, so a hand-built token is signed the same way a real one is. */
@@ -152,7 +153,8 @@ class AccessTokenServiceTest {
         assertThat(secrets).as("a supplied key must not cause one to be generated too").isEmpty();
 
         authConfig.setJwtSecret("too-short");
-        assertThatThrownBy(() -> service().issue(user))
+        var serviceUnderTest = service();
+        assertThatThrownBy(() -> serviceUnderTest.issue(user))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("at least");
     }

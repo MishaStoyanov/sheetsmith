@@ -38,6 +38,15 @@ import java.util.Map;
 @Component
 public class AlignCellsHandler implements ActionHandler {
 
+    // The spellings a person or a model might use for the same alignment, named because the
+    // describing switch and the applying switch have to recognise the same set — and a synonym
+    // added to one of them is a step that reads as one thing and does another.
+    private static final String CENTER = "center";
+    private static final String CENTRE = "centre";
+    private static final String MIDDLE = "middle";
+    private static final String JUSTIFY = "justify";
+    private static final String JUSTIFIED = "justified";
+
     /** Excel's own ceiling on indent steps. */
     private static final int MAX_INDENT = 15;
 
@@ -119,10 +128,10 @@ public class AlignCellsHandler implements ActionHandler {
         String vertical = CellStyles.keyword(ActionDescriptions.text(properties, "vertical"));
         if (horizontal != null) {
             parts.add(switch (horizontal) {
-                case "center", "centre", "middle" -> "centred";
+                case CENTER, CENTRE, MIDDLE -> "centred";
                 case "right" -> "right-aligned";
                 case "left" -> "left-aligned";
-                case "justify" -> "justified";
+                case JUSTIFY -> JUSTIFIED;
                 default -> horizontal;
             });
         }
@@ -130,7 +139,7 @@ public class AlignCellsHandler implements ActionHandler {
             parts.add(switch (vertical) {
                 case "top" -> "aligned to the top";
                 case "bottom" -> "aligned to the bottom";
-                case "middle", "center", "centre" -> "vertically centred";
+                case MIDDLE, CENTER, CENTRE -> "vertically centred";
                 default -> vertical;
             });
         }
@@ -181,9 +190,9 @@ public class AlignCellsHandler implements ActionHandler {
         }
         return switch (cleaned) {
             case "left", "start" -> HorizontalAlignment.LEFT;
-            case "center", "centre", "middle" -> HorizontalAlignment.CENTER;
+            case CENTER, CENTRE, MIDDLE -> HorizontalAlignment.CENTER;
             case "right", "end" -> HorizontalAlignment.RIGHT;
-            case "justify", "justified" -> HorizontalAlignment.JUSTIFY;
+            case JUSTIFY, JUSTIFIED -> HorizontalAlignment.JUSTIFY;
             case "general", "default" -> HorizontalAlignment.GENERAL;
             default -> throw new IllegalArgumentException("Unknown \"horizontal\" alignment \"" + raw
                     + "\" — use left, center, right, justify or general.");
@@ -197,9 +206,9 @@ public class AlignCellsHandler implements ActionHandler {
         }
         return switch (cleaned) {
             case "top" -> VerticalAlignment.TOP;
-            case "middle", "center", "centre" -> VerticalAlignment.CENTER;
+            case MIDDLE, CENTER, CENTRE -> VerticalAlignment.CENTER;
             case "bottom" -> VerticalAlignment.BOTTOM;
-            case "justify", "justified" -> VerticalAlignment.JUSTIFY;
+            case JUSTIFY, JUSTIFIED -> VerticalAlignment.JUSTIFY;
             default -> throw new IllegalArgumentException("Unknown \"vertical\" alignment \"" + raw
                     + "\" — use top, middle or bottom.");
         };

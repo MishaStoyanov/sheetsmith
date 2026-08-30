@@ -77,7 +77,7 @@ class FindRowsToolTest {
 
         QueryResult result = tool.execute(workbook, props);
 
-        assertThat(data(result).get("matched")).isEqualTo(1);
+        assertThat(data(result)).containsEntry("matched", 1);
         assertThat(result.summary()).isEqualTo("1 row matched");
     }
 
@@ -88,7 +88,7 @@ class FindRowsToolTest {
                 Map.of("columnIndex", 1, "operator", "=", "value", "north"),
                 Map.of("columnIndex", 2, "operator", ">=", "value", "100")));
 
-        assertThat(data(tool.execute(workbook, props)).get("matched")).isEqualTo(1);
+        assertThat(data(tool.execute(workbook, props))).containsEntry("matched", 1);
     }
 
     @Test
@@ -148,7 +148,7 @@ class FindRowsToolTest {
             writeRow(sales, r, "Widget X", "North", r);
         }
 
-        assertThat(data(tool.execute(workbook, props("A2:C20"))).get("returned")).isEqualTo(10);
+        assertThat(data(tool.execute(workbook, props("A2:C20")))).containsEntry("returned", 10);
     }
 
     @Test

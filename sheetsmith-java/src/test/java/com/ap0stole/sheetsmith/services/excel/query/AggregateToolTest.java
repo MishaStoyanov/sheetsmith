@@ -74,7 +74,7 @@ class AggregateToolTest {
     @Test
     void countsDistinctStringForms() {
         Map<String, Object> props = props("A2:C6", 0, "COUNT_DISTINCT");
-        assertThat(data(tool.execute(workbook, props)).get("value")).isEqualTo(3L);
+        assertThat(data(tool.execute(workbook, props))).containsEntry("value", 3L);
     }
 
     @Test
@@ -112,8 +112,8 @@ class AggregateToolTest {
         Map<String, Object> byIndex = props("A1:C2", 2, "SUM");
         byIndex.put("sheetIndex", 1);
 
-        assertThat(data(tool.execute(workbook, byName)).get("value")).isEqualTo(10L);
-        assertThat(data(tool.execute(workbook, byIndex)).get("value")).isEqualTo(10L);
+        assertThat(data(tool.execute(workbook, byName))).containsEntry("value", 10L);
+        assertThat(data(tool.execute(workbook, byIndex))).containsEntry("value", 10L);
     }
 
     @Test

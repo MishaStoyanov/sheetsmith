@@ -56,14 +56,13 @@ class EvalFormulaToolTest {
     void evaluatesConditionalFormulas() {
         QueryResult result = tool.execute(workbook, Map.of("formula", "SUMIF(B2:B5,\">50\",C2:C5)"));
 
-        assertThat(data(result).get("value")).isEqualTo(750L);
+        assertThat(data(result)).containsEntry("value", 750L);
         assertThat(result.summary()).isEqualTo("=SUMIF(B2:B5,\">50\",C2:C5) = 750");
     }
 
     @Test
     void evaluatesLookupsTextAndBooleans() {
-        assertThat(data(tool.execute(workbook, Map.of("formula", "VLOOKUP(\"Widget C\",A2:C5,3,FALSE)")))
-                .get("value")).isEqualTo(250L);
+        assertThat(data(tool.execute(workbook, Map.of("formula", "VLOOKUP(\"Widget C\",A2:C5,3,FALSE)")))).containsEntry("value", 250L);
 
         Map<String, Object> text = data(tool.execute(workbook, Map.of("formula", "UPPER(A2)")));
         assertThat(text)
@@ -78,7 +77,7 @@ class EvalFormulaToolTest {
 
     @Test
     void stripsALeadingEqualsSign() {
-        assertThat(data(tool.execute(workbook, Map.of("formula", "=MAX(B2:B5)"))).get("value")).isEqualTo(200L);
+        assertThat(data(tool.execute(workbook, Map.of("formula", "=MAX(B2:B5)")))).containsEntry("value", 200L);
     }
 
     @Test
@@ -98,7 +97,7 @@ class EvalFormulaToolTest {
         assertThat(first).isEqualTo(3L);
         assertThat(second).isEqualTo(3L);
         // same reference on the default sheet reads a different column of data
-        assertThat(data(tool.execute(workbook, Map.of("formula", "SUM(B1:B2)"))).get("value")).isEqualTo(100L);
+        assertThat(data(tool.execute(workbook, Map.of("formula", "SUM(B1:B2)")))).containsEntry("value", 100L);
     }
 
     @Test
@@ -131,7 +130,7 @@ class EvalFormulaToolTest {
     @Test
     void repeatedEvaluationStaysConsistent() {
         for (int i = 0; i < 3; i++) {
-            assertThat(data(tool.execute(workbook, Map.of("formula", "SUM(C2:C5)"))).get("value")).isEqualTo(1050L);
+            assertThat(data(tool.execute(workbook, Map.of("formula", "SUM(C2:C5)")))).containsEntry("value", 1050L);
         }
         assertThat(workbook.getSheet("Sales").getLastRowNum()).isEqualTo(4);
     }

@@ -112,8 +112,8 @@ class DescribeColumnToolTest {
         Map<String, Object> byIndex = props("A1:B1", 1);
         byIndex.put("sheetIndex", 1);
 
-        assertThat(data(tool.execute(workbook, byName)).get("max")).isEqualTo(9L);
-        assertThat(data(tool.execute(workbook, byIndex)).get("max")).isEqualTo(9L);
+        assertThat(data(tool.execute(workbook, byName))).containsEntry("max", 9L);
+        assertThat(data(tool.execute(workbook, byIndex))).containsEntry("max", 9L);
     }
 
     @Test

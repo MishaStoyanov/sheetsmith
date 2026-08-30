@@ -57,8 +57,8 @@ public class BarChartStrategy implements ChartStrategy {
     }
 
     private void addSeriesLabels(XDDFChartData.Series series) {
-        if (series instanceof XDDFBarChartData.Series) {
-            CTBarSer ctSer = ((XDDFBarChartData.Series) series).getCTBarSer();
+        if (series instanceof XDDFBarChartData.Series bar) {
+            CTBarSer ctSer = bar.getCTBarSer();
             CTDLbls dLbls = ctSer.isSetDLbls() ? ctSer.getDLbls() : ctSer.addNewDLbls();
 
             // УБИРАЕМ КВАДРАТИКИ (Legend Key) для чистоты

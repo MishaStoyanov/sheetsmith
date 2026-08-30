@@ -284,6 +284,9 @@ public class AnalyticsService {
 
     private Map<Long, String> names() {
         Map<Long, String> names = new HashMap<>();
+        // The braces are load-bearing, whatever java:S1602 says: as an expression this lambda
+        // matches both query(String, ResultSetExtractor) and query(String, RowCallbackHandler),
+        // because Map.put returns a value — and the call stops compiling. A block makes it void.
         jdbc.query("select id, name from users", rs -> { names.put(rs.getLong("id"), rs.getString("name")); });
         return names;
     }
@@ -408,8 +411,31 @@ public class AnalyticsService {
 
     // ── Filters ───────────────────────────────────────────────────────────────
 
-    /** The where clause and its arguments, built together so they cannot fall out of step. */
+    /**
+     * The where clause and its arguments, built together so they cannot fall out of step.
+     * <p>
+     * The generated equals and hashCode would compare the argument array by identity, so two
+     * clauses filtering on different values would count as equal. Nothing here relies on that
+     * today, which is exactly why it is worth fixing before something does.
+     */
     private record Where(String sql, Object[] args) {
+
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof Where(String otherSql, Object[] otherArgs)
+                    && java.util.Objects.equals(sql, otherSql)
+                    && java.util.Arrays.equals(args, otherArgs);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * java.util.Objects.hashCode(sql) + java.util.Arrays.hashCode(args);
+        }
+
+        @Override
+        public String toString() {
+            return "Where[sql=" + sql + ", args=" + java.util.Arrays.toString(args) + "]";
+        }
 
         /** The model calls: when a call started, and every filter the screen offers. */
         static Where from(AnalyticsQuery query, WorkVisibility.Clause visible) {

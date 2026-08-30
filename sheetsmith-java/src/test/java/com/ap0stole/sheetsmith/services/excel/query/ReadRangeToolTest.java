@@ -71,14 +71,14 @@ class ReadRangeToolTest {
 
         assertThat(values(data(byName)).getFirst()).containsExactly("from other");
         assertThat(values(data(byIndex)).getFirst()).containsExactly("from other");
-        assertThat(data(byIndex).get("sheet")).isEqualTo("Other");
+        assertThat(data(byIndex)).containsEntry("sheet", "Other");
     }
 
     @Test
     void nameWinsOverIndex() {
         QueryResult result = tool.execute(workbook, Map.of("range", "A1:A1", "sheetName", "Other", "sheetIndex", 0));
 
-        assertThat(data(result).get("sheet")).isEqualTo("Other");
+        assertThat(data(result)).containsEntry("sheet", "Other");
     }
 
     @Test
