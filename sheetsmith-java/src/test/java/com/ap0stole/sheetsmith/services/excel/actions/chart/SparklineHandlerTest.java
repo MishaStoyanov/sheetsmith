@@ -155,8 +155,8 @@ class SparklineHandlerTest {
     @Test
     @DisplayName("a data range whose rows do not match the cells is refused with both counts")
     void refusesAMismatchedDataRange() {
-        assertThatThrownBy(() -> sparklines.execute(workbook, props(
-                "range", "F2:F4", "dataRange", "B2:E3")))
+        var properties = props( "range", "F2:F4", "dataRange", "B2:E3");
+        assertThatThrownBy(() -> sparklines.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("2 rows for 3 cells");
     }
@@ -164,8 +164,8 @@ class SparklineHandlerTest {
     @Test
     @DisplayName("a block of target cells is refused — sparklines go down a column or across a row")
     void refusesABlockOfTargets() {
-        assertThatThrownBy(() -> sparklines.execute(workbook, props(
-                "range", "F2:G4", "dataRange", "B2:E4")))
+        var properties = props( "range", "F2:G4", "dataRange", "B2:E4");
+        assertThatThrownBy(() -> sparklines.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("one column or one row");
     }
@@ -173,8 +173,8 @@ class SparklineHandlerTest {
     @Test
     @DisplayName("an unknown type names the three that work")
     void refusesAnUnknownType() {
-        assertThatThrownBy(() -> sparklines.execute(workbook, props(
-                "range", "F2:F4", "dataRange", "B2:E4", "type", "pie")))
+        var properties = props( "range", "F2:F4", "dataRange", "B2:E4", "type", "pie");
+        assertThatThrownBy(() -> sparklines.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("winLoss");
     }

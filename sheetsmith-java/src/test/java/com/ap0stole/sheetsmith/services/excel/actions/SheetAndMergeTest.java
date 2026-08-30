@@ -101,7 +101,8 @@ class SheetAndMergeTest {
     void refusesToEmptyTheWorkbook() throws Exception {
         deleteSheet.execute(workbook, props("name", "Summary"));
 
-        assertThatThrownBy(() -> deleteSheet.execute(workbook, props("name", "Data")))
+        var properties = props("name", "Data");
+        assertThatThrownBy(() -> deleteSheet.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("only sheet");
     }
@@ -109,7 +110,8 @@ class SheetAndMergeTest {
     @Test
     @DisplayName("naming no sheet is refused — this is not an action to point at whatever is first")
     void refusesToGuessATarget() {
-        assertThatThrownBy(() -> deleteSheet.execute(workbook, props()))
+        var properties = props();
+        assertThatThrownBy(() -> deleteSheet.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("\"name\" is required");
     }
@@ -117,7 +119,8 @@ class SheetAndMergeTest {
     @Test
     @DisplayName("a sheet that is not there is named along with the ones that are")
     void namesTheAvailableSheets() {
-        assertThatThrownBy(() -> deleteSheet.execute(workbook, props("name", "Nope")))
+        var properties = props("name", "Nope");
+        assertThatThrownBy(() -> deleteSheet.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("\"Data\", \"Summary\"");
     }

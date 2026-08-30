@@ -171,8 +171,8 @@ class SetCellValueHandlerTest {
 
     @Test
     void rejectsANonIsoDate() {
-        assertThatThrownBy(() -> handler.execute(workbook,
-                props("cell", "A1", "value", "31/01/2026", "valueType", "date")))
+        var properties = props("cell", "A1", "value", "31/01/2026", "valueType", "date");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("is not an ISO date");
     }
@@ -181,8 +181,8 @@ class SetCellValueHandlerTest {
     @DisplayName("POI turns a non-finite double into an error cell, so it is refused before the write")
     void rejectsNonFiniteNumbers() {
         for (String value : new String[]{"NaN", "Infinity", "-Infinity"}) {
-            assertThatThrownBy(() -> handler.execute(workbook,
-                    props("cell", "A1", "value", value, "valueType", "number")))
+            var properties = props("cell", "A1", "value", value, "valueType", "number");
+            assertThatThrownBy(() -> handler.execute(workbook, properties))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("is not a finite number");
         }
@@ -264,7 +264,8 @@ class SetCellValueHandlerTest {
     void refusesToBreakUpAnArrayFormula() {
         sheet.setArrayFormula("A1:A2*2", CellRangeAddress.valueOf("B1:B2"));
 
-        assertThatThrownBy(() -> handler.execute(workbook, props("cell", "B2", "value", 5)))
+        var properties = props("cell", "B2", "value", 5);
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("B2")
                 .hasMessageContaining("array formula")
@@ -332,7 +333,8 @@ class SetCellValueHandlerTest {
     void refusesAWriteThatWouldShowNothing() {
         sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 2));
 
-        assertThatThrownBy(() -> handler.execute(workbook, props("cell", "B1", "value", "hidden")))
+        var properties = props("cell", "B1", "value", "hidden");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("top-left cell");
     }
@@ -351,7 +353,8 @@ class SetCellValueHandlerTest {
     @Test
     @DisplayName("the cap advises splitting the fill, since TRANSFORM_COLUMN cannot write a literal")
     void refusesAFillLargerThanTheCap() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("range", "A1:A10001", "value", "x")))
+        var properties = props("range", "A1:A10001", "value", "x");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("split the fill into steps of 10000 cells or fewer")
                 // TRANSFORM_COLUMN skips blanks, so it cannot do the fill that trips this cap; it is
@@ -364,7 +367,8 @@ class SetCellValueHandlerTest {
     @Test
     @DisplayName("a whole-column reference is refused, not passed to POI as row -1")
     void refusesAWholeColumnReference() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("cell", "A:A", "value", "Region")))
+        var properties = props("cell", "A:A", "value", "Region");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("whole column")
                 .hasMessageContaining("A1:A20");
@@ -373,26 +377,29 @@ class SetCellValueHandlerTest {
     @Test
     @DisplayName("a whole-row reference is refused, not passed to POI as column -1")
     void refusesAWholeRowReference() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("cell", "1:1", "value", "Region")))
+        var properties = props("cell", "1:1", "value", "Region");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("whole row");
     }
 
     @Test
     void requiresACellAndAValue() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("value", "orphan")))
+        var properties = props("value", "orphan");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("\"cell\" is required");
 
-        assertThatThrownBy(() -> handler.execute(workbook, props("cell", "A1")))
+        var properties2 = props("cell", "A1");
+        assertThatThrownBy(() -> handler.execute(workbook, properties2))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("\"value\" is required");
     }
 
     @Test
     void rejectsAnUnknownValueType() {
-        assertThatThrownBy(() -> handler.execute(workbook,
-                props("cell", "A1", "value", "x", "valueType", "currency")))
+        var properties = props("cell", "A1", "value", "x", "valueType", "currency");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("text, number, boolean or date");
     }

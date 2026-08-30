@@ -141,7 +141,8 @@ class AutosizeColumnsHandlerTest {
     @Test
     @DisplayName("a whole-row range is an input error and says so, naming the range")
     void aWholeRowRangeIsReportedAsAnInputError() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("range", "1:1")))
+        var properties = props("range", "1:1");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("\"range\" has to name columns")
                 .hasMessageContaining("1:1")
@@ -161,7 +162,8 @@ class AutosizeColumnsHandlerTest {
         XSSFWorkbook spiedWorkbook = spy(workbook);
         doReturn(spied).when(spiedWorkbook).getSheetAt(0);
 
-        assertThatThrownBy(() -> handler.execute(spiedWorkbook, props("range", "A:C")))
+        var properties = props("range", "A:C");
+        assertThatThrownBy(() -> handler.execute(spiedWorkbook, properties))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("None of the 3 column(s) could be measured")
                 .hasMessageContaining("cannot measure text")
@@ -196,7 +198,8 @@ class AutosizeColumnsHandlerTest {
         XSSFWorkbook spiedWorkbook = spy(workbook);
         doReturn(spied).when(spiedWorkbook).getSheetAt(0);
 
-        assertThatThrownBy(() -> handler.execute(spiedWorkbook, props("range", "A:C")))
+        var properties = props("range", "A:C");
+        assertThatThrownBy(() -> handler.execute(spiedWorkbook, properties))
                 .isInstanceOf(IllegalStateException.class);
         assertThat(spied.getArbitraryExtraWidth()).isEqualTo(before);
     }
@@ -276,7 +279,8 @@ class AutosizeColumnsHandlerTest {
         XSSFWorkbook empty = new XSSFWorkbook();
         empty.createSheet("Blank");
 
-        assertThatThrownBy(() -> handler.execute(empty, props("range", "1:1")))
+        var properties = props("range", "1:1");
+        assertThatThrownBy(() -> handler.execute(empty, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("has to name columns");
         empty.close();

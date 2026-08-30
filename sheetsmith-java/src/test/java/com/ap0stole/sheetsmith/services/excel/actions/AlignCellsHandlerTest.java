@@ -142,7 +142,8 @@ class AlignCellsHandlerTest {
     @Test
     @DisplayName("an alignment step that names nothing would do nothing, so it is an error")
     void namingNothingIsRefused() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("range", "A1:C1")))
+        var properties = props("range", "A1:C1");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Nothing to align");
     }
@@ -150,7 +151,8 @@ class AlignCellsHandlerTest {
     @Test
     @DisplayName("an unknown alignment is named rather than quietly ignored")
     void anUnknownAlignmentIsRefused() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("range", "A1:C1", "horizontal", "sideways")))
+        var properties = props("range", "A1:C1", "horizontal", "sideways");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("sideways");
     }
@@ -158,7 +160,8 @@ class AlignCellsHandlerTest {
     @Test
     @DisplayName("indent outside Excel's own range is refused")
     void indentIsBounded() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("range", "A1:C1", "indent", 20)))
+        var properties = props("range", "A1:C1", "indent", 20);
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("between 0 and 15");
     }

@@ -127,7 +127,8 @@ class TransformColumnHandlerTest {
 
     @Test
     void rejectsARangeSpanningSeveralColumns() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("C2:D6", "PHONE_US")))
+        var properties = props("C2:D6", "PHONE_US");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("single column");
     }
@@ -135,7 +136,8 @@ class TransformColumnHandlerTest {
     @Test
     @DisplayName("an invented operation names the ones that do exist, so the model can correct itself")
     void rejectsAnUnknownOperation() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("C2:C6", "MAKE_IT_NICE")))
+        var properties = props("C2:C6", "MAKE_IT_NICE");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("PHONE_US");
     }

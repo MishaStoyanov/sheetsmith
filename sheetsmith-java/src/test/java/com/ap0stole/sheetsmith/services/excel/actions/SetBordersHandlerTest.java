@@ -150,11 +150,13 @@ class SetBordersHandlerTest {
     @Test
     @DisplayName("an unknown side or style is named rather than quietly ignored")
     void unknownValuesAreRefused() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("range", "A1:C3", "sides", "diagonal")))
+        var properties = props("range", "A1:C3", "sides", "diagonal");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("diagonal");
 
-        assertThatThrownBy(() -> handler.execute(workbook, props("range", "A1:C3", "style", "wavy")))
+        var properties2 = props("range", "A1:C3", "style", "wavy");
+        assertThatThrownBy(() -> handler.execute(workbook, properties2))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("wavy");
     }
@@ -162,7 +164,8 @@ class SetBordersHandlerTest {
     @Test
     @DisplayName("a colour that is not a colour is refused, not dropped")
     void aBadColourIsRefused() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("range", "A1:C3", "color", "reddish")))
+        var properties = props("range", "A1:C3", "color", "reddish");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("hex colour");
     }

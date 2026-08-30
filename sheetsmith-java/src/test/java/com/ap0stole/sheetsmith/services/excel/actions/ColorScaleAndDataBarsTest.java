@@ -115,8 +115,8 @@ class ColorScaleAndDataBarsTest {
     @Test
     @DisplayName("one end without the other is refused rather than half-defaulted")
     void refusesAHalfNamedScale() {
-        assertThatThrownBy(() -> colorScale.execute(workbook, props(
-                "range", "A2:A6", "maxColor", "#15803D")))
+        var properties = props( "range", "A2:A6", "maxColor", "#15803D");
+        assertThatThrownBy(() -> colorScale.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("minColor");
     }
@@ -124,8 +124,8 @@ class ColorScaleAndDataBarsTest {
     @Test
     @DisplayName("a colour that is not a hex value names the key that was wrong")
     void refusesANonHexColour() {
-        assertThatThrownBy(() -> colorScale.execute(workbook, props(
-                "range", "A2:A6", "minColor", "reddish", "maxColor", "#15803D")))
+        var properties = props( "range", "A2:A6", "minColor", "reddish", "maxColor", "#15803D");
+        assertThatThrownBy(() -> colorScale.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("minColor");
     }
@@ -133,7 +133,8 @@ class ColorScaleAndDataBarsTest {
     @Test
     @DisplayName("a whole-column range is refused, as everywhere else that walks cells")
     void refusesAWholeColumnRange() {
-        assertThatThrownBy(() -> colorScale.execute(workbook, props("range", "A:A")))
+        var properties = props("range", "A:A");
+        assertThatThrownBy(() -> colorScale.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("bounded range");
     }
@@ -214,7 +215,8 @@ class ColorScaleAndDataBarsTest {
     @Test
     @DisplayName("a missing range is refused with the key named")
     void refusesAMissingRange() {
-        assertThatThrownBy(() -> dataBars.execute(workbook, props("color", "#0EA5E9")))
+        var properties = props("color", "#0EA5E9");
+        assertThatThrownBy(() -> dataBars.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("range");
     }

@@ -86,8 +86,8 @@ class ValidationAndTableTest {
         String many = "Option ".repeat(1).concat(String.join(",",
                 java.util.Collections.nCopies(40, "LongishOption")));
 
-        assertThatThrownBy(() -> validation.execute(workbook, props(
-                "range", "C2:C100", "type", "list", "values", many)))
+        var properties = props( "range", "C2:C100", "type", "list", "values", many);
+        assertThatThrownBy(() -> validation.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("sourceRange");
     }
@@ -138,7 +138,8 @@ class ValidationAndTableTest {
     @Test
     @DisplayName("a dropdown with no options is refused rather than added and useless")
     void aDropdownNeedsOptions() {
-        assertThatThrownBy(() -> validation.execute(workbook, props("range", "C2:C100", "type", "list")))
+        var properties = props("range", "C2:C100", "type", "list");
+        assertThatThrownBy(() -> validation.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("needs its options");
     }
@@ -146,11 +147,12 @@ class ValidationAndTableTest {
     @Test
     @DisplayName("an unknown type or operator is named rather than quietly ignored")
     void unknownValuesAreRefused() {
-        assertThatThrownBy(() -> validation.execute(workbook, props("range", "C2:C9", "type", "colour")))
+        var properties = props("range", "C2:C9", "type", "colour");
+        assertThatThrownBy(() -> validation.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("colour");
-        assertThatThrownBy(() -> validation.execute(workbook,
-                props("range", "B2:B9", "type", "whole", "operator", "roughly", "min", "1")))
+        var properties2 = props("range", "B2:B9", "type", "whole", "operator", "roughly", "min", "1");
+        assertThatThrownBy(() -> validation.execute(workbook, properties2))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("roughly");
     }
@@ -212,7 +214,8 @@ class ValidationAndTableTest {
     void overlappingTablesAreRefused() throws Exception {
         table.execute(workbook, props("range", "A1:C4"));
 
-        assertThatThrownBy(() -> table.execute(workbook, props("range", "B1:C4")))
+        var properties = props("range", "B1:C4");
+        assertThatThrownBy(() -> table.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("cannot overlap");
     }
@@ -220,7 +223,8 @@ class ValidationAndTableTest {
     @Test
     @DisplayName("a header row with no data under it is not a table")
     void aSingleRowIsRefused() {
-        assertThatThrownBy(() -> table.execute(workbook, props("range", "A1:C1")))
+        var properties = props("range", "A1:C1");
+        assertThatThrownBy(() -> table.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("single row");
     }

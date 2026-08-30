@@ -179,8 +179,8 @@ class GroupByHandlerTest {
     @Test
     @DisplayName("min and max are refused with the reason and the alternatives")
     void refusesMinAndMax() {
-        assertThatThrownBy(() -> groupBy.execute(workbook, props(
-                "range", "A1:C6", "groupBy", "A", "valueColumn", "C", "function", "max")))
+        var properties = props( "range", "A1:C6", "groupBy", "A", "valueColumn", "C", "function", "max");
+        assertThatThrownBy(() -> groupBy.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("sum, average or count");
     }
@@ -188,8 +188,8 @@ class GroupByHandlerTest {
     @Test
     @DisplayName("a column outside the range is refused")
     void refusesAColumnOutsideTheRange() {
-        assertThatThrownBy(() -> groupBy.execute(workbook, props(
-                "range", "A1:C6", "groupBy", "Z", "valueColumn", "C")))
+        var properties = props( "range", "A1:C6", "groupBy", "Z", "valueColumn", "C");
+        assertThatThrownBy(() -> groupBy.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("outside");
     }
@@ -197,8 +197,8 @@ class GroupByHandlerTest {
     @Test
     @DisplayName("a range of only a header row is refused")
     void refusesAHeaderOnlyRange() {
-        assertThatThrownBy(() -> groupBy.execute(workbook, props(
-                "range", "A1:C1", "groupBy", "A", "valueColumn", "C")))
+        var properties = props( "range", "A1:C1", "groupBy", "A", "valueColumn", "C");
+        assertThatThrownBy(() -> groupBy.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("header row");
     }

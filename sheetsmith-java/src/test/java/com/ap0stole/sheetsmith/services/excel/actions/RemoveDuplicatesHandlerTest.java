@@ -147,7 +147,8 @@ class RemoveDuplicatesHandlerTest {
     @Test
     @DisplayName("a column outside the range holds nothing to compare, so it is refused")
     void aColumnOutsideTheRangeIsRefused() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("range", "A1:B5", "columns", "D")))
+        var properties = props("range", "A1:B5", "columns", "D");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("outside");
     }
@@ -155,7 +156,8 @@ class RemoveDuplicatesHandlerTest {
     @Test
     @DisplayName("a whole column is refused before it walks a million rows")
     void aWholeColumnIsRefused() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("range", "A:B")))
+        var properties = props("range", "A:B");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("bounded range");
     }

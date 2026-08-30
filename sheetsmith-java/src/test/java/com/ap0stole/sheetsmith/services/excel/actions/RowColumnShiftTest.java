@@ -104,7 +104,8 @@ class RowColumnShiftTest {
     @Test
     @DisplayName("count is capped, so a misread sheet cannot cost a thousand rows")
     void insertRowsIsCapped() {
-        assertThatThrownBy(() -> insertRows.execute(workbook, props("at", 2, "count", 5000)))
+        var properties = props("at", 2, "count", 5000);
+        assertThatThrownBy(() -> insertRows.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("capped at " + StructureShift.MAX_INSERT);
     }
@@ -112,7 +113,8 @@ class RowColumnShiftTest {
     @Test
     @DisplayName("\"at\" is a row number as Excel shows it, counting from 1")
     void insertRowsRefusesRowZero() {
-        assertThatThrownBy(() -> insertRows.execute(workbook, props("at", 0)))
+        var properties = props("at", 0);
+        assertThatThrownBy(() -> insertRows.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("between 1 and");
     }
@@ -159,7 +161,8 @@ class RowColumnShiftTest {
     @Test
     @DisplayName("a deletion that names no target is refused rather than guessed")
     void deleteRowsNeedsATarget() {
-        assertThatThrownBy(() -> deleteRows.execute(workbook, props()))
+        var properties = props();
+        assertThatThrownBy(() -> deleteRows.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("\"at\" is required");
     }
@@ -199,7 +202,8 @@ class RowColumnShiftTest {
     @Test
     @DisplayName("a column is named the way a spreadsheet names one, and a bad name is refused")
     void columnNamesAreValidated() {
-        assertThatThrownBy(() -> insertColumns.execute(workbook, props("at", "nope!")))
+        var properties = props("at", "nope!");
+        assertThatThrownBy(() -> insertColumns.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("has to name a column");
     }

@@ -118,14 +118,16 @@ class AggregateToolTest {
 
     @Test
     void rejectsUnknownOperation() {
-        assertThatThrownBy(() -> tool.execute(workbook, props("A2:C6", 2, "STDDEV")))
+        var properties = props("A2:C6", 2, "STDDEV");
+        assertThatThrownBy(() -> tool.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("COUNT_DISTINCT");
     }
 
     @Test
     void rejectsColumnOutsideTheRange() {
-        assertThatThrownBy(() -> tool.execute(workbook, props("A2:C6", 7, "SUM")))
+        var properties = props("A2:C6", 7, "SUM");
+        assertThatThrownBy(() -> tool.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("outside range A2:C6");
     }

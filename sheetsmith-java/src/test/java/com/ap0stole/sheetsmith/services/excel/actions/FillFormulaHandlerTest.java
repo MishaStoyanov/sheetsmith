@@ -125,7 +125,8 @@ class FillFormulaHandlerTest {
     @Test
     @DisplayName("one cell is not a fill — ADD_FORMULA is that step, and the error says so")
     void aSingleCellIsRefused() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("range", "D1:D1", "formula", "B1*C1")))
+        var properties = props("range", "D1:D1", "formula", "B1*C1");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("ADD_FORMULA");
     }
@@ -133,7 +134,8 @@ class FillFormulaHandlerTest {
     @Test
     @DisplayName("a source cell holding a plain value would fill a constant, so it is refused")
     void aValueSourceIsRefused() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("range", "B1:B5")))
+        var properties = props("range", "B1:B5");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("holds no formula");
     }
@@ -141,7 +143,8 @@ class FillFormulaHandlerTest {
     @Test
     @DisplayName("a whole column is refused before it creates a million rows")
     void aWholeColumnIsRefused() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("range", "D:D", "formula", "B1")))
+        var properties = props("range", "D:D", "formula", "B1");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("bounded range");
     }

@@ -154,7 +154,8 @@ class HyperlinkCommentProtectTest {
     @Test
     @DisplayName("a link with nowhere to go is refused with both shapes named")
     void refusesAMissingAddress() {
-        assertThatThrownBy(() -> hyperlink.execute(workbook, props("cell", "C1")))
+        var properties = props("cell", "C1");
+        assertThatThrownBy(() -> hyperlink.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("address");
     }
@@ -162,8 +163,8 @@ class HyperlinkCommentProtectTest {
     @Test
     @DisplayName("an unknown link type names the ones that work")
     void refusesAnUnknownLinkType() {
-        assertThatThrownBy(() -> hyperlink.execute(workbook, props(
-                "cell", "C1", "address", "https://example.com", "linkType", "telepathy")))
+        var properties = props( "cell", "C1", "address", "https://example.com", "linkType", "telepathy");
+        assertThatThrownBy(() -> hyperlink.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("email");
     }
@@ -214,7 +215,8 @@ class HyperlinkCommentProtectTest {
     @Test
     @DisplayName("a note with nothing to say is refused")
     void refusesAnEmptyNote() {
-        assertThatThrownBy(() -> comment.execute(workbook, props("cell", "B2")))
+        var properties = props("cell", "B2");
+        assertThatThrownBy(() -> comment.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("text");
     }

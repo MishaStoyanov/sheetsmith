@@ -127,7 +127,8 @@ class GroupRowsAndPageSetupTest {
     @Test
     @DisplayName("a range that names no rows is refused with the fix")
     void refusesANonRowRange() {
-        assertThatThrownBy(() -> group.execute(workbook, props("range", "A:C")))
+        var properties = props("range", "A:C");
+        assertThatThrownBy(() -> group.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("does not name rows");
     }
@@ -205,7 +206,8 @@ class GroupRowsAndPageSetupTest {
     @Test
     @DisplayName("a step that asks for nothing is refused with the keys it could have used")
     void refusesAnEmptyStep() {
-        assertThatThrownBy(() -> page.execute(workbook, props("sheetName", "Data")))
+        var properties = props("sheetName", "Data");
+        assertThatThrownBy(() -> page.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("fitToWidth");
     }
@@ -213,7 +215,8 @@ class GroupRowsAndPageSetupTest {
     @Test
     @DisplayName("an orientation nobody recognises names the two that work")
     void refusesAnUnknownOrientation() {
-        assertThatThrownBy(() -> page.execute(workbook, props("orientation", "sideways-ish")))
+        var properties = props("orientation", "sideways-ish");
+        assertThatThrownBy(() -> page.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("landscape");
     }
@@ -221,7 +224,8 @@ class GroupRowsAndPageSetupTest {
     @Test
     @DisplayName("an unknown paper size names the ones that work")
     void refusesAnUnknownPaperSize() {
-        assertThatThrownBy(() -> page.execute(workbook, props("paperSize", "A9")))
+        var properties = props("paperSize", "A9");
+        assertThatThrownBy(() -> page.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("A4");
     }

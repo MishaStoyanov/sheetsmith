@@ -133,7 +133,8 @@ class AddTotalsRowHandlerTest {
     @Test
     @DisplayName("a range with nothing to total is an error, not an empty row")
     void nothingToTotalIsRefused() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("range", "A1:A3")))
+        var properties = props("range", "A1:A3");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("holds numbers");
     }
@@ -141,7 +142,8 @@ class AddTotalsRowHandlerTest {
     @Test
     @DisplayName("an unknown function is named rather than quietly summed")
     void anUnknownFunctionIsRefused() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("range", "A1:C3", "function", "median")))
+        var properties = props("range", "A1:C3", "function", "median");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("median");
     }

@@ -152,7 +152,8 @@ class FreezePanesHandlerTest {
 
     @Test
     void rejectsNegativeCounts() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("rows", -1)))
+        var properties = props("rows", -1);
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("cannot be negative");
     }

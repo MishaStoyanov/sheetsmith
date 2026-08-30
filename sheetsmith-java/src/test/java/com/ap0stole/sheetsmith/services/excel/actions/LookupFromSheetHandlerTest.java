@@ -177,9 +177,8 @@ class LookupFromSheetHandlerTest {
     @Test
     @DisplayName("mismatched heights are refused with both counts named")
     void refusesMismatchedHeights() {
-        assertThatThrownBy(() -> lookup.execute(workbook, props(
-                "range", "B2:B4", "keyRange", "A2:A10",
-                "sourceRange", "Products!A2:C3", "sourceColumn", "3")))
+        var properties = props( "range", "B2:B4", "keyRange", "A2:A10", "sourceRange", "Products!A2:C3", "sourceColumn", "3");
+        assertThatThrownBy(() -> lookup.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("same rows");
     }
@@ -187,9 +186,8 @@ class LookupFromSheetHandlerTest {
     @Test
     @DisplayName("more than one target column is refused — a lookup writes one")
     void refusesAWideTarget() {
-        assertThatThrownBy(() -> lookup.execute(workbook, props(
-                "range", "B2:C4", "keyRange", "A2:A4",
-                "sourceRange", "Products!A2:C3", "sourceColumn", "3")))
+        var properties = props( "range", "B2:C4", "keyRange", "A2:A4", "sourceRange", "Products!A2:C3", "sourceColumn", "3");
+        assertThatThrownBy(() -> lookup.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("one column");
     }
@@ -197,9 +195,8 @@ class LookupFromSheetHandlerTest {
     @Test
     @DisplayName("a column outside the source range is refused before it becomes #REF")
     void refusesAColumnOutsideTheSource() {
-        assertThatThrownBy(() -> lookup.execute(workbook, props(
-                "range", "B2:B4", "keyRange", "A2:A4",
-                "sourceRange", "Products!A2:C3", "sourceColumn", "9")))
+        var properties = props( "range", "B2:B4", "keyRange", "A2:A4", "sourceRange", "Products!A2:C3", "sourceColumn", "9");
+        assertThatThrownBy(() -> lookup.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("outside");
     }
@@ -207,9 +204,8 @@ class LookupFromSheetHandlerTest {
     @Test
     @DisplayName("a source sheet that does not exist names how to point at one")
     void refusesAMissingSourceSheet() {
-        assertThatThrownBy(() -> lookup.execute(workbook, props(
-                "range", "B2:B4", "keyRange", "A2:A4",
-                "sourceRange", "Catalogue!A2:C3", "sourceColumn", "3")))
+        var properties = props( "range", "B2:B4", "keyRange", "A2:A4", "sourceRange", "Catalogue!A2:C3", "sourceColumn", "3");
+        assertThatThrownBy(() -> lookup.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Catalogue");
     }

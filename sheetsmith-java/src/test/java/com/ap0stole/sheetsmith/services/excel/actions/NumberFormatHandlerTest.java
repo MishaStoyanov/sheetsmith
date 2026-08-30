@@ -111,7 +111,8 @@ class NumberFormatHandlerTest {
     @Test
     @DisplayName("a pattern longer than Excel allows is refused before it reaches the file")
     void anOverlongPatternIsRefused() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("range", "A2:A4", "format", "0".repeat(256))))
+        var properties = props("range", "A2:A4", "format", "0".repeat(256));
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("255");
     }
@@ -119,7 +120,8 @@ class NumberFormatHandlerTest {
     @Test
     @DisplayName("no format, no step: the key is what the action is")
     void theFormatKeyIsRequired() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("range", "A2:A4")))
+        var properties = props("range", "A2:A4");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("\"format\" is required");
     }
@@ -127,8 +129,8 @@ class NumberFormatHandlerTest {
     @Test
     @DisplayName("decimals outside 0-10 is a mistake worth naming rather than clamping")
     void decimalsAreBounded() {
-        assertThatThrownBy(() -> handler.execute(workbook,
-                props("range", "A2:A4", "format", "currency", "decimals", 11)))
+        var properties = props("range", "A2:A4", "format", "currency", "decimals", 11);
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("between 0 and 10");
     }
@@ -136,7 +138,8 @@ class NumberFormatHandlerTest {
     @Test
     @DisplayName("a whole-column range is refused — it would create a million rows")
     void aWholeColumnIsRefused() {
-        assertThatThrownBy(() -> handler.execute(workbook, props("range", "A:A", "format", "currency")))
+        var properties = props("range", "A:A", "format", "currency");
+        assertThatThrownBy(() -> handler.execute(workbook, properties))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("bounded range");
     }
