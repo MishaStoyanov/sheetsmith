@@ -100,14 +100,27 @@ public class FreezePanesHandler implements ActionHandler {
                     + ActionDescriptions.sheetSuffix(properties);
         }
 
-        int rows = rawRows == null && rawColumns == null ? 1 : rawRows == null ? 0 : rawRows;
+        int rows = rowsAsked(rawRows, rawColumns);
         int columns = rawColumns == null ? 0 : rawColumns;
 
         if (rows == 0 && columns == 0) {
             return ActionDescriptions.verb(tense, "Unfreeze", "Unfroze") + " the panes"
                     + ActionDescriptions.sheetSuffix(properties);
         }
+        return ActionDescriptions.verb(tense, "Freeze", "Froze") + " " + what(rows, columns)
+                + ActionDescriptions.sheetSuffix(properties);
+    }
 
+    /** Naming neither means the header row, which is what a freeze is asked for nine times in ten. */
+    private static int rowsAsked(Integer rawRows, Integer rawColumns) {
+        if (rawRows != null) {
+            return rawRows;
+        }
+        return rawColumns == null ? 1 : 0;
+    }
+
+    /** What is about to stay in view, said the way somebody would say it. */
+    private static String what(int rows, int columns) {
         StringBuilder what = new StringBuilder();
         if (rows == 1) {
             what.append("the top row");
@@ -120,8 +133,7 @@ public class FreezePanesHandler implements ActionHandler {
             }
             what.append(columns == 1 ? "the first column" : "the first " + columns + " columns");
         }
-        return ActionDescriptions.verb(tense, "Freeze", "Froze") + " " + what
-                + ActionDescriptions.sheetSuffix(properties);
+        return what.toString();
     }
 
     /** Rows the sheet actually has, so a freeze can never be asked for past the end of it. */

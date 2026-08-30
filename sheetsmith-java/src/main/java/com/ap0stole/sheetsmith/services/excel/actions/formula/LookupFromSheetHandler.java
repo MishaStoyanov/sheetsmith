@@ -118,9 +118,7 @@ public class LookupFromSheetHandler implements ActionHandler {
         String sourceSheet = ActionDescriptions.text(properties, "sourceSheet");
         String column = ActionDescriptions.text(properties, "sourceColumn");
 
-        String from = source == null
-                ? (sourceSheet == null ? "another sheet" : ActionDescriptions.quoted(sourceSheet))
-                : source + (sourceSheet == null ? "" : " on " + ActionDescriptions.quoted(sourceSheet));
+        String from = from(source, sourceSheet);
 
         return ActionDescriptions.verb(tense, "Fill", "Filled") + " "
                 + (range == null ? "the column" : range) + " from " + from
@@ -275,5 +273,13 @@ public class LookupFromSheetHandler implements ActionHandler {
                     + " e.g. \"Products!A2:C100\".");
         }
         return raw.substring(raw.lastIndexOf('!') + 1);
+    }
+
+    /** Where the values are coming from, named as precisely as the step allows. */
+    private static String from(String source, String sourceSheet) {
+        if (source == null) {
+            return sourceSheet == null ? "another sheet" : ActionDescriptions.quoted(sourceSheet);
+        }
+        return sourceSheet == null ? source : source + " on " + ActionDescriptions.quoted(sourceSheet);
     }
 }

@@ -120,19 +120,7 @@ public class DataValidationHandler implements ActionHandler {
         // "value" is the one-sided form, and it carries its meaning in the operator rather than in
         // the key name — without this the card reads "Limited B2:B100 to a number", which tells a
         // reviewer nothing about what was actually allowed.
-        String min = ActionDescriptions.text(properties, "min");
-        String max = ActionDescriptions.text(properties, "max");
-        String single = ActionDescriptions.text(properties, "value");
-        String bounds;
-        if (min != null && max != null) {
-            bounds = " between " + min + " and " + max;
-        } else if (min != null || max != null || single != null) {
-            String bound = min != null ? min : max != null ? max : single;
-            bounds = " " + comparison(CellStyles.keyword(
-                    ActionDescriptions.text(properties, "operator")), min == null && max != null) + " " + bound;
-        } else {
-            bounds = "";
-        }
+        String bounds = bounds(properties);
         String noun = switch (type) {
             case "date" -> "a date";
             case "textlength", "length" -> "a text length";
@@ -141,6 +129,37 @@ public class DataValidationHandler implements ActionHandler {
         };
         return ActionDescriptions.verb(tense, "Limit", "Limited") + " " + where + " to " + noun
                 + bounds + ActionDescriptions.sheetSuffix(properties);
+    }
+
+    /**
+     * The allowed span, in words: between two bounds, past one of them, or unstated.
+     * <p>
+     * "value" is the one-sided form and carries its meaning in the operator rather than in the key
+     * name — without it the card reads "Limited B2:B100 to a number", which tells a reviewer
+     * nothing about what was actually allowed.
+     */
+    private String bounds(Map<String, Object> properties) {
+        String min = ActionDescriptions.text(properties, "min");
+        String max = ActionDescriptions.text(properties, "max");
+        String single = ActionDescriptions.text(properties, "value");
+
+        if (min != null && max != null) {
+            return " between " + min + " and " + max;
+        }
+        if (min == null && max == null && single == null) {
+            return "";
+        }
+        String bound = bound(min, max, single);
+        String operator = CellStyles.keyword(ActionDescriptions.text(properties, "operator"));
+        return " " + comparison(operator, min == null && max != null) + " " + bound;
+    }
+
+    /** Whichever single bound was given. */
+    private static String bound(String min, String max, String single) {
+        if (min != null) {
+            return min;
+        }
+        return max != null ? max : single;
     }
 
     /** How an operator reads in a sentence a reviewer is meant to check. */
