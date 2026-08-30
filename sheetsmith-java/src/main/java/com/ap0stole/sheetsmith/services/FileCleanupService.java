@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -23,9 +24,12 @@ public class FileCleanupService {
     private final DocumentSessionService documentSessionService;
     private final StorageQuotaService storageQuota;
 
+    /** Where "now" comes from, so a test can decide what it is. */
+    private final Clock clock;
+
     @Scheduled(cron = "0 0 2 * * *")
     public void cleanupIdleDocumentSessions() {
-        LocalDateTime threshold = LocalDateTime.now().minusDays(storageConfig.getTtlDays());
+        LocalDateTime threshold = LocalDateTime.now(clock).minusDays(storageConfig.getTtlDays());
         int deleted = documentSessionService.deleteIdleSince(threshold);
         if (deleted > 0) {
             log.info("Cleanup: deleted {} idle chat sessions (older than {} days)", deleted, storageConfig.getTtlDays());
@@ -35,7 +39,7 @@ public class FileCleanupService {
     @Scheduled(cron = "0 0 2 * * *")
     @Transactional
     public void cleanupExpiredJobs() {
-        LocalDateTime threshold = LocalDateTime.now().minusDays(storageConfig.getTtlDays());
+        LocalDateTime threshold = LocalDateTime.now(clock).minusDays(storageConfig.getTtlDays());
         List<JobRecord> expired = jobRepository.findByCreatedAtBefore(threshold);
 
         if (expired.isEmpty()) {

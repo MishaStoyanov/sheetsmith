@@ -19,6 +19,6 @@ final class TestStorage {
     }
 
     static StorageSettingsService storage(FileStorageConfig config) {
-        return new StorageSettingsService(mock(StorageSettingsRepository.class), config);
+        return new StorageSettingsService(mock(StorageSettingsRepository.class), config, java.time.Clock.systemDefaultZone());
     }
 }

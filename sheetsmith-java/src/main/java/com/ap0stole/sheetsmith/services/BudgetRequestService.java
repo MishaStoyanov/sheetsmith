@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -45,6 +46,9 @@ public class BudgetRequestService {
     private final UserRepository users;
     private final BudgetService budgets;
     private final Authz authz;
+
+    /** Where "now" comes from, so a test can decide what it is. */
+    private final Clock clock;
 
     /**
      * Whether this person is close enough to their ceiling for asking to mean anything.
@@ -181,7 +185,7 @@ public class BudgetRequestService {
         }
 
         request.setStatus(approve ? BudgetRequestStatus.APPROVED : BudgetRequestStatus.DECLINED);
-        request.setDecidedAt(LocalDateTime.now());
+        request.setDecidedAt(LocalDateTime.now(clock));
         request.setDecidedBy(callerId == null ? null : users.findById(callerId).orElse(null));
 
         log.info("Request {} for user {} was {}", requestId, target.getId(), request.getStatus());
@@ -197,7 +201,7 @@ public class BudgetRequestService {
     @Transactional
     public void markSeen(Long callerId) {
         undeliveredDecision(callerId).ifPresent(request -> {
-            request.setSeenAt(LocalDateTime.now());
+            request.setSeenAt(LocalDateTime.now(clock));
             requests.save(request);
         });
     }

@@ -59,7 +59,7 @@ class AccessTokenServiceTest {
     }
 
     private AccessTokenService service() {
-        return new AccessTokenService(authConfig, new JwtSecretProvider(authConfig, repository));
+        return new AccessTokenService(authConfig, new JwtSecretProvider(authConfig, repository), java.time.Clock.systemDefaultZone());
     }
 
     @Test

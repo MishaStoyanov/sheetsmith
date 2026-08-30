@@ -148,7 +148,8 @@ class JobServiceSessionTest {
                 // there is no boundary for one to draw.
                 mock(com.ap0stole.sheetsmith.services.WorkVisibility.class),
                 // No cap set, so nothing is ever evicted — these are about the revision chain.
-                mock(com.ap0stole.sheetsmith.services.StorageQuotaService.class));
+                mock(com.ap0stole.sheetsmith.services.StorageQuotaService.class),
+                java.time.Clock.systemDefaultZone());
     }
 
     @Test

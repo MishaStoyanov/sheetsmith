@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.ZoneId;
 import java.time.LocalDateTime;
 
 /**
@@ -52,7 +53,7 @@ public class RefreshToken {
         RefreshToken token = new RefreshToken();
         token.user = user;
         token.tokenHash = tokenHash;
-        token.createdAt = LocalDateTime.now();
+        token.createdAt = LocalDateTime.now(ZoneId.systemDefault());
         token.expiresAt = expiresAt;
         token.rememberMe = rememberMe;
         return token;

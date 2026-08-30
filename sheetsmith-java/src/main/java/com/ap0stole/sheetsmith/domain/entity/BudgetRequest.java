@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.ZoneId;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -59,7 +60,7 @@ public class BudgetRequest {
     public static BudgetRequest openedBy(User user) {
         BudgetRequest request = new BudgetRequest();
         request.user = user;
-        request.requestedAt = LocalDateTime.now();
+        request.requestedAt = LocalDateTime.now(ZoneId.systemDefault());
         request.status = BudgetRequestStatus.PENDING;
         return request;
     }

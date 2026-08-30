@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.ZoneId;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,7 +83,7 @@ public class JobRecord {
 
     public static JobRecord create(String instruction, String inputFilename, String inputFilePath) {
         JobRecord job = new JobRecord();
-        job.createdAt = LocalDateTime.now();
+        job.createdAt = LocalDateTime.now(ZoneId.systemDefault());
         job.instruction = instruction;
         job.inputFilename = inputFilename;
         job.inputFilePath = inputFilePath;

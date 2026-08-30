@@ -14,6 +14,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 /** The price list, which belongs entirely to whoever runs the instance. */
@@ -26,6 +27,9 @@ public class ModelPriceService {
 
     private final ModelPriceRepository prices;
     private final LlmUsageRepository usage;
+
+    /** Where "now" comes from, so a test can decide what it is. */
+    private final Clock clock;
 
     public Page<ModelPriceDto> search(PriceSearchRequest request) {
         int page = request.page() == null ? 0 : Math.max(0, request.page());
@@ -58,7 +62,7 @@ public class ModelPriceService {
         price.setModel(model);
         price.setInputPerMillion(request.inputPerMillion());
         price.setOutputPerMillion(request.outputPerMillion());
-        price.setUpdatedAt(LocalDateTime.now());
+        price.setUpdatedAt(LocalDateTime.now(clock));
 
         ModelPrice saved = prices.save(price);
         return ModelPriceDto.from(saved, callsPricedBy(saved));
@@ -74,7 +78,7 @@ public class ModelPriceService {
         if (request.outputPerMillion() != null) {
             price.setOutputPerMillion(request.outputPerMillion());
         }
-        price.setUpdatedAt(LocalDateTime.now());
+        price.setUpdatedAt(LocalDateTime.now(clock));
 
         return ModelPriceDto.from(prices.save(price), callsPricedBy(price));
     }

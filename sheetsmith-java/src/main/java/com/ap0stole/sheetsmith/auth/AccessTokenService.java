@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.spec.SecretKeySpec;
 
+import java.time.Clock;
 import java.util.concurrent.atomic.AtomicReference;
 import java.time.Instant;
 
@@ -30,6 +31,9 @@ public class AccessTokenService {
     private final AuthConfig authConfig;
     private final JwtSecretProvider secretProvider;
 
+    /** Where "now" comes from, so a test can decide what it is. */
+    private final Clock clock;
+
     // AtomicReference rather than a volatile field: volatile publishes the reference safely and
     // says nothing about the object behind it, and these are built lazily and then shared by every
     // request. The atomic also makes "build it once" the type's own job rather than a comment.
@@ -37,7 +41,7 @@ public class AccessTokenService {
     private final AtomicReference<JwtDecoder> decoder = new AtomicReference<>();
 
     public String issue(User user) {
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .subject(String.valueOf(user.getId()))
                 .claim(NAME_CLAIM, user.getName())

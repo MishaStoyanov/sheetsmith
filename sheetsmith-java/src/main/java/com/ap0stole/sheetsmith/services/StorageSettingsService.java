@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,6 +49,9 @@ public class StorageSettingsService {
 
     private final StorageSettingsRepository repository;
     private final FileStorageConfig config;
+
+    /** Where "now" comes from, so a test can decide what it is. */
+    private final Clock clock;
 
     /** The extension that counts as a spreadsheet here, for both the count and the size. */
     private static final String SPREADSHEET = ".xlsx";
@@ -121,7 +125,7 @@ public class StorageSettingsService {
         entity.setRootDir(root);
         entity.setMaxFiles(update.maxFiles());
         entity.setMaxBytes(update.maxBytes());
-        entity.setUpdatedAt(LocalDateTime.now());
+        entity.setUpdatedAt(LocalDateTime.now(clock));
         repository.save(entity);
 
         log.info("Storage settings updated: root={}, maxFiles={}, maxBytes={}",

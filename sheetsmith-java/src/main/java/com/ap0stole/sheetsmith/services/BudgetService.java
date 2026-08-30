@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -50,6 +51,9 @@ public class BudgetService {
     private final UserRepository users;
     private final CurrentUser currentUser;
     private final JdbcTemplate jdbc;
+
+    /** Where "now" comes from, so a test can decide what it is. */
+    private final Clock clock;
 
     /**
      * Refuses the call if the caller is already at their limit.
@@ -103,7 +107,7 @@ public class BudgetService {
 
     /** The same sum, reachable from {@link #requireHeadroom} without going out through the proxy. */
     private BigDecimal spentSinceTheFirst(Long userId) {
-        LocalDateTime from = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        LocalDateTime from = LocalDate.now(clock).withDayOfMonth(1).atStartOfDay();
 
         BigDecimal total = jdbc.queryForObject("""
                 select coalesce(sum(

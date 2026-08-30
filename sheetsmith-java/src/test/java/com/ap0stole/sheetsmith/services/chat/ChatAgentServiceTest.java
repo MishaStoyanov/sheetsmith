@@ -83,7 +83,8 @@ class ChatAgentServiceTest {
 
         agent = new ChatAgentService(sessionService, toolRegistry, chatLlmService, chatConfig,
                 errorScanner, new ObjectMapper(), new SessionLockRegistry(), mock(com.ap0stole.sheetsmith.services.UsageRecorder.class),
-                mock(com.ap0stole.sheetsmith.services.BudgetService.class));
+                mock(com.ap0stole.sheetsmith.services.BudgetService.class),
+                java.time.Clock.systemDefaultZone());
     }
 
     @Test

@@ -64,7 +64,7 @@ public class AuthTestBeans {
 
     @Bean
     AccessTokenService accessTokenService(AuthConfig authConfig, JwtSecretProvider secretProvider) {
-        return new AccessTokenService(authConfig, secretProvider);
+        return new AccessTokenService(authConfig, secretProvider, java.time.Clock.systemDefaultZone());
     }
 
     @Bean

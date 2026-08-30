@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.ZoneId;
 import java.time.LocalDateTime;
 
 @Entity
@@ -41,7 +42,7 @@ public class ChatMessage {
         message.session = session;
         message.role = role;
         message.content = content;
-        message.createdAt = LocalDateTime.now();
+        message.createdAt = LocalDateTime.now(ZoneId.systemDefault());
         return message;
     }
 }

@@ -30,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Clock;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -71,6 +72,9 @@ public class JobService {
     private final WorkVisibility visibility;
     private final StorageQuotaService storageQuota;
 
+    /** Where "now" comes from, so a test can decide what it is. */
+    private final Clock clock;
+
     private final ConcurrentHashMap<String, PendingPlan> pendingPlans = new ConcurrentHashMap<>();
 
     /**
@@ -94,7 +98,7 @@ public class JobService {
         DocumentSession session = documentSessionService.require(request.sessionId());
 
         ExcelSchemaDto schema = documentSessionService.schema(session);
-        LocalDateTime askedAt = LocalDateTime.now();
+        LocalDateTime askedAt = LocalDateTime.now(clock);
         PlanningResult planned = aiPlanningService.generatePlan(request.instruction(), schema.toPromptString());
         AutomationRequest plan = planned.plan();
 
@@ -376,7 +380,7 @@ public class JobService {
     private JobRecord startJob(Long jobId, String inputPath) {
         JobRecord job = jobRepository.findById(jobId).orElseThrow();
         job.setInputFilePath(inputPath);
-        job.setProcessingStartedAt(LocalDateTime.now());
+        job.setProcessingStartedAt(LocalDateTime.now(clock));
         return jobRepository.save(job);
     }
 
@@ -391,7 +395,7 @@ public class JobService {
         if (prePlan != null) {
             plan = prePlan;
         } else {
-            LocalDateTime askedAt = LocalDateTime.now();
+            LocalDateTime askedAt = LocalDateTime.now(clock);
             PlanningResult planned = aiPlanningService.generatePlan(instruction, schema.toPromptString());
             plan = planned.plan();
             recordEngine(job, planned.engine());
@@ -404,7 +408,7 @@ public class JobService {
 
         if (shouldRetry(results, plan)) {
             log.info("Job {} triggering retry via fixPlan", job.getId());
-            LocalDateTime repairAskedAt = LocalDateTime.now();
+            LocalDateTime repairAskedAt = LocalDateTime.now(clock);
             PlanningResult repaired = aiPlanningService.fixPlan(
                     instruction, buildErrorSummary(results), schema.toPromptString());
             recordEngine(job, repaired.engine());
@@ -506,7 +510,7 @@ public class JobService {
 
         job.setStatus(status);
         job.setResultFilePath(resultPath);
-        job.setProcessingFinishedAt(LocalDateTime.now());
+        job.setProcessingFinishedAt(LocalDateTime.now(clock));
         jobRepository.save(job);
         actionResultRepository.saveAll(results);
 
@@ -528,7 +532,7 @@ public class JobService {
         jobRepository.findById(jobId).ifPresent(job -> {
             job.setStatus(JobStatus.FAILED);
             job.setErrorMessage(reason);
-            job.setProcessingFinishedAt(LocalDateTime.now());
+            job.setProcessingFinishedAt(LocalDateTime.now(clock));
             jobRepository.save(job);
         });
     }

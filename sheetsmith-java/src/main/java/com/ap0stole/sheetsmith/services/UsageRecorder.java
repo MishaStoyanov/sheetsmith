@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 /**
@@ -32,6 +33,9 @@ public class UsageRecorder {
     private final com.ap0stole.sheetsmith.repository.ModelPriceRepository prices;
     private final UserRepository users;
     private final CurrentUser currentUser;
+
+    /** Where "now" comes from, so a test can decide what it is. */
+    private final Clock clock;
 
     /** Who to bill it to, resolved on the calling thread while the caller is still known. */
     public User caller() {
@@ -117,8 +121,8 @@ public class UsageRecorder {
                 }
             }
 
-            row.setStartedAt(entry.startedAt() == null ? LocalDateTime.now() : entry.startedAt());
-            row.setFinishedAt(LocalDateTime.now());
+            row.setStartedAt(entry.startedAt() == null ? LocalDateTime.now(clock) : entry.startedAt());
+            row.setFinishedAt(LocalDateTime.now(clock));
             usage.save(row);
         } catch (Exception e) {
             log.warn("Could not record what a {} call cost; the call itself is unaffected", entry.kind(), e);

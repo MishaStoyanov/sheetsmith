@@ -157,7 +157,8 @@ class SessionWriterConcurrencyTest {
                 new com.ap0stole.sheetsmith.services.WorkVisibility(new com.ap0stole.sheetsmith.configs.AuthConfig(), new com.ap0stole.sheetsmith.auth.CurrentUser(), mock(com.ap0stole.sheetsmith.auth.Authz.class)));
         agentService = new ChatAgentService(sessionService, toolRegistry, chatLlmService, new ChatConfig(),
                 errorScanner, new ObjectMapper(), sessionLocks, mock(com.ap0stole.sheetsmith.services.UsageRecorder.class),
-                mock(com.ap0stole.sheetsmith.services.BudgetService.class));
+                mock(com.ap0stole.sheetsmith.services.BudgetService.class),
+                java.time.Clock.systemDefaultZone());
         jobService = new JobService(jobRepository, actionResultRepository, new FileStorageService(storageConfig, TestStorage.storage(storageConfig)),
                 schemaExtractor, planningService, automationService, actionRegistry,
                 mock(PathGuard.class), new Semaphore(1), sessionService, sessionLocks,
@@ -170,7 +171,8 @@ class SessionWriterConcurrencyTest {
                 // there is no boundary for one to draw.
                 mock(com.ap0stole.sheetsmith.services.WorkVisibility.class),
                 // No cap set, so nothing is ever evicted — these are about the revision chain.
-                mock(com.ap0stole.sheetsmith.services.StorageQuotaService.class));
+                mock(com.ap0stole.sheetsmith.services.StorageQuotaService.class),
+                java.time.Clock.systemDefaultZone());
     }
 
     @Test

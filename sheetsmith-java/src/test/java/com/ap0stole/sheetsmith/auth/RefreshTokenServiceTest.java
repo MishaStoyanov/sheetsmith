@@ -69,7 +69,7 @@ class RefreshTokenServiceTest {
         });
 
         authConfig = new AuthConfig();
-        service = new RefreshTokenService(authConfig, repository);
+        service = new RefreshTokenService(authConfig, repository, java.time.Clock.systemDefaultZone());
     }
 
     @Test

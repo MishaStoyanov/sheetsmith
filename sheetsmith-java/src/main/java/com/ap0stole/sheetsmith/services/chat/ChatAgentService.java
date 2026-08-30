@@ -12,6 +12,7 @@ import com.ap0stole.sheetsmith.domain.enums.ChatRole;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
 import com.ap0stole.sheetsmith.domain.entity.User;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import com.ap0stole.sheetsmith.llm.AgentDecision;
 import com.ap0stole.sheetsmith.llm.ChatCall;
@@ -65,6 +66,9 @@ public class ChatAgentService {
     private final SessionLockRegistry sessionLocks;
     private final UsageRecorder usageRecorder;
     private final com.ap0stole.sheetsmith.services.BudgetService budgets;
+
+    /** Where "now" comes from, so a test can decide what it is. */
+    private final Clock clock;
 
     /** The lock is shared with the improve job, which also appends revisions to this session. */
     public ChatTurnDto send(String sessionId, String text) {
@@ -290,7 +294,7 @@ public class ChatAgentService {
      * turn would undercount every turn that used a tool.
      */
     private AgentDecision decide(Turn turn, boolean mustAnswer) {
-        LocalDateTime startedAt = LocalDateTime.now();
+        LocalDateTime startedAt = LocalDateTime.now(clock);
         ChatCall call = chatLlmService.decide(turn.catalog, turn.tableContext, turn.history,
                 turn.userText, turn.trace.toString(), mustAnswer);
 

@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,6 +34,9 @@ public class LlmSettingsService {
 
     private final LlmSettingsRepository repository;
     private final ObjectMapper objectMapper;
+
+    /** Where "now" comes from, so a test can decide what it is. */
+    private final Clock clock;
 
     /**
      * What the running instance was configured with. Spring AI reads the same two properties, so a
@@ -83,7 +87,7 @@ public class LlmSettingsService {
         LlmSettingsEntity entity = repository.findById(LlmSettingsEntity.GLOBAL_ID)
                 .orElseGet(() -> LlmSettingsEntity.of(LlmSettingsEntity.GLOBAL_ID, json));
         entity.setSettingsJson(json);
-        entity.setUpdatedAt(LocalDateTime.now());
+        entity.setUpdatedAt(LocalDateTime.now(clock));
         repository.save(entity);
         log.info("LLM settings updated: providerMode={}", merged.providerMode());
         return withoutKeys(merged);

@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -36,6 +37,9 @@ public class RefreshTokenService {
 
     private final AuthConfig authConfig;
     private final RefreshTokenRepository tokens;
+
+    /** Where "now" comes from, so a test can decide what it is. */
+    private final Clock clock;
     private final SecureRandom random = new SecureRandom();
 
     /** The plain token, returned once. Only its hash is kept, so this is the only chance to see it. */
@@ -47,7 +51,7 @@ public class RefreshTokenService {
         random.nextBytes(raw);
         String value = Base64.getUrlEncoder().withoutPadding().encodeToString(raw);
 
-        LocalDateTime expiresAt = LocalDateTime.now().plus(
+        LocalDateTime expiresAt = LocalDateTime.now(clock).plus(
                 rememberMe ? authConfig.getRememberMeTtl() : authConfig.getRefreshTokenTtl());
         tokens.save(RefreshToken.issue(user, hash(value), expiresAt, rememberMe));
 
@@ -66,7 +70,7 @@ public class RefreshTokenService {
         RefreshToken existing = tokens.findByTokenHash(hash(presented))
                 .orElseThrow(() -> new ApiException(ErrorCode.UNAUTHORIZED, "Session expired — sign in again"));
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         if (existing.getUsedAt() != null) {
             log.warn("Refresh token for user {} was presented twice — every session of theirs is being "
                     + "ended, because a second use means a copy is in circulation", existing.getUser().getId());
@@ -90,14 +94,14 @@ public class RefreshTokenService {
     @Transactional
     public void revoke(String presented) {
         tokens.findByTokenHash(hash(presented)).ifPresent(token -> {
-            token.setRevokedAt(LocalDateTime.now());
+            token.setRevokedAt(LocalDateTime.now(clock));
             tokens.save(token);
         });
     }
 
     @Transactional
     public void revokeAllForUser(Long userId) {
-        int ended = tokens.revokeAllForUser(userId, LocalDateTime.now());
+        int ended = tokens.revokeAllForUser(userId, LocalDateTime.now(clock));
         if (ended > 0) {
             log.info("Ended {} session(s) for user {}", ended, userId);
         }

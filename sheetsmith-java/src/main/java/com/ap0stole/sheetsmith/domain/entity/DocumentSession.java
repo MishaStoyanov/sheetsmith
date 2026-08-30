@@ -11,6 +11,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.ZoneId;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -60,7 +61,7 @@ public class DocumentSession {
     public static DocumentSession create(String originalFilename, String directory) {
         DocumentSession session = new DocumentSession();
         session.id = UUID.randomUUID().toString();
-        session.createdAt = LocalDateTime.now();
+        session.createdAt = LocalDateTime.now(ZoneId.systemDefault());
         session.lastActivityAt = session.createdAt;
         session.originalFilename = originalFilename;
         session.directory = directory;
@@ -69,6 +70,6 @@ public class DocumentSession {
     }
 
     public void touch() {
-        this.lastActivityAt = LocalDateTime.now();
+        this.lastActivityAt = LocalDateTime.now(ZoneId.systemDefault());
     }
 }

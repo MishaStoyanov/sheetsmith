@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.ZoneId;
 import java.time.LocalDateTime;
 
 /** A key the instance generated for itself because nobody supplied one. */
@@ -31,7 +32,7 @@ public class AuthSecret {
         AuthSecret entry = new AuthSecret();
         entry.name = name;
         entry.secret = secret;
-        entry.createdAt = LocalDateTime.now();
+        entry.createdAt = LocalDateTime.now(ZoneId.systemDefault());
         return entry;
     }
 }

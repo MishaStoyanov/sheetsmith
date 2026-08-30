@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.ZoneId;
 import java.time.LocalDateTime;
 
 @Entity
@@ -33,7 +34,7 @@ public class LlmSettingsEntity {
         LlmSettingsEntity entity = new LlmSettingsEntity();
         entity.id = id;
         entity.settingsJson = settingsJson;
-        entity.updatedAt = LocalDateTime.now();
+        entity.updatedAt = LocalDateTime.now(ZoneId.systemDefault());
         return entity;
     }
 }

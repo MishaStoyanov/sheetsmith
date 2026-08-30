@@ -44,7 +44,8 @@ class FileCleanupServiceTest {
         jobRepository = mock(JobRepository.class);
         cleanupService = new FileCleanupService(jobRepository, storageConfig,
                 new FileStorageService(storageConfig, TestStorage.storage(storageConfig)),
-                mock(DocumentSessionService.class), mock(StorageQuotaService.class));
+                mock(DocumentSessionService.class), mock(StorageQuotaService.class),
+                java.time.Clock.systemDefaultZone());
     }
 
     @Test
