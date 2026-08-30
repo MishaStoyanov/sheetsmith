@@ -16,7 +16,6 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "sheetsmith.chat")
 public class ChatConfig {
 
-    /** Maximum tool invocations the agent may make before it must answer. */
     /**
      * Whether this instance has a chat at all.
      * <p>
@@ -30,6 +29,7 @@ public class ChatConfig {
      */
     private boolean enabled = true;
 
+    /** Maximum tool invocations the agent may make before it must answer. */
     private int maxSteps = 8;
 
     /** Hard cap on cells a single READ_RANGE may return. */

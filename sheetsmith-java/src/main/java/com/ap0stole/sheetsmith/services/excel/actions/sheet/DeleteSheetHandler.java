@@ -84,10 +84,7 @@ public class DeleteSheetHandler implements ActionHandler {
         }
         Integer index = ActionDescriptions.integer(properties, "sheetIndex");
 
-        String what = name != null ? "the sheet " + ActionDescriptions.quoted(name)
-                : index != null ? "sheet " + (index + 1)
-                : "the sheet";
-        return ActionDescriptions.verb(tense, "Delete", "Deleted") + " " + what;
+        return ActionDescriptions.verb(tense, "Delete", "Deleted") + " " + which(name, index);
     }
 
     /**
@@ -155,5 +152,13 @@ public class DeleteSheetHandler implements ActionHandler {
                     + " the workbook has " + workbook.getNumberOfSheets() + " sheet(s).");
         }
         return index;
+    }
+
+    /** Which sheet the card should name: by name, by position, or as "the sheet" when neither. */
+    private static String which(String name, Integer index) {
+        if (name != null) {
+            return "the sheet " + ActionDescriptions.quoted(name);
+        }
+        return index != null ? "sheet " + (index + 1) : "the sheet";
     }
 }

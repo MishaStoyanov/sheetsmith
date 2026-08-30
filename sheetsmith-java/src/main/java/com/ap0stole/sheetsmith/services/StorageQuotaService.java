@@ -85,20 +85,20 @@ public class StorageQuotaService {
                 // Removing the row anyway would cost somebody a line of history and free not one
                 // byte — and, worse, leave a session file on disk that no record accounts for.
                 log.debug("Storage: run {} holds nothing the cap can free, leaving it alone", job.getId());
-                continue;
+            } else {
+                int countBefore = countOf(job);
+                long sizeBefore = sizeOf(job);
+
+                files.deleteJobFiles(job.getInputFilePath(), job.getResultFilePath());
+                jobs.delete(job);
+                removed++;
+
+                int stillThere = countOf(job);
+                long stillTaking = sizeOf(job);
+                freed += sizeBefore - stillTaking;
+                usage = new StorageSettingsService.Usage(
+                        usage.files() - (countBefore - stillThere), usage.bytes() - (sizeBefore - stillTaking));
             }
-            int countBefore = countOf(job);
-            long sizeBefore = sizeOf(job);
-
-            files.deleteJobFiles(job.getInputFilePath(), job.getResultFilePath());
-            jobs.delete(job);
-            removed++;
-
-            int stillThere = countOf(job);
-            long stillTaking = sizeOf(job);
-            freed += sizeBefore - stillTaking;
-            usage = new StorageSettingsService.Usage(
-                    usage.files() - (countBefore - stillThere), usage.bytes() - (sizeBefore - stillTaking));
         }
 
         if (removed > 0) {

@@ -131,6 +131,6 @@ public class ChartHandler {
         if (rowCount <= 6) {
             return 6;
         }
-        return Math.clamp((int) (rowCount * 1.1) + 2, 5, 14);
+        return Math.clamp((long) rowCount * 11 / 10 + 2, 5, 14);
     }
 }

@@ -79,27 +79,8 @@ public final class CellStyles {
                 if (variant == null) {
                     continue;
                 }
-                if (row == null) {
-                    row = sheet.getRow(r);
-                    if (row == null) {
-                        row = sheet.createRow(r);
-                    }
-                }
-                XSSFCell cell = row.getCell(c);
-                if (cell == null) {
-                    cell = row.createCell(c);
-                }
-                XSSFCellStyle current = cell.getCellStyle();
-                int currentRow = r;
-                int currentColumn = c;
-                cell.setCellStyle(cache.computeIfAbsent(
-                        current.getIndex() + "|" + variant,
-                        ignored -> {
-                            XSSFCellStyle edited = workbook.createCellStyle();
-                            edited.cloneStyleFrom(current);
-                            edit.apply(edited, currentRow, currentColumn);
-                            return edited;
-                        }));
+                row = row == null ? rowAt(sheet, r) : row;
+                style(workbook, cellAt(row, c), variant, r, c, edit, cache);
                 touched++;
             }
         }
@@ -160,5 +141,37 @@ public final class CellStyles {
     /** Lower-cased and trimmed, with {@code null} and blank collapsed to null. */
     public static String keyword(String value) {
         return value == null || value.isBlank() ? null : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    /** The row, made if the sheet does not have one there yet. */
+    private static XSSFRow rowAt(XSSFSheet sheet, int index) {
+        XSSFRow row = sheet.getRow(index);
+        return row == null ? sheet.createRow(index) : row;
+    }
+
+    /** The cell, likewise. */
+    private static XSSFCell cellAt(XSSFRow row, int column) {
+        XSSFCell cell = row.getCell(column);
+        return cell == null ? row.createCell(column) : cell;
+    }
+
+    /**
+     * Gives the cell a style that is its current one plus this edit.
+     * <p>
+     * Cached by "the style it had" plus "the change being made", because a workbook has a hard
+     * limit on style records and a range of a thousand cells that all start the same way needs one
+     * new style, not a thousand.
+     */
+    private static void style(XSSFWorkbook workbook, XSSFCell cell, String variant,
+                              int row, int column, StyleEdit edit, Map<String, XSSFCellStyle> cache) {
+        XSSFCellStyle current = cell.getCellStyle();
+        cell.setCellStyle(cache.computeIfAbsent(
+                current.getIndex() + "|" + variant,
+                ignored -> {
+                    XSSFCellStyle edited = workbook.createCellStyle();
+                    edited.cloneStyleFrom(current);
+                    edit.apply(edited, row, column);
+                    return edited;
+                }));
     }
 }

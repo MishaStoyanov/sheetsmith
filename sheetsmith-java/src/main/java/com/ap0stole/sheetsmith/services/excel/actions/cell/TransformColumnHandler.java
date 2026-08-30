@@ -119,10 +119,13 @@ public class TransformColumnHandler implements ActionHandler {
     /** Wording the user reads next to the step, and the model reads in its trace. */
     private String detail(int changed, int skipped) {
         String done = changed + (changed == 1 ? " value changed" : " values changed");
-        return skipped == 0
-                ? done
-                : done + ", " + skipped + " left as " + (skipped == 1 ? "it was" : "they were")
-                + " (the rule could not convert " + (skipped == 1 ? "it" : "them") + ")";
+        if (skipped == 0) {
+            return done;
+        }
+        String them = skipped == 1 ? "it" : "them";
+        String were = skipped == 1 ? "it was" : "they were";
+        return done + ", " + skipped + " left as " + were
+                + " (the rule could not convert " + them + ")";
     }
 
     private CellRangeAddress singleColumn(Map<String, Object> properties, String key, boolean required) {

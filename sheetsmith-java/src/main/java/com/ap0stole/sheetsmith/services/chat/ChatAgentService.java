@@ -141,35 +141,16 @@ public class ChatAgentService {
             turn.stepNumber++;
             AgentDecision decision = decide(turn, false);
 
-            // A read-only turn refuses the tool rather than the whole turn, so the model can
-            // correct itself instead of the caller getting a sheet it never asked to change.
-            if (turn.readOnly && decision.isToolCall() && toolRegistry.isMutating(decision.tool())) {
-                turn.trace.append(STEP).append(turn.stepNumber).append(": REFUSED — ")
-                        .append(decision.tool())
-                        .append(" changes the sheet, and this is a look-only pass. ")
-                        .append("Use query tools, then answer.\n");
+            if (refusedAsReadOnly(turn, decision)) {
                 continue;
             }
-
-            // The compact index is enough to pick an action but not to get its details right, so
-            // re-ask once with the full rules before anything touches the sheet. When the rules
-            // were in front of the model all along there is nothing to re-ask — but the pass still
-            // has to happen, because it is also where the self-check takes its "before" snapshot.
-            if (decision.isToolCall() && !turn.escalated && toolRegistry.isMutating(decision.tool())) {
-                if (escalateToEditing(turn, workbook)) {
-                    decision = decide(turn, false);
-                }
-            }
+            decision = escalateIfEditing(turn, workbook, decision);
 
             if (decision.isAnswer()) {
                 return decision.answer();
             }
-
             if (!decision.isToolCall()) {
-                log.warn("Chat session {} got an unusable reply: {}", turn.sessionId, decision.parseError());
-                turn.trace.append(STEP).append(turn.stepNumber).append(": REJECTED — ")
-                        .append(decision.parseError())
-                        .append(" Reply with a single JSON object.\n");
+                rejectUnusableReply(turn, decision);
                 continue;
             }
 
@@ -179,6 +160,49 @@ public class ChatAgentService {
             appendTrace(turn, decision, invocation);
         }
         return null;
+    }
+
+    /**
+     * A read-only turn refuses the tool rather than the whole turn, so the model can correct itself
+     * instead of the caller getting a sheet they never asked to change.
+     *
+     * @return true when the step was refused and the turn should try again
+     */
+    private boolean refusedAsReadOnly(Turn turn, AgentDecision decision) {
+        if (!turn.readOnly || !decision.isToolCall() || !toolRegistry.isMutating(decision.tool())) {
+            return false;
+        }
+        turn.trace.append(STEP).append(turn.stepNumber).append(": REFUSED — ")
+                .append(decision.tool())
+                .append(" changes the sheet, and this is a look-only pass. ")
+                .append("Use query tools, then answer.\n");
+        return true;
+    }
+
+    /**
+     * The compact index is enough to pick an action but not to get its details right, so the model
+     * is asked once more with the full rules before anything touches the sheet.
+     * <p>
+     * When the rules were in front of it all along there is nothing to re-ask — but the pass still
+     * has to happen, because it is also where the self-check takes its "before" snapshot.
+     *
+     * @return the decision to act on: a fresh one where the prompt grew, the original otherwise
+     */
+    private AgentDecision escalateIfEditing(Turn turn, XSSFWorkbook workbook, AgentDecision decision) {
+        boolean firstEdit = decision.isToolCall() && !turn.escalated
+                && toolRegistry.isMutating(decision.tool());
+        if (firstEdit && escalateToEditing(turn, workbook)) {
+            return decide(turn, false);
+        }
+        return decision;
+    }
+
+    /** Not an answer and not a tool call: say what was wrong with it and let the model try again. */
+    private void rejectUnusableReply(Turn turn, AgentDecision decision) {
+        log.warn("Chat session {} got an unusable reply: {}", turn.sessionId, decision.parseError());
+        turn.trace.append(STEP).append(turn.stepNumber).append(": REJECTED — ")
+                .append(decision.parseError())
+                .append(" Reply with a single JSON object.\n");
     }
 
     /**
