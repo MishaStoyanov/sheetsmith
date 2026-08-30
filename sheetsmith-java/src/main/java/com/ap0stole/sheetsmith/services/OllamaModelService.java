@@ -17,7 +17,7 @@ public class OllamaModelService {
     private final RestClient restClient = RestClient.create();
 
     public List<String> listModels(String baseUrl) {
-        String tagsUrl = baseUrl.replaceAll("/+$", "") + "/api/tags";
+        String tagsUrl = baseUrl.replaceAll("/++$", "") + "/api/tags";
         try {
             JsonNode response = restClient.get()
                     .uri(tagsUrl)

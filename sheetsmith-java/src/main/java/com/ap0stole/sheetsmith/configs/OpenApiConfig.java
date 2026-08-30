@@ -38,6 +38,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OpenApiConfig {
 
+    /** The security scheme's name, written once for the three places that refer to it. */
+    private static final String BEARER = "bearer";
+
     private final AuthConfig authConfig;
 
     @Bean
@@ -53,15 +56,15 @@ public class OpenApiConfig {
                         .description("The long-form reference: setup, the action catalogue, and why each rule is the way it is")
                         .url("https://github.com/MishaStoyanov/ai_excel#readme"))
                 .servers(List.of(new Server().url("/").description("This instance")))
-                .components(new Components().addSecuritySchemes("bearer", new SecurityScheme()
+                .components(new Components().addSecuritySchemes(BEARER, new SecurityScheme()
                         .type(SecurityScheme.Type.HTTP)
-                        .scheme("bearer")
+                        .scheme(BEARER)
                         .bearerFormat("JWT")
                         .description("""
                                 The access token from POST /api/auth/login. It lives two hours; the \
                                 refresh token is an httpOnly cookie the browser sends by itself and \
                                 is not used here.""")))
-                .addSecurityItem(new SecurityRequirement().addList("bearer"));
+                .addSecurityItem(new SecurityRequirement().addList(BEARER));
     }
 
     /**

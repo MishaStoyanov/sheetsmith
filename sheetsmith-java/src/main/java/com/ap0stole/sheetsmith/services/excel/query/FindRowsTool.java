@@ -103,9 +103,7 @@ public class FindRowsTool implements QueryTool {
         log.info("FIND_ROWS over {} matched {} row(s), returned {}",
                 range.formatAsString(), matched.size(), rows.size());
 
-        String summary = matched.size() > rows.size()
-                ? "%d rows matched, returned the first %d".formatted(matched.size(), rows.size())
-                : "%d row%s matched".formatted(matched.size(), matched.size() == 1 ? "" : "s");
+        String summary = summarise(matched.size(), rows.size());
         return new QueryResult(QuerySupport.clip(summary, 120), data);
     }
 
@@ -125,8 +123,11 @@ public class FindRowsTool implements QueryTool {
                 : "%s the %d %s rows%s by column %s".formatted(
                 verb, limit, asc ? "lowest" : "highest", where, QuerySupport.colName(sortCol));
 
-        int filters = properties != null && properties.get("filters") instanceof List<?> list ? list.size() : 0;
-        return filters == 0 ? text : text + " matching %d condition%s".formatted(filters, filters == 1 ? "" : "s");
+        int filters = filterCount(properties);
+        if (filters == 0) {
+            return text;
+        }
+        return text + " matching %d condition%s".formatted(filters, plural(filters));
     }
 
     private int resolveLimit(Integer requested) {
@@ -202,5 +203,26 @@ public class FindRowsTool implements QueryTool {
 
     private static String nullSafe(String value) {
         return value == null ? "" : value;
+    }
+
+    /** How many rows matched, and whether the answer had to stop short of them. */
+    private static String summarise(int matched, int returned) {
+        if (matched > returned) {
+            return "%d rows matched, returned the first %d".formatted(matched, returned);
+        }
+        return "%d row%s matched".formatted(matched, plural(matched));
+    }
+
+    /** How many conditions the step carries, or none where it carries no list at all. */
+    private static int filterCount(Map<String, Object> properties) {
+        if (properties != null && properties.get("filters") instanceof List<?> list) {
+            return list.size();
+        }
+        return 0;
+    }
+
+    /** The "s" that makes a count read as English. */
+    private static String plural(int count) {
+        return count == 1 ? "" : "s";
     }
 }

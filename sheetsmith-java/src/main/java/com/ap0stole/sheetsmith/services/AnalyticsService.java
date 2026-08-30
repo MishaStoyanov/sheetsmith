@@ -282,6 +282,8 @@ public class AnalyticsService {
         return names.getOrDefault(userId, "Deleted account");
     }
 
+    // The braces below are load-bearing, whatever java:S1602 says — see the comment inside.
+    @SuppressWarnings("java:S1602")
     private Map<Long, String> names() {
         Map<Long, String> names = new HashMap<>();
         // The braces are load-bearing, whatever java:S1602 says: as an expression this lambda

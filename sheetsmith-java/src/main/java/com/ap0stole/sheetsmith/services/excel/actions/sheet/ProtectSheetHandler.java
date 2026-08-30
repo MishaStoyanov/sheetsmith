@@ -84,9 +84,10 @@ public class ProtectSheetHandler implements ActionHandler {
 
         String caveat = "Excel's protection stops accidents, not people — it can be removed without"
                 + " the password";
-        return unlocked == 0
-                ? "every cell is now read-only. " + caveat
-                : unlocked + (unlocked == 1 ? " cell stays" : " cells stay") + " editable. " + caveat;
+        if (unlocked == 0) {
+            return "every cell is now read-only. " + caveat;
+        }
+        return unlocked + (unlocked == 1 ? " cell stays" : " cells stay") + " editable. " + caveat;
     }
 
     @Override

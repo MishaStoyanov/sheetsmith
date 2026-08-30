@@ -31,6 +31,10 @@ import java.util.Optional;
  */
 @Service
 @RequiredArgsConstructor
+// The only thing interpolated into this query is the owner clause, and its value is a
+// "?" travelling in the argument list beside it — there is no caller text in the SQL.
+// An identifier cannot be bound as a parameter, which is what the rule would ask for.
+@SuppressWarnings("java:S2077")
 public class PromptHistoryService {
 
     /** Two is what makes it a habit rather than a thing that happened once. */

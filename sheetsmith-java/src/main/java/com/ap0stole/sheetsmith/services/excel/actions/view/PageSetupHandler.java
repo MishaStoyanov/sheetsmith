@@ -150,7 +150,7 @@ public class PageSetupHandler implements ActionHandler {
 
     /** "one page wide, as long as it needs" is the ask behind almost every fit-to-page request. */
     private String fit(Integer width, Integer height) {
-        String across = width == null || width < 1 ? "1 page" : width + (width == 1 ? " page" : " pages");
+        String across = pages(width);
         if (height == null || height < 1) {
             return "fit " + across + " across, however many down";
         }
@@ -229,5 +229,13 @@ public class PageSetupHandler implements ActionHandler {
 
     private boolean notBlank(String value) {
         return value != null && !value.isBlank();
+    }
+
+    /** A page count in words, defaulting to one where the step did not say. */
+    private static String pages(Integer count) {
+        if (count == null || count < 1) {
+            return "1 page";
+        }
+        return count + (count == 1 ? " page" : " pages");
     }
 }

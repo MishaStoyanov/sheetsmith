@@ -40,16 +40,22 @@ public class JobHistoryDto {
     private final LocalDateTime processingStartedAt;
     private final LocalDateTime processingFinishedAt;
 
-    private JobHistoryDto(Long id, LocalDateTime createdAt, JobStatus status,
-                          String instruction, String inputFilename, List<AppliedActionDto> appliedActions,
-                          String errorMessage, JobRecord job) {
-        this.id = id;
-        this.createdAt = createdAt;
-        this.status = status;
+    /**
+     * Everything but two fields comes off the run itself.
+     * <p>
+     * The instruction is passed in because the list view truncates it and the detail view does not,
+     * and the actions because only one of the two views may touch that lazy collection at all —
+     * which was the reason the constructor grew to eight parameters, seven of which were the run
+     * being taken apart at the call site and put back together here.
+     */
+    private JobHistoryDto(JobRecord job, String instruction, List<AppliedActionDto> appliedActions) {
+        this.id = job.getId();
+        this.createdAt = job.getCreatedAt();
+        this.status = job.getStatus();
         this.instruction = instruction;
-        this.inputFilename = inputFilename;
+        this.inputFilename = job.getInputFilename();
         this.appliedActions = appliedActions;
-        this.errorMessage = errorMessage;
+        this.errorMessage = job.getErrorMessage();
         this.promptTokens = job.getPromptTokens();
         this.completionTokens = job.getCompletionTokens();
         this.totalTokens = job.getTotalTokens();
@@ -64,8 +70,7 @@ public class JobHistoryDto {
 
     // For paginated list — does NOT access lazy actions collection
     public static JobHistoryDto from(JobRecord job) {
-        return new JobHistoryDto(job.getId(), job.getCreatedAt(), job.getStatus(),
-                truncate(job.getInstruction()), job.getInputFilename(), List.of(), job.getErrorMessage(), job);
+        return new JobHistoryDto(job, truncate(job.getInstruction()), List.of());
     }
 
     // For single job detail — accesses actions (requires open session)
@@ -73,8 +78,7 @@ public class JobHistoryDto {
         List<AppliedActionDto> actions = job.getActions().stream()
                 .map(AppliedActionDto::from)
                 .toList();
-        return new JobHistoryDto(job.getId(), job.getCreatedAt(), job.getStatus(),
-                truncate(job.getInstruction()), job.getInputFilename(), actions, job.getErrorMessage(), job);
+        return new JobHistoryDto(job, truncate(job.getInstruction()), actions);
     }
 
     private static String truncate(String s) {

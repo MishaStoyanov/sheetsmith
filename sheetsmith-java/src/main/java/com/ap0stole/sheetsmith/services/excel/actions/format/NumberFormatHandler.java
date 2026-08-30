@@ -42,6 +42,9 @@ import java.io.IOException;
 @Component
 public class NumberFormatHandler implements ActionHandler {
 
+    /** The format this step names three times: in the switch, the validation and the card. */
+    private static final String CURRENCY = "currency";
+
     /** Excel's own ceiling on a format string. */
     private static final int MAX_PATTERN = 255;
 
@@ -108,10 +111,9 @@ public class NumberFormatHandler implements ActionHandler {
             return "formatted numbers";
         }
         Integer decimals = ActionDescriptions.integer(properties, "decimals");
-        String places = decimals == null ? "" : " to " + decimals
-                + (decimals == 1 ? " decimal place" : " decimal places");
+        String places = places(decimals);
         return switch (named) {
-            case "currency", "money" -> "currency" + places;
+            case CURRENCY, "money" -> CURRENCY + places;
             case "percent", "percentage" -> "percentages" + places;
             case "thousands", "integer", "number", "decimal" -> "numbers with thousands separators" + places;
             case "date" -> "dates";
@@ -143,7 +145,7 @@ public class NumberFormatHandler implements ActionHandler {
                 ? DEFAULT_CURRENCY : cfg.getCurrencySymbol().trim();
 
         String resolved = switch (named) {
-            case "currency", "money" -> "\"" + symbol + "\"#,##0" + places(cfg.getDecimals() == null ? 2 : decimals);
+            case CURRENCY, "money" -> "\"" + symbol + "\"#,##0" + places(cfg.getDecimals() == null ? 2 : decimals);
             case "percent", "percentage" -> "0" + places(cfg.getDecimals() == null ? 0 : decimals) + "%";
             case "thousands", "number", "decimal" -> "#,##0" + places(cfg.getDecimals() == null ? 2 : decimals);
             case "integer", "whole" -> "#,##0";
@@ -215,5 +217,13 @@ public class NumberFormatHandler implements ActionHandler {
             }
         }
         return text;
+    }
+
+    /** How many decimal places the step asked for, said in words — or nothing where it did not ask. */
+    private static String places(Integer decimals) {
+        if (decimals == null) {
+            return "";
+        }
+        return " to " + decimals + (decimals == 1 ? " decimal place" : " decimal places");
     }
 }
