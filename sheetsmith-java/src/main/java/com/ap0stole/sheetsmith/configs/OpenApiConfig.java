@@ -131,6 +131,16 @@ public class OpenApiConfig {
                         + "without a token, and runs are recorded with no owner, because there is "
                         + "nobody to name. Set `SHEETSMITH_AUTH_ENABLED=true` for the other mode.";
 
+        // Whether the ladder above bites depends on the mode, so the sentence that says so has to
+        // as well. It used to be part of the block below, which meant a secured instance published
+        // "every rule answers yes" underneath "this instance requires a login" — the two halves of
+        // the document contradicting each other, with the wrong half being the reassuring one.
+        String enforcement = authConfig.isEnabled()
+                ? "Every rule is enforced against the bearer token: a caller the rule does not name "
+                        + "is refused."
+                : "With authentication off there is nobody to refuse, so every rule answers yes: "
+                        + "the person at the keyboard is the operator by definition.";
+
         return mode + """
 
 
@@ -143,8 +153,8 @@ public class OpenApiConfig {
                 demote, to delete anything, and to change the instance's own configuration: the \
                 model and its API keys, where files are kept, and what a token costs.
 
-                With authentication off there is nobody to refuse, so every rule answers yes: the \
-                person at the keyboard is the operator by definition.
+                """ + enforcement + """
+
 
                 ### What is not here
 
