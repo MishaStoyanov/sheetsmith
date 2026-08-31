@@ -133,7 +133,8 @@ class RefreshTokenServiceTest {
         var firstValue = first.value();
         assertThatThrownBy(() -> service.rotate(firstValue)).isInstanceOf(ApiException.class);
 
-        assertThatThrownBy(() -> service.rotate(rotation.token().value()))
+        var rotatedValue = rotation.token().value();
+        assertThatThrownBy(() -> service.rotate(rotatedValue))
                 .as("the token the thief would be holding must stop working too")
                 .isInstanceOf(ApiException.class);
     }

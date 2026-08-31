@@ -97,7 +97,9 @@ class ColumnTransformTest {
 
     @Test
     void replaceWithoutAFindArgumentSaysSo() {
-        assertThatThrownBy(() -> new ReplaceTransform().apply("x", Map.of()))
+        var replace = new ReplaceTransform();
+        Map<String, Object> noOptions = Map.of();
+        assertThatThrownBy(() -> replace.apply("x", noOptions))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("\"find\"");
     }
@@ -111,7 +113,9 @@ class ColumnTransformTest {
     @Test
     @DisplayName("a broken pattern fails the step instead of skipping all 35 000 rows")
     void regexReplaceRejectsABrokenPattern() {
-        assertThatThrownBy(() -> new RegexReplaceTransform().apply("x", Map.of("pattern", "([unclosed")))
+        var regexReplace = new RegexReplaceTransform();
+        Map<String, Object> brokenPattern = Map.of("pattern", "([unclosed");
+        assertThatThrownBy(() -> regexReplace.apply("x", brokenPattern))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("not a valid regular expression");
     }

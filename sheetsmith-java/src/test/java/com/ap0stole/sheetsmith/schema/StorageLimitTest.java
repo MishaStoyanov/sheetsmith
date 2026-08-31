@@ -144,7 +144,8 @@ class StorageLimitTest {
         assertThatCode(() -> Files.createDirectories(notAFolder.getParent())).doesNotThrowAnyException();
         assertThatCode(() -> Files.write(notAFolder, new byte[]{1})).doesNotThrowAnyException();
 
-        assertThatThrownBy(() -> settings.update(new StorageSettingsDto.Update(notAFolder.toString(), null, null)))
+        var unusable = new StorageSettingsDto.Update(notAFolder.toString(), null, null);
+        assertThatThrownBy(() -> settings.update(unusable))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("Cannot use");
     }
@@ -154,7 +155,8 @@ class StorageLimitTest {
     void zeroIsNotAnAnswer() {
         as(superId, "admin");
         // It would mean "delete every run as it finishes", which nobody says by leaving a box at 0.
-        assertThatThrownBy(() -> settings.update(new StorageSettingsDto.Update(null, 0, null)))
+        var keepNothing = new StorageSettingsDto.Update(null, 0, null);
+        assertThatThrownBy(() -> settings.update(keepNothing))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("every run");
     }

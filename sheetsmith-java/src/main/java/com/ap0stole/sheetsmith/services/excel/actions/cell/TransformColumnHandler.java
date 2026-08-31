@@ -68,26 +68,16 @@ public class TransformColumnHandler implements ActionHandler {
         int targetColumn = target == null ? sourceColumn : target.getFirstColumn();
         int targetOffset = target == null ? 0 : target.getFirstRow() - source.getFirstRow();
 
+        // Where each converted value goes, and how the two columns line up — bundled because the
+        // per-cell work needs all four of them and a nine-parameter method is nobody's friend.
+        Placement placement = new Placement(sourceColumn, targetColumn, targetOffset, target == null);
+
         int changed = 0;
         int skipped = 0;
         for (int r = source.getFirstRow(); r <= source.getLastRow(); r++) {
-            String before = readText(sheet, r, sourceColumn, evaluator);
-            // An empty cell is not a failed conversion — there was nothing there to convert.
-            if (before == null || before.isBlank()) {
-                continue;
-            }
-
-            Optional<String> after = transform.apply(before, properties);
-            if (after.isEmpty()) {
-                skipped++;
-                continue;
-            }
-            if (target == null && after.get().equals(before)) {
-                continue;
-            }
-
-            write(sheet, r + targetOffset, targetColumn, after.get(), transform.numeric());
-            changed++;
+            Outcome outcome = convert(sheet, r, placement, evaluator, transform, properties);
+            changed += outcome == Outcome.CHANGED ? 1 : 0;
+            skipped += outcome == Outcome.UNCONVERTIBLE ? 1 : 0;
         }
 
         log.info("TRANSFORM_COLUMN {} over {}: {} changed, {} left alone",
@@ -100,16 +90,24 @@ public class TransformColumnHandler implements ActionHandler {
     private enum Outcome { CHANGED, UNCONVERTIBLE, UNTOUCHED }
 
     /**
+     * Which column is read, which is written, and how far apart their ranges start.
+     *
+     * @param inPlace whether the result goes back over the value it came from, which is what makes
+     *                an unchanged value not worth writing
+     */
+    private record Placement(int sourceColumn, int targetColumn, int rowOffset, boolean inPlace) {
+    }
+
+    /**
      * Converts one cell, and says which of the three things happened to it.
      * <p>
      * An empty cell is not a failed conversion — there was nothing there to convert — and a value
      * the rule leaves as it found it is only worth writing when the result goes somewhere else,
      * because writing it back over itself would spend a revision saying nothing.
      */
-    private Outcome convert(XSSFSheet sheet, int row, int sourceColumn, int targetColumn,
-                            int targetRow, boolean inPlace, FormulaEvaluator evaluator,
+    private Outcome convert(XSSFSheet sheet, int row, Placement placement, FormulaEvaluator evaluator,
                             ColumnTransform transform, Map<String, Object> properties) {
-        String before = readText(sheet, row, sourceColumn, evaluator);
+        String before = readText(sheet, row, placement.sourceColumn(), evaluator);
         if (before == null || before.isBlank()) {
             return Outcome.UNTOUCHED;
         }
@@ -118,11 +116,11 @@ public class TransformColumnHandler implements ActionHandler {
         if (after.isEmpty()) {
             return Outcome.UNCONVERTIBLE;
         }
-        if (inPlace && after.get().equals(before)) {
+        if (placement.inPlace() && after.get().equals(before)) {
             return Outcome.UNTOUCHED;
         }
 
-        write(sheet, targetRow, targetColumn, after.get(), transform.numeric());
+        write(sheet, row + placement.rowOffset(), placement.targetColumn(), after.get(), transform.numeric());
         return Outcome.CHANGED;
     }
 

@@ -51,8 +51,8 @@ spring:
       # would refuse the work this application exists to do. The upload is written straight to disk
       # and never held in memory, the endpoint requires a signed-in caller when accounts are on, and
       # the storage cap in Settings bounds what a stream of them can consume.
-      max-file-size: 50MB
-      max-request-size: 55MB
+      max-file-size: 50MB # NOSONAR java:S5693 — see the note above
+      max-request-size: 55MB # NOSONAR java:S5693 — see the note above
 
 management:
   endpoints:

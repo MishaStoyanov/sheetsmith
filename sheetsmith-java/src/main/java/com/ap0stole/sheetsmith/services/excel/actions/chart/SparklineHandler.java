@@ -255,7 +255,17 @@ public class SparklineHandler implements ActionHandler {
         if (bang < 0) {
             return fallback;
         }
-        return raw.substring(0, bang).trim().replaceAll("^'|'$", "").replace("''", "'");
+        // Unquoted by hand rather than by regex: "^'|'$" is what java:S5850 asks to be grouped and
+        // java:S6395 then asks to be ungrouped, and neither rule is wrong about a pattern that did
+        // not need to be a pattern. A sheet name arrives quoted when it has a space in it.
+        String name = raw.substring(0, bang).trim();
+        if (name.startsWith("'")) {
+            name = name.substring(1);
+        }
+        if (name.endsWith("'")) {
+            name = name.substring(0, name.length() - 1);
+        }
+        return name.replace("''", "'");
     }
 
     private String strip(String raw) {

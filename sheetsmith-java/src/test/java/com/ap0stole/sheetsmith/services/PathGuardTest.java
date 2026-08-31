@@ -124,8 +124,8 @@ class PathGuardTest {
         }
 
         var guardUnderTest = guard(true, root);
-        assertThatThrownBy(() -> guardUnderTest.resolveInput(
-                link.resolve("passwd.xlsx").toString(), "inputPath"))
+        var throughTheLink = link.resolve("passwd.xlsx").toString();
+        assertThatThrownBy(() -> guardUnderTest.resolveInput(throughTheLink, "inputPath"))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getErrorCode())
                 .isEqualTo(ErrorCode.PATH_TRAVERSAL);
@@ -138,7 +138,8 @@ class PathGuardTest {
         Files.createDirectories(root);
 
         var guardUnderTest = guard(true, root);
-        assertThatThrownBy(() -> guardUnderTest.resolveInput(root.resolve("nope.xlsx").toString(), "inputPath"))
+        var missingText = root.resolve("nope.xlsx").toString();
+        assertThatThrownBy(() -> guardUnderTest.resolveInput(missingText, "inputPath"))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FILE_NOT_FOUND);
@@ -167,7 +168,9 @@ class PathGuardTest {
         config.setPathEndpointEnabled(true);
         config.setPathEndpointRoots(List.of("   "));
 
-        assertThatThrownBy(() -> new PathGuard(config).resolveInput(input.toString(), "inputPath"))
+        var disabledGuard = new PathGuard(config);
+        var inputPath = input.toString();
+        assertThatThrownBy(() -> disabledGuard.resolveInput(inputPath, "inputPath"))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("SHEETSMITH_PATH_ENDPOINT_ROOTS")
                 .extracting(e -> ((ApiException) e).getErrorCode())

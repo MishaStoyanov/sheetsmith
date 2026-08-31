@@ -17,7 +17,13 @@ public class OllamaModelService {
     private final RestClient restClient = RestClient.create();
 
     public List<String> listModels(String baseUrl) {
-        String tagsUrl = baseUrl.replaceAll("/++$", "") + "/api/tags";
+        // Trimmed by hand rather than by regex: "/+$" is a pattern whose runtime grows with the
+        // number of trailing slashes, and this is a two-line loop that cannot backtrack at all.
+        String base = baseUrl;
+        while (base.endsWith("/")) {
+            base = base.substring(0, base.length() - 1);
+        }
+        String tagsUrl = base + "/api/tags";
         try {
             JsonNode response = restClient.get()
                     .uri(tagsUrl)

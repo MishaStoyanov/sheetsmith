@@ -33,10 +33,9 @@ import static org.mockito.Mockito.*;
 /**
  * Manual grid edits used to live only in the browser and vanish on the next refresh. These tests
  * pin down that they now become a revision like anything else.
- */
-/**
- * java:S2925: the sleep in here is the fixture — it is the window in which a reader outside
- * the lock can observe a half-written revision, which is the thing being measured.
+ * <p>
+ * java:S2925: the sleep in here is the fixture — it is the window in which a reader outside the
+ * lock can observe a half-written revision, which is the thing being measured.
  */
 @SuppressWarnings("java:S2925")
 class ManualEditServiceTest {
