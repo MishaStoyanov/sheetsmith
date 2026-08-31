@@ -42,6 +42,11 @@ Two ways to work on the same file, sharing one engine and one undo history:
 Uploading opens a session whose working copy is an append-only chain of revisions, so an improve
 run and a chat turn can never leave each other behind, and undo covers both.
 
+Both boxes remember how you ask. A phrasing you have used more than once comes back as a
+suggestion — used once is not yet a habit — with the most used first and the most recent breaking a
+tie. They are kept per person and per flow, so improve and chat never offer each other's wording,
+and nobody is ever offered somebody else's.
+
 Two more screens, once an instance has been used for a while:
 
 - **History** — every run, with filters, and what each one actually did step by step.
@@ -142,8 +147,55 @@ Upgrading an instance that already had accounts does not take anything away — 
 manage accounts yesterday becomes an admin, and only new accounts start as plain users.
 
 The default account cannot be deleted, you cannot delete the account you are signed in with, and
-nobody can change their own role or their own spend limit. An instance cannot be locked out of
-itself, and a limit is not something the limited person can lift.
+nobody can change their own role. An instance cannot be locked out of itself, and a limit is not
+something the limited person can lift — with one exception, below, that the shape of the hierarchy
+forces.
+
+### Whose work you can see
+
+The history and the analytics answer the same question about somebody's work, so they answer it the
+same way. A **user** sees their own runs and nobody else's. An **admin** sees their own and every
+plain user's, but not a fellow admin's — the same wall that stops them managing each other. The
+**superadmin** sees everything. Runs from before an instance had accounts belong to nobody, so they
+go to the administrators rather than to whoever signs in next.
+
+The rule holds all the way down rather than only in the list. The page count counts what you may
+see rather than what was hidden from you. A filter naming somebody else returns your own work, not
+theirs. The per-person breakdown in analytics names only the people you may see, and its totals
+count the same runs the history shows. The spreadsheet behind a run is guarded as well as the row
+describing it. And a run you are not allowed to see is reported **not found** rather than
+forbidden, because "forbidden" would confirm that it exists.
+
+Deleting is narrower than seeing: only the superadmin removes a run, whoever it belongs to. Being
+able to see somebody's work is not the same as being allowed to erase it.
+
+### What a person may spend
+
+Everybody starts with no limit. An admin can set a monthly ceiling on the users they look after;
+only the superadmin sets an admin's — and sets their own, because there is nobody above them to do
+it. That is the one exception to nobody setting their own limit, and it exists because the
+alternative is a ceiling no account on the instance can ever adjust.
+
+A month is a calendar month, so last month's spending is last month's. Under the ceiling a run
+proceeds; at it a run is refused, and the refusal says how much of what has gone — a number you can
+act on rather than a closed door.
+
+Only what has a price counts. A model you run locally is free, so it never counts towards a limit —
+even if somebody has priced that model, a local call to it is still free while a cloud call to the
+same name still counts. A model nobody has priced counts as nothing, because unknown is not the
+same as expensive.
+
+Your own figure is readable without going near the accounts screen; the bar sits where you work.
+Everybody sees their own whatever their role, an admin sees the users they look after but not a
+peer's, and a plain user sees nobody else's.
+
+**Running low.** Inside the last fifteen per cent of a limit, a button appears to ask for a bigger
+one. With room to spare there is nothing to ask about, and with no limit there is no ceiling to
+raise. One request stands at a time. An admin approves it — an approval that would not actually
+raise anything is refused rather than sent back as a lie — or declines it, which leaves the limit
+exactly where it was. Nobody answers their own request, no request is answered twice, and either
+outcome reaches the person who asked, once. An approved request remembers the figure it was
+approved at, not whatever the limit happens to be later.
 
 **Forgot the password?** There is no email recovery — a self-hosted instance has no mail server, and
 nobody else can reach your database. Two ways back in:
@@ -190,6 +242,24 @@ the code that serves it and lives at **`/swagger-ui.html`** on a running instanc
 for the raw document): every endpoint says what it does and which role it needs, and *Authorize*
 takes the token from `POST /api/auth/login` so you can try them from the page.
 
+![The generated API document: eleven groups covering the whole surface, and a preamble that describes the instance it is served from](docs/api.png)
+
+The preamble is not a fixed blurb. The instance writes it from its own configuration, which is why
+the screenshot says *without accounts* — that is how the instance serving it was running. One that
+requires a login says so instead, and says what that means for every rule below.
+
+Underneath, everything under `/api` is denied unless something opens it, and what opens it is a
+`@PreAuthorize` on the handler — beside the mapping, in the file you would open to see what the
+endpoint does, rather than in a list of paths maintained somewhere else. The weakness of that
+arrangement is that an annotation is something a person has to remember, and this application
+already lived through it: five endpoints had been added without one, open to every account on the
+instance, with nothing saying so. So it is enforced rather than intended. One test walks the
+handlers Spring actually registered — not the source, not a maintained list — and fails if any of
+them carries no rule; the only exceptions are the three ways in and the capability probe, each of
+which has to answer before anybody is signed in. A second test signs in as each of the three roles
+and checks the guarded endpoints over HTTP, so the rules are tested by their effect and not by
+their spelling.
+
 ## Status
 
 Working and in use, being prepared for a wider audience. Known gaps, so nobody has to discover them
@@ -197,11 +267,12 @@ the hard way:
 
 - authentication is **off by default** — run that way, the app is designed for a machine you
   control, and the CORS allowlist is the only thing between a browser and the API. Set
-  `SHEETSMITH_AUTH_ENABLED=true` for a login screen and accounts (see below);
-- **spend limits only see what has a price**: a model you run locally costs nothing, and one nobody
-  has priced costs an unknown amount, so neither counts towards a limit. That is the honest reach of
-  a ceiling denominated in money — the alternative would be to guess, and a budget enforced against
-  a guess is worse than none. The interface says so where the limit is set;
+  `SHEETSMITH_AUTH_ENABLED=true` for a login screen and accounts ([above](#accounts));
+- **spend limits only see what has a price**: a local model costs nothing and an unpriced one costs
+  an unknown amount, so neither counts towards a limit. That is the honest reach of a ceiling
+  denominated in money — the alternative would be to guess, and a budget enforced against a guess is
+  worse than none. The interface says so where the limit is set, and
+  [What a person may spend](#what-a-person-may-spend) has the rest of the rules;
 - the database is still called `xlsxai` by default, from before the app was called SheetSmith —
   deliberately, because changing that default would point an existing install at an empty database.
   Everything else has been renamed: settings are `sheetsmith.*` and environment variables

@@ -213,6 +213,17 @@ document, whose account. Anything under `/api` that the chain does not name is d
 endpoint fails closed and is noticed in the first minute. `SecurityMatrixTest` asks every one of
 them as each role, over HTTP, with real tokens.
 
+**Whose work you may see is a rule, not a filter on the screen.** `WorkVisibility` answers for a
+`JobRecord` and for a `DocumentSession` alike: a user sees their own runs, an admin sees their own
+and every ordinary user's but not a peer's, and the superadmin sees everything. Ownerless runs —
+made before the instance had accounts — go to the administrators. It is applied in the query rather
+than after it, so the page count counts what may be seen and a filter naming somebody else cannot
+answer about them; the same ladder narrows the analytics, including its per-person breakdown. A run
+you may not see is **404**, because 403 would confirm it exists. Deleting is narrower still and is
+the superadmin's alone. The check is called from the controllers rather than from
+`DocumentSessionService.require`, since that method is also reached from a job's own virtual thread
+where there is no security context and the honest answer to "who is asking" is nobody.
+
 **Stored API keys never travel back.** `GET /api/settings` reports which providers have a key, not
 what it is; a blank key on save means "leave the stored one alone", and naming it blank is the way
 to remove it.
@@ -386,7 +397,7 @@ PUT    /api/users/{id}            replace name + password         — admin
 PATCH  /api/users/{id}            name and/or password            — admin, or your own account
 DELETE /api/users/{id}            remove                          — admin
 PATCH  /api/users/{id}/role       {role}                          — see below
-PUT    /api/users/{id}/budget     {monthlyBudget}                 — admin, never your own
+PUT    /api/users/{id}/budget     {monthlyBudget}                 — admin; your own only if superadmin
 ```
 Search is open to anyone signed in on purpose: the history screen builds its "started by" filter
 from it, and the names are on the analytics screen anyway.
@@ -397,7 +408,28 @@ it back, `SUPERADMIN` cannot be given out at all, and nobody changes their own.
 
 `budget` is a PUT of its own because **null is a real value** there — "no limit" — and on a PATCH
 null already means "leave this alone". A limit is counted from the price list, so calls to a local
-or unpriced model contribute nothing to it.
+or unpriced model contribute nothing to it. Nobody sets their own, with one exception the hierarchy
+forces: the superadmin has nobody above them, so a limit on that account could otherwise never be
+set at all.
+
+### Asking for a bigger limit
+```
+POST /api/users/me/budget-request              ask                — anyone signed in
+POST /api/users/me/budget-request/seen         acknowledge        — anyone signed in
+GET  /api/users/budget-requests                what is waiting    — admin
+POST /api/users/budget-requests/{id}/decide    {approve, newLimit} — admin
+```
+The ask carries **no amount**. How much more is the decision of whoever answers, and a field for it
+would invite asking for the figure you think will be granted rather than the one you need. One open
+request per account: a second while one is waiting is a 409.
+
+`decide` with `approve` refuses a `newLimit` that is not larger than the one in force — **400**,
+because the person is told their limit was raised and that has to be true. Declining leaves the
+limit exactly where it was. A request already answered is a 404, not a second decision, and the
+answer records the figure it was approved at rather than pointing at a limit that may move later.
+
+`seen` is what makes the notification happen once: the outcome is delivered until the person
+acknowledges it, and not again afterwards.
 
 ---
 
