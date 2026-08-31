@@ -31,14 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
-.aider*
 
 ### Tooling ###
 .sonar/
-### Claude Code: the excel-task skill is committed as contributor docs; local state is not.
-.claude/*
-!.claude/skills/
-.claude/settings.local.json
 node_modules/
 dist/
 

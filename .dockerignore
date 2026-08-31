@@ -29,7 +29,6 @@ sessions/
 .github/
 .idea/
 .vscode/
-.claude/
 .sonar/
 **/.sonar/
 .mvn/

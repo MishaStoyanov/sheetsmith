@@ -49,8 +49,8 @@ POI quirk, in a sentence or two. A comment restating the line below it will be r
 
 ## Adding an action
 
-This is the most common change, and the engine is built for it. The full six-stage routine lives in
-`.claude/skills/excel-task/SKILL.md`; the short version:
+This is the most common change, and the engine is built for it. `sheetsmith-java/ARCHITECTURE.md`
+covers the pieces and how they fit; the short version:
 
 1. **Write the handler.** A `@Component` implementing `ActionHandler` in
    `services/excel/actions/`. `@Component` *is* the registration — there is no list to add it to.
