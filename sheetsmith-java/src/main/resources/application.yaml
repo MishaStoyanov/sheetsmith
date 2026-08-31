@@ -46,6 +46,11 @@ spring:
 
   servlet:
     multipart:
+      # sonar java:S5693 warns that these are above its 8 MB default, and they are, deliberately: an
+      # .xlsx with a hundred thousand rows and a few charts is tens of megabytes, and refusing it
+      # would refuse the work this application exists to do. The upload is written straight to disk
+      # and never held in memory, the endpoint requires a signed-in caller when accounts are on, and
+      # the storage cap in Settings bounds what a stream of them can consume.
       max-file-size: 50MB
       max-request-size: 55MB
 

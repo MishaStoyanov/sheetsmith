@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.Objects;
 import java.util.List;
 
 /**
@@ -112,6 +113,9 @@ public class PathGuard {
      * so symlinks are followed and {@code ..} is interpreted against the real parent, never textually.
      */
     private static Path canonicalise(Path absolute) throws IOException {
+        // A null here would be a bug in this class rather than bad input, and it would surface on
+        // the line that reports the failure instead of where it came from.
+        Objects.requireNonNull(absolute, "absolute");
         Deque<Path> tail = new ArrayDeque<>();
         Path existing = absolute;
         while (existing != null && !Files.exists(existing, LinkOption.NOFOLLOW_LINKS)) {

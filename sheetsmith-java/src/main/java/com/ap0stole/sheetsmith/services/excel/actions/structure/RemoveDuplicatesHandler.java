@@ -71,23 +71,10 @@ public class RemoveDuplicatesHandler implements ActionHandler {
             return "there are no data rows in " + area.formatAsString() + ", so nothing was removed";
         }
 
-        FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
-        Map<String, Integer> seen = new HashMap<>();
-        List<Integer> duplicates = new ArrayList<>();
-
-        for (int r = firstData; r <= lastData; r++) {
-            String key = key(sheet.getRow(r), columns, evaluator);
-            Integer first = seen.putIfAbsent(key, r);
-            if (first != null) {
-                duplicates.add(r);
-            }
-        }
+        List<Integer> duplicates = duplicateRows(workbook, sheet, columns, firstData, lastData);
 
         if (duplicates.isEmpty()) {
-            int rows = lastData - firstData + 1;
-            return "no duplicates found — all " + rows + " rows are distinct"
-                    + (columns.size() < area.getLastColumn() - area.getFirstColumn() + 1
-                    ? " by " + describeColumns(columns) : "");
+            return noneFound(area, columns, lastData - firstData + 1);
         }
 
         List<FormulaErrorScanner.CellError> before = StructureShift.formulaErrors(workbook);
@@ -108,10 +95,40 @@ public class RemoveDuplicatesHandler implements ActionHandler {
         log.info("REMOVE_DUPLICATES removed {} row(s) from {} of '{}', comparing {}",
                 removed, area.formatAsString(), sheet.getSheetName(), describeColumns(columns));
 
+        int remaining = lastData - firstData + 1 - removed;
         String detail = removed + (removed == 1 ? " duplicate row removed" : " duplicate rows removed")
-                + ", keeping the first of each; " + seen.size()
-                + (seen.size() == 1 ? " row remains" : " rows remain");
+                + ", keeping the first of each; " + remaining
+                + (remaining == 1 ? " row remains" : " rows remain");
         return detail + StructureShift.brokenFormulas(workbook, before);
+    }
+
+    /** The rows whose key has been seen higher up in the range. */
+    private List<Integer> duplicateRows(XSSFWorkbook workbook, XSSFSheet sheet, List<Integer> columns,
+                                        int firstData, int lastData) {
+        FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
+        Map<String, Integer> seen = new HashMap<>();
+        List<Integer> duplicates = new ArrayList<>();
+
+        for (int r = firstData; r <= lastData; r++) {
+            String key = key(sheet.getRow(r), columns, evaluator);
+            if (seen.putIfAbsent(key, r) != null) {
+                duplicates.add(r);
+            }
+        }
+        return duplicates;
+    }
+
+    /**
+     * Nothing to remove, said in a way the reader can check.
+     * <p>
+     * Naming the columns matters only where the comparison used some of them: "all 400 rows are
+     * distinct" and "distinct by A and C" are different claims, and the second is the one that
+     * explains a result somebody was not expecting.
+     */
+    private String noneFound(CellRangeAddress area, List<Integer> columns, int rows) {
+        boolean everyColumn = columns.size() >= area.getLastColumn() - area.getFirstColumn() + 1;
+        return "no duplicates found — all " + rows + " rows are distinct"
+                + (everyColumn ? "" : " by " + describeColumns(columns));
     }
 
     @Override

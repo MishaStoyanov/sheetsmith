@@ -265,7 +265,7 @@ public class LookupFromSheetHandler implements ActionHandler {
         if (bang < 0) {
             return null;
         }
-        return raw.substring(0, bang).trim().replaceAll("(?:^')|(?:'$)", "").replace("''", "'");
+        return raw.substring(0, bang).trim().replaceAll("^'|'$", "").replace("''", "'");
     }
 
     private String stripSheet(String raw) {

@@ -85,7 +85,9 @@ class PathGuardTest {
         Files.createDirectories(root);
         Path outside = file(tmp.resolve("elsewhere"), "book.xlsx");
 
-        assertThatThrownBy(() -> guard(true, root).resolveInput(outside.toString(), "inputPath"))
+        var guardUnderTest = guard(true, root);
+        var outsideText = outside.toString();
+        assertThatThrownBy(() -> guardUnderTest.resolveInput(outsideText, "inputPath"))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("outside the allowed roots");
     }
@@ -97,7 +99,9 @@ class PathGuardTest {
         Files.createDirectories(root);
         Path evil = file(tmp.resolve("data-evil"), "book.xlsx");
 
-        assertThatThrownBy(() -> guard(true, root).resolveInput(evil.toString(), "inputPath"))
+        var guardUnderTest = guard(true, root);
+        var evilText = evil.toString();
+        assertThatThrownBy(() -> guardUnderTest.resolveInput(evilText, "inputPath"))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getErrorCode())
                 .isEqualTo(ErrorCode.PATH_TRAVERSAL);
@@ -119,7 +123,8 @@ class PathGuardTest {
             assumeTrue(false, "symlink creation not permitted here: " + e.getMessage());
         }
 
-        assertThatThrownBy(() -> guard(true, root).resolveInput(
+        var guardUnderTest = guard(true, root);
+        assertThatThrownBy(() -> guardUnderTest.resolveInput(
                 link.resolve("passwd.xlsx").toString(), "inputPath"))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getErrorCode())
@@ -132,7 +137,8 @@ class PathGuardTest {
         Path root = tmp.resolve("data");
         Files.createDirectories(root);
 
-        assertThatThrownBy(() -> guard(true, root).resolveInput(root.resolve("nope.xlsx").toString(), "inputPath"))
+        var guardUnderTest = guard(true, root);
+        assertThatThrownBy(() -> guardUnderTest.resolveInput(root.resolve("nope.xlsx").toString(), "inputPath"))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FILE_NOT_FOUND);
@@ -144,7 +150,9 @@ class PathGuardTest {
         Path root = tmp.resolve("data");
         Path input = file(root, "book.xlsx");
 
-        assertThatThrownBy(() -> guard(false, root).resolveInput(input.toString(), "inputPath"))
+        var guardUnderTest = guard(false, root);
+        var inputText = input.toString();
+        assertThatThrownBy(() -> guardUnderTest.resolveInput(inputText, "inputPath"))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("SHEETSMITH_PATH_ENDPOINT_ENABLED")
                 .extracting(e -> ((ApiException) e).getErrorCode())

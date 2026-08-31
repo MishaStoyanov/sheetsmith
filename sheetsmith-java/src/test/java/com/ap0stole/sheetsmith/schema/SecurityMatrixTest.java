@@ -68,7 +68,6 @@ class SecurityMatrixTest {
     private ObjectMapper json;
 
     private Long superId;
-    private Long adminId;
     private Long userId;
 
     private String asSuper;
@@ -90,7 +89,7 @@ class SecurityMatrixTest {
                 "$2a$10$VXN.dor9JKKtAZ7xjhernu5kcCmarsDg1L7s.yN5z37tUP/rmWMGu", superId);
 
         asSuper = signIn("admin", "admin");
-        adminId = createUser("matrix-boss", "ADMIN");
+        createUser("matrix-boss", "ADMIN");
         userId = createUser("matrix-dana", "USER");
         asAdmin = signIn("matrix-boss", PASSWORD);
         asUser = signIn("matrix-dana", PASSWORD);

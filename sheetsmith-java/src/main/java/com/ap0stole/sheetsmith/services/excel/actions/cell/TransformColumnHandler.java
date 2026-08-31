@@ -96,6 +96,36 @@ public class TransformColumnHandler implements ActionHandler {
         return detail(changed, skipped);
     }
 
+    /** What one cell came to: rewritten, refused by the rule, or nothing to do. */
+    private enum Outcome { CHANGED, UNCONVERTIBLE, UNTOUCHED }
+
+    /**
+     * Converts one cell, and says which of the three things happened to it.
+     * <p>
+     * An empty cell is not a failed conversion — there was nothing there to convert — and a value
+     * the rule leaves as it found it is only worth writing when the result goes somewhere else,
+     * because writing it back over itself would spend a revision saying nothing.
+     */
+    private Outcome convert(XSSFSheet sheet, int row, int sourceColumn, int targetColumn,
+                            int targetRow, boolean inPlace, FormulaEvaluator evaluator,
+                            ColumnTransform transform, Map<String, Object> properties) {
+        String before = readText(sheet, row, sourceColumn, evaluator);
+        if (before == null || before.isBlank()) {
+            return Outcome.UNTOUCHED;
+        }
+
+        Optional<String> after = transform.apply(before, properties);
+        if (after.isEmpty()) {
+            return Outcome.UNCONVERTIBLE;
+        }
+        if (inPlace && after.get().equals(before)) {
+            return Outcome.UNTOUCHED;
+        }
+
+        write(sheet, targetRow, targetColumn, after.get(), transform.numeric());
+        return Outcome.CHANGED;
+    }
+
     @Override
     public String describe(Map<String, Object> properties, StepTense tense) {
         String range = ActionDescriptions.range(properties, "range");

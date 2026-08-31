@@ -66,9 +66,6 @@ import static org.mockito.Mockito.when;
  * Both flows append to the same revision chain, so they must not interleave: each writer has to see
  * the other's revision before deriving its own. This runs a chat turn and an improve job at the
  * same session at the same time and insists both edits survive.
- */
-/**
- * Two writers on one session, and what stops them deriving the same revision.
  * <p>
  * java:S2925 objects to the sleeps in here, and they stay: this file measures what happens while a
  * slow write is in flight, so the window <em>is</em> the fixture. Awaiting a condition would remove

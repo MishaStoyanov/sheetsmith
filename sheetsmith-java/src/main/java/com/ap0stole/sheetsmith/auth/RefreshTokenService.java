@@ -45,8 +45,19 @@ public class RefreshTokenService {
     /** The plain token, returned once. Only its hash is kept, so this is the only chance to see it. */
     public record IssuedToken(String value, LocalDateTime expiresAt) {}
 
+    /**
+     * A new refresh token for this user.
+     * <p>
+     * Annotated for callers in other beans; {@link #rotate} calls {@link #mint} directly, because a
+     * call through {@code this} never reaches the proxy — and rotation is already inside a
+     * transaction of its own, which is the one that has to cover both halves of the swap.
+     */
     @Transactional
     public IssuedToken issue(User user, boolean rememberMe) {
+        return mint(user, rememberMe);
+    }
+
+    private IssuedToken mint(User user, boolean rememberMe) {
         byte[] raw = new byte[TOKEN_BYTES];
         random.nextBytes(raw);
         String value = Base64.getUrlEncoder().withoutPadding().encodeToString(raw);
@@ -85,7 +96,7 @@ public class RefreshTokenService {
         tokens.save(existing);
 
         User user = existing.getUser();
-        return new Rotation(user, issue(user, existing.isRememberMe()));
+        return new Rotation(user, mint(user, existing.isRememberMe()));
     }
 
     public record Rotation(User user, IssuedToken token) {}

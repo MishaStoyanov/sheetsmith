@@ -153,17 +153,21 @@ public class ChatAgentService {
             if (decision.isAnswer()) {
                 return decision.answer();
             }
-            if (!decision.isToolCall()) {
+            if (decision.isToolCall()) {
+                act(turn, workbook, decision);
+            } else {
                 rejectUnusableReply(turn, decision);
-                continue;
             }
-
-            ToolInvocation invocation = toolRegistry.invoke(workbook, decision.tool(), decision.args());
-            turn.add(invocation, decision.args());
-            turn.mutated = turn.mutated || (invocation.mutating() && invocation.success());
-            appendTrace(turn, decision, invocation);
         }
         return null;
+    }
+
+    /** Runs the tool the model asked for, and records what it did. */
+    private void act(Turn turn, XSSFWorkbook workbook, AgentDecision decision) {
+        ToolInvocation invocation = toolRegistry.invoke(workbook, decision.tool(), decision.args());
+        turn.add(invocation, decision.args());
+        turn.mutated = turn.mutated || (invocation.mutating() && invocation.success());
+        appendTrace(turn, decision, invocation);
     }
 
     /**

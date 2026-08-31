@@ -169,9 +169,7 @@ public final class JobSearch {
         }
 
         // Newest first is the default because a history is read from the end.
-        Sort.Direction direction = request.direction() == null
-                ? (CREATED_AT.equals(asked) ? Sort.Direction.DESC : Sort.Direction.ASC)
-                : ("desc".equalsIgnoreCase(request.direction()) ? Sort.Direction.DESC : Sort.Direction.ASC);
+        Sort.Direction direction = direction(request.direction(), asked);
 
         return PageRequest.of(page, size, Sort.by(direction, property));
     }
@@ -182,5 +180,18 @@ public final class JobSearch {
 
     private static boolean notEmpty(List<?> values) {
         return values != null && !values.isEmpty();
+    }
+
+    /**
+     * Which way to sort, and the default that makes a history readable.
+     * <p>
+     * Newest first when sorting by date and nothing was asked for, because a history is read from
+     * the end; ascending for every other column, because a name or a status is read from the start.
+     */
+    private static Sort.Direction direction(String asked, String column) {
+        if (asked != null) {
+            return "desc".equalsIgnoreCase(asked) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        }
+        return CREATED_AT.equals(column) ? Sort.Direction.DESC : Sort.Direction.ASC;
     }
 }

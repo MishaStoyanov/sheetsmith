@@ -65,18 +65,18 @@ public class SetBordersHandler implements ActionHandler {
         Set<String> sides = sides(cfg.getSides());
         // Colouring a border that is being removed would be a contradiction; POI keeps the colour of
         // a NONE border in the file, where it does nothing but bloat the style table.
-        XSSFColor color = style == BorderStyle.NONE
-                ? null
-                : CellStyles.color(cfg.getColor() == null ? DEFAULT_COLOR : cfg.getColor(), "color");
+        XSSFColor color = colourFor(style, cfg);
 
         int touched = CellStyles.apply(workbook, sheet, area, new CellStyles.StyleEdit() {
             @Override
             public String key(int row, int column) {
                 Set<Edge> edges = edges(sides, area, row, column);
                 // The middle of a block being outlined has no edge of its own to draw.
-                return edges.isEmpty() ? null
-                        : "borders:" + style + ":" + (color == null ? "-" : color.getARGBHex())
-                        + ":" + edges;
+                if (edges.isEmpty()) {
+                    return null;
+                }
+                String shade = color == null ? "-" : color.getARGBHex();
+                return "borders:" + style + ":" + shade + ":" + edges;
             }
 
             @Override
@@ -278,5 +278,14 @@ public class SetBordersHandler implements ActionHandler {
             };
         }
         return weight + " borders on " + String.join(" and ", sides);
+    }
+
+    /** The colour to draw with, or none where the step is rubbing borders out. */
+    private XSSFColor colourFor(BorderStyle style, BordersConfig cfg) {
+        if (style == BorderStyle.NONE) {
+            return null;
+        }
+        String hex = cfg.getColor() == null ? DEFAULT_COLOR : cfg.getColor();
+        return CellStyles.color(hex, "color");
     }
 }

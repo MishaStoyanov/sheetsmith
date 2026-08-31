@@ -117,7 +117,8 @@ class RefreshTokenServiceTest {
         RefreshTokenService.IssuedToken first = service.issue(user, false);
         service.rotate(first.value());
 
-        assertThatThrownBy(() -> service.rotate(first.value())).isInstanceOf(ApiException.class);
+        var firstValue = first.value();
+        assertThatThrownBy(() -> service.rotate(firstValue)).isInstanceOf(ApiException.class);
     }
 
     @Test
@@ -129,7 +130,8 @@ class RefreshTokenServiceTest {
         RefreshTokenService.IssuedToken first = service.issue(user, false);
         RefreshTokenService.Rotation rotation = service.rotate(first.value());
 
-        assertThatThrownBy(() -> service.rotate(first.value())).isInstanceOf(ApiException.class);
+        var firstValue = first.value();
+        assertThatThrownBy(() -> service.rotate(firstValue)).isInstanceOf(ApiException.class);
 
         assertThatThrownBy(() -> service.rotate(rotation.token().value()))
                 .as("the token the thief would be holding must stop working too")
@@ -142,7 +144,8 @@ class RefreshTokenServiceTest {
         authConfig.setRefreshTokenTtl(Duration.ofMillis(-1));
         RefreshTokenService.IssuedToken expired = service.issue(user, false);
 
-        assertThatThrownBy(() -> service.rotate(expired.value()))
+        var expiredValue = expired.value();
+        assertThatThrownBy(() -> service.rotate(expiredValue))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("expired");
     }
@@ -155,7 +158,8 @@ class RefreshTokenServiceTest {
 
         service.revoke(laptop.value());
 
-        assertThatThrownBy(() -> service.rotate(laptop.value())).isInstanceOf(ApiException.class);
+        var laptopValue = laptop.value();
+        assertThatThrownBy(() -> service.rotate(laptopValue)).isInstanceOf(ApiException.class);
         assertThat(service.rotate(phone.value()).token().value())
                 .as("signing out on one device must not sign you out on the others")
                 .isNotBlank();
@@ -175,7 +179,9 @@ class RefreshTokenServiceTest {
 
         service.revokeAllForUser(7L);
 
-        assertThatThrownBy(() -> service.rotate(laptop.value())).isInstanceOf(ApiException.class);
-        assertThatThrownBy(() -> service.rotate(phone.value())).isInstanceOf(ApiException.class);
+        var laptopValue = laptop.value();
+        assertThatThrownBy(() -> service.rotate(laptopValue)).isInstanceOf(ApiException.class);
+        var phoneValue = phone.value();
+        assertThatThrownBy(() -> service.rotate(phoneValue)).isInstanceOf(ApiException.class);
     }
 }

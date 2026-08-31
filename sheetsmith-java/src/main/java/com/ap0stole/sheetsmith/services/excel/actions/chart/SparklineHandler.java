@@ -46,6 +46,10 @@ import java.io.IOException;
 @Component
 public class SparklineHandler implements ActionHandler {
 
+    /** The two sparkline shapes that are named in the switch, the validation and the card. */
+    private static final String COLUMN = "column";
+    private static final String STACKED = "stacked";
+
     /**
      * Excel's identifier for the sparkline extension — <b>and its exact casing is load-bearing</b>.
      * Excel matches this GUID case-sensitively: written as {@code 4FD2} rather than {@code 4fd2} the
@@ -143,8 +147,8 @@ public class SparklineHandler implements ActionHandler {
         String type = CellStyles.keyword(ActionDescriptions.text(properties, "type"));
 
         String shape = switch (type == null ? "line" : type) {
-            case "column", "bar" -> "bar";
-            case "winloss", "win_loss", "stacked" -> "win/loss";
+            case COLUMN, "bar" -> "bar";
+            case "winloss", "win_loss", STACKED -> "win/loss";
             default -> "line";
         };
 
@@ -229,8 +233,8 @@ public class SparklineHandler implements ActionHandler {
         }
         return switch (keyword) {
             case "line" -> "line";
-            case "column", "bar" -> "column";
-            case "winloss", "win_loss", "win/loss", "stacked" -> "stacked";
+            case COLUMN, "bar" -> COLUMN;
+            case "winloss", "win_loss", "win/loss", STACKED -> STACKED;
             default -> throw new IllegalArgumentException("Unknown sparkline \"type\" \"" + raw
                     + "\" — use line, column or winLoss.");
         };
@@ -265,6 +269,6 @@ public class SparklineHandler implements ActionHandler {
     /** A sheet name reaches the file inside XML, so its own markup characters have to be escaped. */
     private String escape(String value) {
         String escaped = value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
-        return escaped.matches("[A-Za-z0-9_]+") ? escaped : "'" + escaped.replace("'", "''") + "'";
+        return escaped.matches("\\w+") ? escaped : "'" + escaped.replace("'", "''") + "'";
     }
 }

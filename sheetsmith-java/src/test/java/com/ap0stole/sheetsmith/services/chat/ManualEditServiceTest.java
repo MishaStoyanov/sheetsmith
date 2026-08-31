@@ -34,6 +34,11 @@ import static org.mockito.Mockito.*;
  * Manual grid edits used to live only in the browser and vanish on the next refresh. These tests
  * pin down that they now become a revision like anything else.
  */
+/**
+ * java:S2925: the sleep in here is the fixture — it is the window in which a reader outside
+ * the lock can observe a half-written revision, which is the thing being measured.
+ */
+@SuppressWarnings("java:S2925")
 class ManualEditServiceTest {
 
     private DocumentSessionService sessionService;
@@ -154,8 +159,8 @@ class ManualEditServiceTest {
     @Test
     @DisplayName("an unknown sheet index is refused with a message that says what is wrong")
     void rejectsUnknownSheetIndex() {
-        var cellEditsRequest3 = new CellEditsRequest(List.of(new CellEdit(9, 0, 0, "x")), null);
-        assertThatThrownBy(() -> service.apply("s1",cellEditsRequest3))
+        var cellEditsRequest = new CellEditsRequest(List.of(new CellEdit(9, 0, 0, "x")), null);
+        assertThatThrownBy(() -> service.apply("s1",cellEditsRequest))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("no sheet 9");
     }
@@ -163,8 +168,8 @@ class ManualEditServiceTest {
     @Test
     @DisplayName("an empty payload is refused — there is nothing to commit")
     void rejectsEmptyPayload() {
-        var cellEditsRequest4 = new CellEditsRequest(List.of(), Map.of());
-        assertThatThrownBy(() -> service.apply("s1", cellEditsRequest4))
+        var cellEditsRequest = new CellEditsRequest(List.of(), Map.of());
+        assertThatThrownBy(() -> service.apply("s1", cellEditsRequest))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("No edits");
 

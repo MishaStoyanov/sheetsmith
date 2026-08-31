@@ -58,8 +58,7 @@ import static org.mockito.Mockito.when;
  * The improve flow now lives inside a session's revision chain, so what is under test here is the
  * lifecycle rather than the Excel work: which revision a job reads, which one it writes, and what
  * survives when the job record is deleted. The POI work itself is stubbed.
- */
-/**
+ * <p>
  * java:S2925: the sleep in here is a stand-in for a job that takes time, which is the thing the
  * revision chain has to survive. Waiting for a condition instead would remove it.
  */
@@ -222,8 +221,8 @@ class JobServiceSessionTest {
         // 200 with review cards reading "Unknown step" — a plan nobody can act on or diagnose.
         when(planningService.generatePlan(anyString(), anyString())).thenReturn(planWith(null));
 
-        var planRequest2 = new PlanRequest(session.getId(), "tidy it");
-        assertThatThrownBy(() -> jobService.generatePlan(planRequest2))
+        var planRequest = new PlanRequest(session.getId(), "tidy it");
+        assertThatThrownBy(() -> jobService.generatePlan(planRequest))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("could not read");
     }

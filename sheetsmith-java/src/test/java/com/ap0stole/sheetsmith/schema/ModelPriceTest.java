@@ -125,7 +125,8 @@ class ModelPriceTest {
 
         // The guard is on the server, not in a dialog: a warning drawn in the interface is bypassed
         // by anything that is not the interface.
-        assertThatThrownBy(() -> prices.delete(added.id(), false))
+        var addedId = added.id();
+        assertThatThrownBy(() -> prices.delete(addedId, false))
                 .isInstanceOf(ApiException.class)
                 .hasMessageContaining("2 recorded calls")
                 .hasMessageContaining("does not delete them");

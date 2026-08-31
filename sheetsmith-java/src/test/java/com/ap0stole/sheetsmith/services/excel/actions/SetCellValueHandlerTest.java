@@ -128,7 +128,7 @@ class SetCellValueHandlerTest {
 
         assertThat(cell(0, 0).getCellType()).isEqualTo(CellType.NUMERIC);
         assertThat(DateUtil.isCellDateFormatted(cell(0, 0))).isTrue();
-        assertThat(cell(0, 0).getLocalDateTimeCellValue().toLocalDate().toString()).isEqualTo("2026-01-31");
+        assertThat(cell(0, 0).getLocalDateTimeCellValue().toLocalDate()).hasToString("2026-01-31");
     }
 
     @Test
@@ -137,7 +137,7 @@ class SetCellValueHandlerTest {
         handler.execute(workbook, props("cell", "A1", "value", "2026-01-31T14:30:00", "valueType", "datetime"));
 
         assertThat(DateUtil.isCellDateFormatted(cell(0, 0))).isTrue();
-        assertThat(cell(0, 0).getLocalDateTimeCellValue().toString()).isEqualTo("2026-01-31T14:30");
+        assertThat(cell(0, 0).getLocalDateTimeCellValue()).hasToString("2026-01-31T14:30");
         assertThat(cell(0, 0).getCellStyle().getDataFormatString())
                 .as("a date-only format would hide the time entirely")
                 .isEqualTo("yyyy-mm-dd hh:mm:ss");

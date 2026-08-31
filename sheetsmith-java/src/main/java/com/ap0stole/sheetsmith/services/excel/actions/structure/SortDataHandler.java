@@ -46,17 +46,7 @@ public class SortDataHandler implements ActionHandler {
         int lastCol = range.getLastColumn();
         int sortCol = cfg.getColumnIndex();
 
-        // snapshot row data as 2D array of raw values
-        List<Object[]> rowData = new ArrayList<>();
-        for (int r = firstRow; r <= lastRow; r++) {
-            Row row = sheet.getRow(r);
-            Object[] cells = new Object[lastCol - firstCol + 1];
-            for (int c = firstCol; c <= lastCol; c++) {
-                cells[c - firstCol] = row != null ? getCellValue(row, c) : null;
-            }
-            rowData.add(cells);
-        }
-
+        List<Object[]> rowData = snapshot(sheet, firstRow, lastRow, firstCol, lastCol);
         int sortColOffset = sortCol - firstCol;
         rowData.sort((a, b) -> {
             Object va = a[sortColOffset];
@@ -113,6 +103,26 @@ public class SortDataHandler implements ActionHandler {
             case FORMULA -> cell.getCellFormula();
             default -> null;
         };
+    }
+
+    /**
+     * The range's values, read out before anything moves.
+     * <p>
+     * Read as raw values rather than sorted in place, because sorting in place would move cells
+     * under the comparator that is still reading them — and a missing row is a row of nulls here
+     * rather than a gap, so it sorts to one end instead of throwing.
+     */
+    private List<Object[]> snapshot(XSSFSheet sheet, int firstRow, int lastRow, int firstCol, int lastCol) {
+        List<Object[]> rowData = new ArrayList<>();
+        for (int r = firstRow; r <= lastRow; r++) {
+            Row row = sheet.getRow(r);
+            Object[] cells = new Object[lastCol - firstCol + 1];
+            for (int c = firstCol; c <= lastCol; c++) {
+                cells[c - firstCol] = row != null ? getCellValue(row, c) : null;
+            }
+            rowData.add(cells);
+        }
+        return rowData;
     }
 
     private void setCellValue(Cell cell, Object value) {

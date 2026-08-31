@@ -121,7 +121,7 @@ public class FindRowsTool implements QueryTool {
         String text = sortCol == null
                 ? "%s up to %d rows%s".formatted(verb, limit, where)
                 : "%s the %d %s rows%s by column %s".formatted(
-                verb, limit, asc ? "lowest" : "highest", where, QuerySupport.colName(sortCol));
+                verb, limit, end(asc), where, QuerySupport.colName(sortCol));
 
         int filters = filterCount(properties);
         if (filters == 0) {
@@ -224,5 +224,10 @@ public class FindRowsTool implements QueryTool {
     /** The "s" that makes a count read as English. */
     private static String plural(int count) {
         return count == 1 ? "" : "s";
+    }
+
+    /** Which end of the sort the rows are taken from. */
+    private static String end(boolean ascending) {
+        return ascending ? "lowest" : "highest";
     }
 }

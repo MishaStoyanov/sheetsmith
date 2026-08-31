@@ -54,6 +54,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class JobService {
 
+    /** What every "no such run" refusal says, so all three say it the same way. */
+    private static final String NOT_FOUND = "Job not found: ";
+
     private final JobRepository jobRepository;
     private final ActionResultRepository actionResultRepository;
     private final FileStorageService fileStorageService;
@@ -264,14 +267,14 @@ public class JobService {
     @Transactional(readOnly = true)
     public JobHistoryDto getById(Long id) {
         JobRecord job = jobRepository.findById(id)
-                .orElseThrow(() -> new ApiException(ErrorCode.JOB_NOT_FOUND, "Job not found: " + id));
+                .orElseThrow(() -> new ApiException(ErrorCode.JOB_NOT_FOUND, NOT_FOUND + id));
         visibility.requireReadable(job);
         return JobHistoryDto.fromDetail(job);
     }
 
     public Resource downloadResult(Long id) {
         JobRecord job = jobRepository.findById(id)
-                .orElseThrow(() -> new ApiException(ErrorCode.JOB_NOT_FOUND, "Job not found: " + id));
+                .orElseThrow(() -> new ApiException(ErrorCode.JOB_NOT_FOUND, NOT_FOUND + id));
         // The file, not just the row about it. Hiding a run in the list while still serving its
         // spreadsheet by id would make the list a decoration.
         visibility.requireReadable(job);
@@ -300,7 +303,7 @@ public class JobService {
     @Transactional
     public void deleteJob(Long id) {
         JobRecord job = jobRepository.findById(id)
-                .orElseThrow(() -> new ApiException(ErrorCode.JOB_NOT_FOUND, "Job not found: " + id));
+                .orElseThrow(() -> new ApiException(ErrorCode.JOB_NOT_FOUND, NOT_FOUND + id));
 
         fileStorageService.deleteJobFiles(job.getInputFilePath(), job.getResultFilePath());
 
