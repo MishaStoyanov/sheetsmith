@@ -39,8 +39,8 @@ public class SecurityConfig {
      * Open in both shapes: the UI itself, the question "what can this instance do", health, and the
      * API's own description.
      * <p>
-     * The OpenAPI document lists paths and shapes, never data — and this is an open-source
-     * application whose endpoints are in its README anyway. Hiding it behind the login would buy
+     * The OpenAPI document lists paths and shapes, never data — and the endpoints are in the
+     * README anyway. Hiding it behind the login would buy
      * nothing and cost the one page that makes the API usable from outside a browser.
      */
     private static final String[] ALWAYS_OPEN = {

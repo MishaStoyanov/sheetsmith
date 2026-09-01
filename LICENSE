@@ -1,21 +1,119 @@
-MIT License
+SheetSmith Source-Available License, Version 1.0
+SPDX-License-Identifier: LicenseRef-SheetSmith-1.0
 
-Copyright (c) 2026 Misha Stoyanov
+Copyright (c) 2026 Misha Stoyanov. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+SheetSmith is source-available software, not open source. The source is published
+so that anyone can read it, verify what it does with their data, and run it. It is
+free to run. It is not free to resell, to offer as a service, or to change.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Read this before using the software. If you use it, you accept these terms.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+
+1. DEFINITIONS
+
+   "Software" means SheetSmith, in source or built form, together with its
+   documentation, as published by the Licensor.
+
+   "Licensor" means Misha Stoyanov, the author and sole copyright holder.
+
+   "You" means the individual or organisation exercising the rights below. For an
+   organisation, "you" includes every entity that controls it, is controlled by
+   it, or is under common control with it.
+
+   "Unmodified" means byte-for-byte as published by the Licensor. Supplying
+   configuration through the means the Software itself provides — environment
+   variables, settings files, values entered in its own interface, the choice of
+   language model, the contents of your spreadsheets — is not a modification.
+
+   "Third Party" means anyone other than you, your employees, and your
+   contractors acting for you.
+
+
+2. WHAT YOU MAY DO WITHOUT ASKING, AT NO CHARGE
+
+   a) Run the Software, Unmodified, for any purpose, including commercial
+      purposes, on hardware you own or control, or on private infrastructure you
+      rent for your own use. This applies equally to a person on one machine and
+      to a company across its whole staff. No fee, no registration, no notice
+      to the Licensor.
+
+   b) Read, study, and analyse the source.
+
+   c) Make and keep verbatim copies of the Software, and give verbatim copies to
+      others, provided every copy keeps this license and all copyright notices
+      intact, and provided you charge nothing for the copy itself.
+
+
+3. WHAT REQUIRES A SEPARATE WRITTEN AGREEMENT WITH THE LICENSOR
+
+   The rights in this section are reserved. They are not granted by this license,
+   they are not granted by implication, and they do not become available with the
+   passage of time. Each is available on terms agreed with the Licensor, who
+   built this software and decides what it costs.
+
+   a) HOSTING. Making the Software, or any service built on it, available to a
+      Third Party over a network — as a hosted product, a paid or unpaid service,
+      an internal offering to another organisation, or any other arrangement in
+      which a Third Party uses an instance you operate. Your own staff are not a
+      Third Party, so running one instance for your whole company is section 2(a)
+      and needs no agreement.
+
+   b) MODIFICATION. Altering, adapting, translating, extending, or building upon
+      the Software, or combining it with other software so as to create a
+      derivative work. This includes adding features, changing behaviour, and
+      removing parts. The single exception is section 4.
+
+   c) REDISTRIBUTION OF CHANGES. Distributing, publishing, or otherwise supplying
+      to anyone a version of the Software that is not Unmodified.
+
+   d) Removing, obscuring, or altering this license, the copyright notices, or
+      the attribution the Software displays.
+
+   To ask about any of these, open an issue at
+   https://github.com/MishaStoyanov/sheetsmith or contact the Licensor directly.
+
+
+4. CONTRIBUTIONS
+
+   You may modify your own copy for the sole purpose of preparing a contribution
+   to be submitted to the Licensor, and you may submit it.
+
+   By submitting a contribution you grant the Licensor a perpetual, worldwide,
+   irrevocable, royalty-free, non-exclusive license to use, reproduce, modify,
+   sublicense, and distribute it as part of the Software, under this license or
+   any other terms the Licensor chooses, and you confirm you have the right to
+   grant that.
+
+   This is the only circumstance in which section 3(b) does not apply, and it
+   does not extend to running a modified copy in production.
+
+
+5. NO OTHER RIGHTS
+
+   All rights not expressly granted in section 2 are reserved. This license
+   grants no rights in the Licensor's names, logos, or trademarks.
+
+
+6. TERMINATION
+
+   The rights in section 2 end automatically if you breach this license. They are
+   restored if you cure the breach within 30 days of becoming aware of it, unless
+   the Licensor has already notified you of the breach, in which case restoration
+   is at the Licensor's discretion. Sections 5, 7, and 8 survive termination.
+
+
+7. NO WARRANTY
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. THE SOFTWARE EDITS YOUR
+   SPREADSHEETS AND USES LANGUAGE MODELS, WHICH ARE NOT DETERMINISTIC. KEEP
+   BACKUPS AND REVIEW WHAT IT PROPOSES BEFORE APPLYING IT.
+
+
+8. NO LIABILITY
+
+   IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM,
+   OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.

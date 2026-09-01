@@ -2,6 +2,26 @@
 
 Issues and pull requests are welcome. This page is what the repository assumes you know.
 
+**Before anything else, one thing about the licence.** SheetSmith is source-available rather than
+open source: running it is free, changing it is not a right you have by default (see
+[LICENSE](LICENSE)). Preparing a pull request is the one exception — you may modify your copy for
+that purpose, and by opening a PR you license the change to the author for use in the project.
+
+**What gets merged.** Three things have to be true, and the pull request has to make the case for
+all three:
+
+1. **It says what, where and why.** A description that explains the change, the place it belongs and
+   the problem it solves. A patch that does not argue for itself will be asked to.
+2. **It does not cost the project its point.** The model is never handed your table — it receives
+   structure and the result of steps it asks for, and that is the promise the whole design exists to
+   keep. A change that widens what reaches the model, or that quietly makes a run less auditable, is
+   not a trade this project makes.
+3. **The community is better off with it than without it.** Something people other than you will
+   use. A change that only serves one deployment belongs in that deployment, and that is what a
+   customisation agreement is for.
+
+Approval is the author's, and it is what puts a change into the published project.
+
 ## Running it
 
 You need Java 25, Maven 3.9+, Node 20+, PostgreSQL 14+, and something for the model to talk to —

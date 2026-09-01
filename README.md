@@ -279,10 +279,24 @@ the hard way:
   `SHEETSMITH_*`, with the old `XLSXAI_*` names still read as a fallback so an existing `.env`
   keeps working.
 
-Issues and pull requests are welcome — [CONTRIBUTING.md](CONTRIBUTING.md) covers running both
+Issues and pull requests are welcome — [CONTRIBUTING.md](CONTRIBUTING.md) covers what gets merged, running both
 halves, the bar for new code, and how to add an action. Security posture and how to report
 something: [SECURITY.md](SECURITY.md).
 
 ## Licence
 
-MIT — see [LICENSE](LICENSE).
+**Source-available, not open source** — see [LICENSE](LICENSE). The difference is worth two
+sentences, because the word gets used loosely and you should know what you are getting.
+
+**Free, no permission needed, no fee:** run it unmodified for anything you like, including
+commercially, on your own machine or your company's own servers, for one person or for all your
+staff. Read the source. Pass on verbatim copies.
+
+**By agreement with the author:** offering it to other people over a network as a hosted service,
+and changing the code — adding features, altering behaviour, or shipping a modified version. Those
+rights are reserved and do not expire. If you need either, [open an
+issue](https://github.com/MishaStoyanov/sheetsmith/issues) and ask; paid customisation is how the
+project is funded.
+
+Contributions are welcome and are the one exception: you may modify your copy to prepare a pull
+request. [CONTRIBUTING.md](CONTRIBUTING.md) says what gets merged.

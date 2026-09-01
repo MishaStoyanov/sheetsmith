@@ -84,8 +84,8 @@ public record AnalyticsSummaryDto(
      *                       model drags an average far enough that it stops describing anything.
      *                       Fractional, because a run that takes four tenths of a second is not a
      *                       run that takes no time at all
-     * @param topActions     what the application is actually used for, which on an open-source
-     *                       project is a more interesting question than what it costs
+     * @param topActions     what the application is actually used for, which is a more interesting
+     *                       question about a self-hosted instance than what it costs
      * @param topErrors      what breaks most often, by the message the run recorded
      */
     public record Runs(long total, List<Count> byStatus, Double successRate, Double medianSeconds,
