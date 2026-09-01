@@ -286,6 +286,20 @@ key brought the context down. The base `application.yaml` also sets every *other
 (`embedding`, `image`, `moderation`, `audio.*`) to `none` — a provider starter auto-configures those
 too, and each insists on a key at startup even though this app only ever uses chat.
 
+**The profiles configure a bean nothing reads.** Both callers — `AiPlanningService` and
+`ChatLlmService` — ask `LlmClientFactory` for a `ChatModel` built from the settings row in the
+database, because the provider and its key are the user's to change at runtime rather than the
+operator's to fix at startup. The profiles remain because they still switch off the auto-configuration
+that would otherwise demand a key for every provider on the classpath.
+
+**Spring AI 2 does not talk to the providers itself.** It takes a client built with the vendor's own
+SDK, so `LlmClientFactory` hands `OpenAiChatModel` an `OpenAIClient` and `AnthropicChatModel` an
+`AnthropicClient`. Those SDKs split their transport into a separate artifact, which is why
+`openai-java-client-okhttp` and `anthropic-java-client-okhttp` are declared by name and pinned to
+the versions spring-ai already resolves — a transport newer than the core it plugs into fails at
+runtime, not at compile time. Gemini and DeepSeek ride the OpenAI client with a substituted base
+URL, which is the whole of their support.
+
 ### Storage & concurrency
 
 - Files are written to `./sessions/{sessionId}/` (the working copies both flows use) and — for the scripting endpoints only — `./uploads` (input) and `./results` (output), configurable via `sheetsmith.storage.*` or env vars `SHEETSMITH_UPLOAD_DIR` / `SHEETSMITH_RESULT_DIR` / `SHEETSMITH_SESSION_DIR`.
@@ -351,6 +365,15 @@ every path-only rule and ends at `.requestMatchers("/api/**").denyAll()`, so an 
 without a rule answers 403 the first time it is called. Path rules go through `AuthorizationManager`
 lambdas backed by the same `Authz` bean the annotations use, because roles are not in the token and
 `hasRole` has nothing to read.
+
+**A security filter must not also be a servlet filter.** `JwtAuthenticationFilter` is a
+`@Component`, and Boot registers every filter bean with the servlet container as well as wherever
+you add it yourself. Both copies then run: the outer one authenticates, marks the request filtered
+so the copy inside the chain skips itself, and `SecurityContextHolderFilter` then replaces the
+context with the empty one it loaded — discarding the authentication that was just established. A
+valid token answers 401 and nothing in the log says why. `SecurityConfig.jwtFilterNotInServletChain`
+registers it disabled so it runs only where `addFilterBefore` puts it. Any filter bean added to the
+chain needs the same treatment.
 
 `configs/SecurityProperties` is the `sheetsmith.security` properties holder (CORS allowlist, by-path
 endpoint); it was called `SecurityConfig` until the filter chain needed that name.
