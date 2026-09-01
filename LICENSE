@@ -32,11 +32,19 @@ Read this before using the software. If you use it, you accept these terms.
 
 2. WHAT YOU MAY DO WITHOUT ASKING, AT NO CHARGE
 
-   a) Run the Software, Unmodified, for any purpose, including commercial
-      purposes, on hardware you own or control, or on private infrastructure you
-      rent for your own use. This applies equally to a person on one machine and
-      to a company across its whole staff. No fee, no registration, no notice
-      to the Licensor.
+   a) Run the Software, Unmodified, on hardware you own or control, or on
+      private infrastructure you rent for your own use. This applies equally to a
+      person on one machine and to a company across its whole staff. No fee, no
+      registration, no notice to the Licensor.
+
+      Your own work may be commercial. A company may run it on its own business,
+      and you may use it as a tool in work you are paid for — tidying a client's
+      spreadsheet and invoicing for your time is your business, and the Software
+      is no more part of that bargain than the computer you ran it on.
+
+      What this does not grant is earning money from the Software itself. That is
+      section 3(a), and the distinction is the whole point: use it to do your
+      work, do not make it the product you sell.
 
    b) Read, study, and analyse the source.
 
@@ -52,12 +60,21 @@ Read this before using the software. If you use it, you accept these terms.
    passage of time. Each is available on terms agreed with the Licensor, who
    built this software and decides what it costs.
 
-   a) HOSTING. Making the Software, or any service built on it, available to a
-      Third Party over a network — as a hosted product, a paid or unpaid service,
-      an internal offering to another organisation, or any other arrangement in
-      which a Third Party uses an instance you operate. Your own staff are not a
-      Third Party, so running one instance for your whole company is section 2(a)
-      and needs no agreement.
+   a) HOSTING, AND MAKING MONEY FROM IT. Making the Software, or any service
+      built on it, available to a Third Party over a network — as a hosted
+      product, a paid or unpaid service, an internal offering to another
+      organisation, or any other arrangement in which a Third Party uses an
+      instance you operate. Whether you charge for it makes no difference: a free
+      public instance needs an agreement exactly as a paid one does. Your own
+      staff are not a Third Party, so running one instance for your whole company
+      is section 2(a) and needs no agreement.
+
+      Equally reserved is deriving revenue from the Software by any means,
+      including from an instance offered at no charge: subscription or per-use
+      fees, advertising of any kind, sponsorship, affiliate or referral
+      arrangements, selling data gathered through it, and bundling it into
+      something else you sell. Advertising is named because "it is free to the
+      user" is not the same as "nobody is being paid".
 
    b) MODIFICATION. Altering, adapting, translating, extending, or building upon
       the Software, or combining it with other software so as to create a

@@ -288,15 +288,18 @@ something: [SECURITY.md](SECURITY.md).
 **Source-available, not open source** — see [LICENSE](LICENSE). The difference is worth two
 sentences, because the word gets used loosely and you should know what you are getting.
 
-**Free, no permission needed, no fee:** run it unmodified for anything you like, including
-commercially, on your own machine or your company's own servers, for one person or for all your
-staff. Read the source. Pass on verbatim copies.
+**Free, no permission needed, no fee:** run it unmodified on your own machine or your company's own
+servers, for one person or for all your staff. Your work may be commercial — a business may run it
+on its own books, and you may use it as a tool in work you are paid for. Read the source. Pass on
+verbatim copies.
 
-**By agreement with the author:** offering it to other people over a network as a hosted service,
-and changing the code — adding features, altering behaviour, or shipping a modified version. Those
-rights are reserved and do not expire. If you need either, [open an
-issue](https://github.com/MishaStoyanov/sheetsmith/issues) and ask; paid customisation is how the
-project is funded.
+**By agreement with the author:** offering it to other people over a network, and changing the code
+— adding features, altering behaviour, or shipping a modified version. Hosting needs an agreement
+whether or not you charge for it, and so does earning from it any other way: subscriptions,
+advertising, sponsorship, bundling it into something you sell. The line is *use it to do your work,
+do not make it the product you sell.* These rights are reserved and do not expire. If you need
+either, [open an issue](https://github.com/MishaStoyanov/sheetsmith/issues) and ask; paid
+customisation is how the project is funded.
 
 Contributions are welcome and are the one exception: you may modify your copy to prepare a pull
 request. [CONTRIBUTING.md](CONTRIBUTING.md) says what gets merged.
