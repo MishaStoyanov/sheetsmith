@@ -20,11 +20,6 @@
         <apache-poi.version>5.5.1</apache-poi.version>
         <spring-ai.version>2.0.1</spring-ai.version>
         <lombok.version>1.18.38</lombok.version>
-        <!-- Spring Boot 3.4's Byte Buddy predates JDK 24+, and Mockito refuses to mock on it. -->
-        <byte-buddy.version>1.17.8</byte-buddy.version>
-        <!-- Spring Boot 3.4's Testcontainers 1.20.5 ships docker-java 3.4.1, which Docker Engine 29 rejects
-             with HTTP 400 on /info — every container test would silently skip. -->
-        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
     <dependencies>
@@ -166,9 +161,11 @@
             <artifactId>spring-boot-testcontainers</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Testcontainers 2 renamed its modules: org.testcontainers:postgresql stops at 1.21.4 and
+             the version Spring Boot manages lives under testcontainers-postgresql. -->
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>postgresql</artifactId>
+            <artifactId>testcontainers-postgresql</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
