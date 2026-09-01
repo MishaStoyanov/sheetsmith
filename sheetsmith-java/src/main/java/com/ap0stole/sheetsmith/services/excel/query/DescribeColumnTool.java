@@ -4,8 +4,9 @@ import com.ap0stole.sheetsmith.configs.ConditionalOnChatEnabled;
 import com.ap0stole.sheetsmith.services.excel.SheetResolver;
 import com.ap0stole.sheetsmith.services.excel.StepTense;
 import com.ap0stole.sheetsmith.services.excel.query.model.DescribeColumnConfig;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.util.CellRangeAddress;
@@ -27,8 +28,9 @@ public class DescribeColumnTool implements QueryTool {
 
     private static final int SAMPLE_SIZE = 10;
 
-    private final ObjectMapper mapper = new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private final ObjectMapper mapper = JsonMapper.builder()
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .build();
 
     @Override
     public String getType() {

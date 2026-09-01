@@ -3,16 +3,18 @@ package com.ap0stole.sheetsmith.llm;
 import com.ap0stole.sheetsmith.domain.dto.LlmSettingsDto;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
+import com.anthropic.client.AnthropicClient;
+import com.anthropic.client.okhttp.AnthropicOkHttpClient;
+import com.openai.client.OpenAIClient;
+import com.openai.client.okhttp.OpenAIOkHttpClient;
 import org.springframework.ai.anthropic.AnthropicChatModel;
 import org.springframework.ai.anthropic.AnthropicChatOptions;
-import org.springframework.ai.anthropic.api.AnthropicApi;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaApi;
-import org.springframework.ai.ollama.api.OllamaOptions;
+import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -51,8 +53,8 @@ public class LlmClientFactory {
 
     private ChatModel buildLocal(LlmSettingsDto.LocalSettings local) {
         OllamaApi api = OllamaApi.builder().baseUrl(local.baseUrl()).build();
-        OllamaOptions options = OllamaOptions.builder().model(local.model()).build();
-        return OllamaChatModel.builder().ollamaApi(api).defaultOptions(options).build();
+        OllamaChatOptions options = OllamaChatOptions.builder().model(local.model()).build();
+        return OllamaChatModel.builder().ollamaApi(api).options(options).build();
     }
 
     private ChatModel buildCloud(LlmSettingsDto.CloudSettings cloud) {
@@ -72,23 +74,29 @@ public class LlmClientFactory {
             // Both speak the OpenAI wire protocol, so the only difference is where they live.
             case "GEMINI" -> openAiCompatible(GEMINI_BASE_URL, apiKey, model);
             case "DEEPSEEK" -> openAiCompatible(DEEPSEEK_BASE_URL, apiKey, model);
-            case "CLAUDE" -> AnthropicChatModel.builder()
-                    .anthropicApi(AnthropicApi.builder().apiKey(apiKey).build())
-                    .defaultOptions(AnthropicChatOptions.builder().model(model).build())
-                    .build();
+            case "CLAUDE" -> anthropic(apiKey, model);
             default -> throw new ApiException(ErrorCode.LLM_FAILURE, "Unknown cloud provider: " + provider);
         };
     }
 
-    /** A null {@code baseUrl} leaves the builder's own default, which is OpenAI's. */
+    /** A null {@code baseUrl} leaves the SDK's own default, which is OpenAI's. */
     private ChatModel openAiCompatible(String baseUrl, String apiKey, String model) {
-        OpenAiApi.Builder api = OpenAiApi.builder().apiKey(apiKey);
+        OpenAIOkHttpClient.Builder client = OpenAIOkHttpClient.builder().apiKey(apiKey);
         if (baseUrl != null) {
-            api.baseUrl(baseUrl);
+            client.baseUrl(baseUrl);
         }
+        OpenAIClient openAi = client.build();
         return OpenAiChatModel.builder()
-                .openAiApi(api.build())
-                .defaultOptions(OpenAiChatOptions.builder().model(model).build())
+                .openAiClient(openAi)
+                .options(OpenAiChatOptions.builder().model(model).build())
+                .build();
+    }
+
+    private ChatModel anthropic(String apiKey, String model) {
+        AnthropicClient client = AnthropicOkHttpClient.builder().apiKey(apiKey).build();
+        return AnthropicChatModel.builder()
+                .anthropicClient(client)
+                .options(AnthropicChatOptions.builder().model(model).build())
                 .build();
     }
 

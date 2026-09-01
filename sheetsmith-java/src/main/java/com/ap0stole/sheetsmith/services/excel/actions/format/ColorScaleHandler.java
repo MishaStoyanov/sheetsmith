@@ -6,8 +6,9 @@ import com.ap0stole.sheetsmith.services.excel.ActionHandler;
 import com.ap0stole.sheetsmith.services.excel.CellStyles;
 import com.ap0stole.sheetsmith.services.excel.SheetResolver;
 import com.ap0stole.sheetsmith.services.excel.StepTense;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Color;
 import org.apache.poi.ss.usermodel.ColorScaleFormatting;
@@ -48,8 +49,9 @@ public class ColorScaleHandler implements ActionHandler {
     private static final String DEFAULT_MID = "#FEF08A";
     private static final String DEFAULT_HIGH = "#BBF7D0";
 
-    private final ObjectMapper mapper = new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private final ObjectMapper mapper = JsonMapper.builder()
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .build();
 
     @Override
     public String getType() {

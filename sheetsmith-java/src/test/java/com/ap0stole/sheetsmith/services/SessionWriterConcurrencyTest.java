@@ -30,7 +30,7 @@ import com.ap0stole.sheetsmith.services.excel.ActionRegistry;
 import com.ap0stole.sheetsmith.services.excel.ExcelAutomationService;
 import com.ap0stole.sheetsmith.services.excel.FormulaErrorScanner;
 import com.ap0stole.sheetsmith.services.excel.StepTense;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;

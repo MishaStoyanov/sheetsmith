@@ -3,7 +3,7 @@ package com.ap0stole.sheetsmith.services.catalogue;
 import com.ap0stole.sheetsmith.domain.dto.price.CatalogueEntry;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -67,7 +67,7 @@ public class OpenRouterCatalogue implements ModelCatalogue {
             .build();
 
     private static org.springframework.http.client.ClientHttpRequestFactory factory() {
-        var settings = org.springframework.boot.http.client.ClientHttpRequestFactorySettings.defaults()
+        var settings = org.springframework.boot.http.client.HttpClientSettings.defaults()
                 .withConnectTimeout(Duration.ofSeconds(5))
                 .withReadTimeout(Duration.ofSeconds(15));
         return org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder.detect().build(settings);

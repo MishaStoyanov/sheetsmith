@@ -15,7 +15,7 @@ import com.ap0stole.sheetsmith.llm.ChatLlmService;
 import com.ap0stole.sheetsmith.services.SessionLockRegistry;
 import com.ap0stole.sheetsmith.services.excel.FormulaErrorScanner;
 import com.ap0stole.sheetsmith.services.excel.FormulaErrorScanner.CellError;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;

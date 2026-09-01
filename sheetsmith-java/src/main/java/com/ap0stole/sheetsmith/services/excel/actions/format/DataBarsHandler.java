@@ -6,8 +6,9 @@ import com.ap0stole.sheetsmith.services.excel.ActionHandler;
 import com.ap0stole.sheetsmith.services.excel.CellStyles;
 import com.ap0stole.sheetsmith.services.excel.SheetResolver;
 import com.ap0stole.sheetsmith.services.excel.StepTense;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.ConditionalFormattingRule;
 import org.apache.poi.ss.usermodel.ConditionalFormattingThreshold.RangeType;
@@ -36,8 +37,9 @@ public class DataBarsHandler implements ActionHandler {
     /** Sky blue, from the prompt's palette — dark enough to read, light enough to type over. */
     private static final String DEFAULT_COLOR = "#0EA5E9";
 
-    private final ObjectMapper mapper = new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private final ObjectMapper mapper = JsonMapper.builder()
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .build();
 
     @Override
     public String getType() {

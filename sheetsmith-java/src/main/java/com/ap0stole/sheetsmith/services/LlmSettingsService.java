@@ -4,7 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import com.ap0stole.sheetsmith.domain.dto.LlmSettingsDto;
 import com.ap0stole.sheetsmith.domain.entity.LlmSettingsEntity;
 import com.ap0stole.sheetsmith.repository.LlmSettingsRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

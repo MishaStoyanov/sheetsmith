@@ -6,8 +6,9 @@ import com.ap0stole.sheetsmith.services.excel.ActionHandler;
 import com.ap0stole.sheetsmith.services.excel.CellStyles;
 import com.ap0stole.sheetsmith.services.excel.SheetResolver;
 import com.ap0stole.sheetsmith.services.excel.StepTense;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.xssf.usermodel.XSSFRow;
@@ -54,8 +55,9 @@ public class AlignCellsHandler implements ActionHandler {
     /** POI's marker for "let Excel decide this row's height". */
     private static final short AUTOMATIC_HEIGHT = -1;
 
-    private final ObjectMapper mapper = new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private final ObjectMapper mapper = JsonMapper.builder()
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .build();
 
     @Override
     public String getType() {

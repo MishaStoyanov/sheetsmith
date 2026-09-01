@@ -4,8 +4,9 @@ import com.ap0stole.sheetsmith.services.excel.actions.ActionDescriptions;
 import com.ap0stole.sheetsmith.services.excel.model.sheet.SheetConfig;
 import com.ap0stole.sheetsmith.services.excel.ActionHandler;
 import com.ap0stole.sheetsmith.services.excel.StepTense;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.util.WorkbookUtil;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -18,8 +19,9 @@ import java.io.IOException;
 @Component
 public class AddSheetHandler implements ActionHandler {
 
-    private final ObjectMapper mapper = new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private final ObjectMapper mapper = JsonMapper.builder()
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .build();
 
     @Override
     public String getType() {

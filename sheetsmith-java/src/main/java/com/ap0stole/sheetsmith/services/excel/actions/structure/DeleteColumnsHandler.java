@@ -6,8 +6,9 @@ import com.ap0stole.sheetsmith.services.excel.ActionHandler;
 import com.ap0stole.sheetsmith.services.excel.FormulaErrorScanner;
 import com.ap0stole.sheetsmith.services.excel.SheetResolver;
 import com.ap0stole.sheetsmith.services.excel.StepTense;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -38,8 +39,9 @@ public class DeleteColumnsHandler implements ActionHandler {
     /** The property this step reads its columns from, named once for the three places it is read. */
     private static final String RANGE = "range";
 
-    private final ObjectMapper mapper = new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private final ObjectMapper mapper = JsonMapper.builder()
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .build();
 
     @Override
     public String getType() {

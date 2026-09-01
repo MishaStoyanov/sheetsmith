@@ -29,7 +29,7 @@ class ErrorControllerAdviceTest {
     @DisplayName("a path nobody serves is 404, not a server fault")
     void missingPathIs404() {
         ResponseEntity<ErrorResponse> response =
-                advice.handleNotFound(new NoResourceFoundException(HttpMethod.POST, "/api/nope"));
+                advice.handleNotFound(new NoResourceFoundException(HttpMethod.POST, "/api/nope", "/api/nope"));
 
         assertThat(response.getStatusCode().value()).isEqualTo(404);
         assertThat(response.getBody()).isNotNull();

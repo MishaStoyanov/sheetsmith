@@ -1,6 +1,16 @@
 spring:
   application:
     name: sheetsmith
+
+  # Jackson 3 (Spring Boot 4) turns FAIL_ON_NULL_FOR_PRIMITIVES on, where Jackson 2 had it off.
+  # Every request DTO here is a record, and Jackson must pass a value for each component to the
+  # canonical constructor — so a property the caller simply omitted arrives as null and a primitive
+  # boolean rejects it. `rememberMe` on the login request is the one clients have always been free
+  # to leave out. Restored rather than accepted, because what an endpoint accepts is a promise to
+  # its callers, and a library's new default is not a reason to break it.
+  jackson:
+    deserialization:
+      fail-on-null-for-primitives: false
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:ollama}
 

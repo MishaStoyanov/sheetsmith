@@ -22,7 +22,7 @@ import com.ap0stole.sheetsmith.services.DocumentSessionService;
 import com.ap0stole.sheetsmith.services.SessionLockRegistry;
 import com.ap0stole.sheetsmith.services.excel.FormulaErrorScanner;
 import com.ap0stole.sheetsmith.services.excel.FormulaErrorScanner.CellError;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;

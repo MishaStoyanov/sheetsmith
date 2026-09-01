@@ -3,9 +3,11 @@ package com.ap0stole.sheetsmith.configs;
 import com.ap0stole.sheetsmith.auth.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -31,6 +33,7 @@ import java.util.List;
  */
 @Slf4j
 @Configuration
+@EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
@@ -162,4 +165,21 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
+    /**
+     * Keeps the JWT filter out of the servlet chain, so it runs only where it is added above.
+     * <p>
+     * It is a {@code @Component}, and Boot registers every filter bean with the servlet container
+     * as well. That outer copy runs before the security chain: it authenticates, marks the request
+     * filtered so the copy inside the chain is skipped, and then {@code SecurityContextHolderFilter}
+     * replaces the context with the empty one it loaded — losing the authentication that was just
+     * established. The request then answers 401 with nothing in the log to say why.
+     */
+    @Bean
+    public FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterNotInServletChain(JwtAuthenticationFilter filter) {
+        FilterRegistrationBean<JwtAuthenticationFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
 }
