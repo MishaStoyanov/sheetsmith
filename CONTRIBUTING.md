@@ -7,6 +7,11 @@ open source: running it is free, changing it is not a right you have by default 
 [LICENSE](LICENSE)). Preparing a pull request is the one exception — you may modify your copy for
 that purpose, and by opening a PR you license the change to the author for use in the project.
 
+**Found a bug?** The fix comes here, as a pull request, rather than staying in your own copy. That
+is the deliberate part: a defect repaired in one deployment and left standing in every other one
+helps exactly one person, and the next person to hit it has no idea it was ever solved. If you
+cannot write the fix yourself, open an issue — that is the same route, one step earlier.
+
 **What gets merged.** Three things have to be true, and the pull request has to make the case for
 all three:
 
