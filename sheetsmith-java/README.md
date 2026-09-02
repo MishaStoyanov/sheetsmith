@@ -131,6 +131,7 @@ mvn spring-boot:run
 | `SHEETSMITH_CHAT_ENABLED` | `true` | `false` removes the chat entirely — see [Running without the chat](#running-without-the-chat) |
 | `SHEETSMITH_CHAT_MAX_STEPS` | `8` | Tool calls the chat may make before it must answer |
 | `SHEETSMITH_CHAT_MAX_CELLS` | `300` | Cell cap for a single range read |
+| `SHEETSMITH_CHAT_MAX_READ_SHARE` | `0.5` | Largest share of a sheet one read may return; a single column is always allowed |
 | `SHEETSMITH_CHAT_MAX_ROWS` | `50` | Row cap for any query result |
 | `SHEETSMITH_CHAT_HISTORY` | `12` | Previous messages replayed to the model |
 | `SHEETSMITH_CHAT_STREAM_TIMEOUT_MS` | `600000` | How long `/messages/stream` holds the connection open |

@@ -48,6 +48,12 @@ public class ChatLlmService {
               (SUMIF, COUNTIF, VLOOKUP, MAX, INDEX/MATCH...).
             - If a tool returns an error, read it, fix the arguments and try again. If it keeps failing,
               answer the user explaining what you could not do.
+            - WHEN A SEARCH FINDS NOTHING, SAY SO AND ASK. Two failed searches is an answer: tell the
+              person exactly what you looked for and ask them to name the value as it is spelled in
+              the sheet. Do NOT widen the range and read the table to look through it yourself —
+              that is refused, and it would hand you data nobody asked you to see.
+            - Never say you could not find something and then give it anyway. If you have the answer,
+              answer; if you do not, ask.
             - Answer in the same language the user wrote in. Be short and factual — one or two sentences,
               no markdown headings, no preamble.
             - NEVER put anything outside the single JSON object. No markdown fences, no commentary.

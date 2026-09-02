@@ -49,7 +49,42 @@ class ReadRangeToolTest {
     }
 
     @Test
+    void willNotHandOverTheSheet() {
+        XSSFSheet orders = workbook.createSheet("Orders");
+        for (int r = 0; r < 9; r++) {
+            XSSFRow row = orders.createRow(r);
+            for (int c = 0; c < 6; c++) {
+                row.createCell(c).setCellValue("v" + r + c);
+            }
+        }
+
+        // The shape of the failure this exists for: a search came up empty, so read everything and
+        // look through it. 48 of 54 cells is well inside the cell cap and is still the table.
+        assertThatThrownBy(() -> tool.execute(workbook, Map.of("range", "A2:F9", "sheetName", "Orders")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("89% of this sheet's data")
+                .hasMessageContaining("Read one column instead");
+    }
+
+    @Test
+    void oneColumnIsAlwaysAllowed() {
+        XSSFSheet narrow = workbook.createSheet("Narrow");
+        for (int r = 0; r < 4; r++) {
+            narrow.createRow(r).createCell(0).setCellValue("name" + r);
+        }
+
+        // Half the sheet by cells, and the whole of it on a one-column sheet — allowed either way,
+        // because reading the column you are searching is the behaviour the limit is steering to.
+        QueryResult result = tool.execute(workbook, Map.of("range", "A1:A4", "sheetName", "Narrow"));
+
+        assertThat(values(data(result))).hasSize(4);
+    }
+
+    @Test
     void returnsTypedValuesAndResolvesFormulas() {
+        // These fixtures are two rows wide, so reading them at all is reading all of them. The
+        // coverage limit has its own tests below; this one is about what the values come back as.
+        chatConfig.setMaxReadShare(1.0);
         QueryResult result = tool.execute(workbook, Map.of("range", "A1:D2"));
 
         Map<String, Object> data = data(result);
@@ -83,6 +118,9 @@ class ReadRangeToolTest {
 
     @Test
     void toleratesMissingRowsAndCells() {
+        // These fixtures are two rows wide, so reading them at all is reading all of them. The
+        // coverage limit has its own tests below; this one is about what the values come back as.
+        chatConfig.setMaxReadShare(1.0);
         QueryResult result = tool.execute(workbook, Map.of("range", "A1:B4"));
 
         assertThat(values(data(result))).hasSize(4);

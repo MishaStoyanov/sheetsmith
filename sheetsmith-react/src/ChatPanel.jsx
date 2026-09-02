@@ -12,7 +12,11 @@ import {
 
 const mono = "'JetBrains Mono', monospace";
 
-const PRIVACY_LINE = 'The model never sees your sheet — only the result of each step it runs.';
+// Says what is enforced rather than what sounds strongest. The old wording — "never sees your
+// sheet" — was true of every step and untrue of a turn: one READ_RANGE over the data range handed
+// the model the whole table and reported it as a step's result. No read may do that now, so the
+// line can promise it.
+const PRIVACY_LINE = 'The model gets only what each step returns, never the whole sheet — and every step is listed.';
 
 // ── Panel ───────────────────────────────────────────────────────────────────
 

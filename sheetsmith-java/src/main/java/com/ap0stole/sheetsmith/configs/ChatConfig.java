@@ -38,6 +38,21 @@ public class ChatConfig {
     /** Hard cap on rows any query tool may return. */
     private int maxRows = 50;
 
+    /**
+     * The largest share of a sheet's own data one READ_RANGE may return, as a fraction of it.
+     * <p>
+     * The cell cap above measures size and this measures proportion, which is the thing that
+     * actually matters: 300 cells is a generous ceiling and also the whole of most small sheets, so
+     * a size limit alone permits reading a sheet entirely and calling it a step's result. A tool
+     * that can hand over the table makes "the model never sees your sheet" a sentence about
+     * arithmetic rather than about what happens.
+     * <p>
+     * Reading a single column is never refused by this, whatever share it comes to — one column is
+     * the narrow behaviour the limit exists to push a caller towards, and refusing it on a
+     * two-column sheet would break the honest path along with the wasteful one.
+     */
+    private double maxReadShare = 0.5;
+
     /** How many previous messages of the conversation are replayed to the model. */
     private int historyMessages = 12;
 
