@@ -52,8 +52,37 @@ public class FindRowsTool implements QueryTool {
                    "ascending" (boolean, default true), "limit" (default %d, max %d), "columns" (array of 0-based
                    absolute columns to return, default every column of the range), "sheetName", "sheetIndex"
                    Use it to answer "which rows...", "top N by...", "how many rows where...".
+                   When a text filter matches nothing, the result may carry "suggestions" — values
+                   in that column close to what was asked for, found here rather than by you. Offer
+                   them to the person and let them choose; do not search again on a guess of your own,
+                   and do not read the sheet to look.
                    Example: {"tool": "FIND_ROWS", "args": {"range": "A2:D20", "filters": [{"columnIndex": 1, "operator": ">", "value": "100"}], "sortColumnIndex": 2, "ascending": false, "limit": 5}}"""
                 .formatted(DEFAULT_LIMIT, chatConfig.getMaxRows());
+    }
+
+    /**
+     * The values a failed text search came closest to, across every column it filtered on.
+     * <p>
+     * Only text comparisons are asked about. A range that found no row over 100 is a question with
+     * a real answer — none — and offering "did you mean 99" would be inventing a different question.
+     */
+    private List<String> nearMatches(XSSFSheet sheet, CellRangeAddress range,
+                                     List<FilterCriterion> filters, FormulaEvaluator evaluator) {
+        List<String> suggestions = new ArrayList<>();
+        for (FilterCriterion filter : filters) {
+            String op = filter.getOperator() == null ? "" : filter.getOperator().trim().toLowerCase();
+            boolean textual = "contains".equals(op) || "=".equals(op) || "==".equals(op);
+            if (!textual || filter.getColumnIndex() == null || filter.getValue() == null) {
+                continue;
+            }
+            for (String near : NearMatches.suggest(sheet, range, filter.getColumnIndex(),
+                    filter.getValue(), evaluator)) {
+                if (!suggestions.contains(near)) {
+                    suggestions.add(near);
+                }
+            }
+        }
+        return suggestions;
     }
 
     @Override
@@ -102,10 +131,22 @@ public class FindRowsTool implements QueryTool {
         data.put("matched", matched.size());
         data.put("truncated", matched.size() > rows.size());
 
+        // Nothing matched is usually a spelling rather than an absence, so say what is nearby.
+        // Computed here rather than by letting the model look: this returns a few values, and
+        // reading the column to the model would return the column.
+        List<String> suggestions = matched.isEmpty()
+                ? nearMatches(sheet, range, filters, evaluator)
+                : List.of();
+        if (!suggestions.isEmpty()) {
+            data.put("suggestions", suggestions);
+        }
+
         log.info("FIND_ROWS over {} matched {} row(s), returned {}",
                 range.formatAsString(), matched.size(), rows.size());
 
-        String summary = summarise(matched.size(), rows.size());
+        String summary = suggestions.isEmpty()
+                ? summarise(matched.size(), rows.size())
+                : summarise(matched.size(), rows.size()) + " — did you mean: " + String.join(", ", suggestions) + "?";
         return new QueryResult(QuerySupport.clip(summary, 120), data);
     }
 

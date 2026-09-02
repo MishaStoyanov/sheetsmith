@@ -48,6 +48,53 @@ class FindRowsToolTest {
     }
 
     @Test
+    void offersWhatWasProbablyMeantWhenATypoFindsNothing() {
+        Map<String, Object> props = props("A2:C6");
+        props.put("filters", List.of(Map.of("columnIndex", 0, "operator", "contains", "value", "Widgt A")));
+
+        QueryResult result = tool.execute(workbook, props);
+
+        assertThat(data(result)).containsEntry("matched", 0);
+        assertThat(suggestions(data(result))).contains("Widget A");
+        // The sentence the model reads: nothing matched is not the whole answer when something
+        // nearly did, and it should offer rather than guess again.
+        assertThat(result.summary()).contains("did you mean");
+    }
+
+    @Test
+    void readsCyrillicAsTheLatinItStandsFor() {
+        Map<String, Object> props = props("A2:C6");
+        // The failure this was written for: the question is asked in one alphabet about a sheet
+        // written in another, and no edit distance crosses that on its own.
+        props.put("filters", List.of(Map.of("columnIndex", 1, "operator", "contains", "value", "норт")));
+
+        assertThat(suggestions(data(tool.execute(workbook, props)))).contains("North");
+    }
+
+    @Test
+    void staysQuietWhenTheValueIsSimplyNotThere() {
+        Map<String, Object> props = props("A2:C6");
+        props.put("filters", List.of(Map.of("columnIndex", 0, "operator", "contains", "value", "Gadget Z")));
+
+        QueryResult result = tool.execute(workbook, props);
+
+        // A suggestion for a value nobody asked about is worse than none: it turns "not here" into
+        // a different question, and the honest answer to this search is that there is no such row.
+        assertThat(data(result)).doesNotContainKey("suggestions");
+        assertThat(result.summary()).doesNotContain("did you mean");
+    }
+
+    @Test
+    void doesNotSecondGuessANumericSearch() {
+        Map<String, Object> props = props("A2:C6");
+        props.put("filters", List.of(Map.of("columnIndex", 2, "operator", ">", "value", "10000")));
+
+        // "No row over 10000" is a real answer. Offering "did you mean 200" would be answering
+        // something else.
+        assertThat(data(tool.execute(workbook, props))).doesNotContainKey("suggestions");
+    }
+
+    @Test
     void returnsEveryRowWhenThereAreNoFilters() {
         Map<String, Object> data = data(tool.execute(workbook, props("A2:C6")));
 
@@ -199,6 +246,11 @@ class FindRowsToolTest {
         Map<String, Object> props = new HashMap<>();
         props.put("range", range);
         return props;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> suggestions(Map<String, Object> data) {
+        return (List<String>) data.get("suggestions");
     }
 
     @SuppressWarnings("unchecked")
