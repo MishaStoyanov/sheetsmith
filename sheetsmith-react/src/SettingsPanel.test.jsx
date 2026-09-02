@@ -93,6 +93,29 @@ describe('SettingsPanel keys', () => {
     expect(button).toHaveAttribute('title', expect.stringContaining('what it offers'));
   });
 
+  it('says why the button will not help when no key is saved for the provider', async () => {
+    getSettings.mockResolvedValue({
+      ...llm,
+      cloud: { ...llm.cloud, activeProvider: 'CLAUDE', savedKeys: [] },
+    });
+    render(<SettingsPanel open maySetStorage onClose={() => {}} />);
+
+    // A disabled button explains itself only to a mouse that hovers over it, and a press that
+    // does nothing is the whole of what somebody sees. The reason has to be on the screen.
+    expect(await screen.findByText(/Save a key for Anthropic Claude first/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Fetch models' })).toBeDisabled();
+  });
+
+  it('says so when a provider answers with no chat models at all', async () => {
+    getCloudModels.mockResolvedValue([]);
+    render(<SettingsPanel open maySetStorage onClose={() => {}} />);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Fetch models' }));
+
+    // Otherwise an empty answer is indistinguishable from never having asked.
+    expect(await screen.findByText(/listed no chat models/)).toBeInTheDocument();
+  });
+
   it('offers what the provider answered, and keeps the typed box until it has', async () => {
     getCloudModels.mockResolvedValue(['gpt-5', 'gpt-5-mini']);
     render(<SettingsPanel open maySetStorage onClose={() => {}} />);

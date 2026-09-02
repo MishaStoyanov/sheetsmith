@@ -430,6 +430,26 @@ export default function SettingsPanel({ open, onClose, maySetStorage = false }) 
                           {cloudError && (
                             <div style={{ fontSize: 11.5, color: 'var(--del)' }}>{cloudError}</div>
                           )}
+                          {/* Why the button will not help, said where somebody can read it. A
+                              disabled button explains itself only to a mouse that hovers, and a
+                              list that came back empty looks exactly like one never asked for —
+                              both end as a press that appears to do nothing. */}
+                          {!cloudError && !keySaved(settings, active.key) && (
+                            <div style={{ fontSize: 11.5, color: 'var(--text-faint)' }}>
+                              Save a key for {active.label} first — the list is fetched with it.
+                            </div>
+                          )}
+                          {!cloudError && keySaved(settings, active.key)
+                            && (cloudModels[active.key]?.length === 0) && (
+                            <div style={{ fontSize: 11.5, color: 'var(--text-faint)' }}>
+                              {active.label} listed no chat models. Type the name instead.
+                            </div>
+                          )}
+                          {!cloudError && (cloudModels[active.key]?.length > 0) && (
+                            <div style={{ fontSize: 11.5, color: 'var(--text-faint)' }}>
+                              {cloudModels[active.key].length} model{cloudModels[active.key].length > 1 ? 's' : ''} offered (press ↻ to ask again).
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
