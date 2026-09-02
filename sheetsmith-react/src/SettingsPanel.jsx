@@ -306,8 +306,20 @@ export default function SettingsPanel({ open, onClose, maySetStorage = false }) 
                     if (!active) return null;
                     return (
                       <div style={{ padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface-2)' }}>
-                        <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 8, color: 'var(--accent-text)' }}>
-                          {active.label}
+                        {/* The key comes from the vendor's own page, and finding it is the part
+                            people actually get stuck on — so the address is here rather than in a
+                            README nobody has open at this moment. */}
+                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+                                      gap: 12, marginBottom: 8 }}>
+                          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent-text)' }}>
+                            {active.label}
+                          </div>
+                          {active.keysUrl && (
+                            <a href={active.keysUrl} target="_blank" rel="noopener noreferrer"
+                               style={{ fontSize: 11.5, color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>
+                              Get a key ↗
+                            </a>
+                          )}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {/* The server never sends a stored key back, so this box starts empty

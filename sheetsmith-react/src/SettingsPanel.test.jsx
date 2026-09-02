@@ -68,6 +68,17 @@ describe('SettingsPanel keys', () => {
     expect(updateSettings.mock.calls[0][0].cloud.apiKeys).toEqual({});
   });
 
+  it('points at the page where the active provider mints a key', async () => {
+    render(<SettingsPanel open maySetStorage onClose={() => {}} />);
+
+    const link = await screen.findByRole('link', { name: /Get a key/ });
+    // The fixture's active provider is the one the link has to be about — a link that always
+    // pointed at the same vendor would look right and send people to the wrong console.
+    expect(link).toHaveAttribute('href', 'https://platform.openai.com/api-keys');
+    // Opening a vendor's site from a self-hosted page: no window.opener back into this instance.
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+  });
+
   it('clearing a typed key is the way to remove it, and says so', async () => {
     render(<SettingsPanel open maySetStorage onClose={() => {}} />);
 
