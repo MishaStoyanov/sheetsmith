@@ -3,10 +3,10 @@ package com.ap0stole.sheetsmith.llm;
 import com.ap0stole.sheetsmith.domain.dto.LlmSettingsDto;
 import com.ap0stole.sheetsmith.domain.exception.ApiException;
 import com.ap0stole.sheetsmith.domain.exception.ErrorCode;
-import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
-import com.openai.client.OpenAIClient;
+import com.anthropic.client.okhttp.AnthropicOkHttpClientAsync;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
+import com.openai.client.okhttp.OpenAIOkHttpClientAsync;
 import org.springframework.ai.anthropic.AnthropicChatModel;
 import org.springframework.ai.anthropic.AnthropicChatOptions;
 import org.springframework.ai.chat.model.ChatModel;
@@ -79,23 +79,34 @@ public class LlmClientFactory {
         };
     }
 
-    /** A null {@code baseUrl} leaves the SDK's own default, which is OpenAI's. */
+    /**
+     * A null {@code baseUrl} leaves the SDK's own default, which is OpenAI's.
+     * <p>
+     * Both the synchronous and the asynchronous client have to be supplied. Given only one, the
+     * model builder constructs the other itself from ambient configuration — which here has no
+     * credential at all, so building the model throws "At least one credential source must be
+     * specified" even though a key was passed. The message names the thing that was provided,
+     * which is what makes it slow to read.
+     */
     private ChatModel openAiCompatible(String baseUrl, String apiKey, String model) {
-        OpenAIOkHttpClient.Builder client = OpenAIOkHttpClient.builder().apiKey(apiKey);
+        OpenAIOkHttpClient.Builder sync = OpenAIOkHttpClient.builder().apiKey(apiKey);
+        OpenAIOkHttpClientAsync.Builder async = OpenAIOkHttpClientAsync.builder().apiKey(apiKey);
         if (baseUrl != null) {
-            client.baseUrl(baseUrl);
+            sync.baseUrl(baseUrl);
+            async.baseUrl(baseUrl);
         }
-        OpenAIClient openAi = client.build();
         return OpenAiChatModel.builder()
-                .openAiClient(openAi)
+                .openAiClient(sync.build())
+                .openAiClientAsync(async.build())
                 .options(OpenAiChatOptions.builder().model(model).build())
                 .build();
     }
 
+    /** Both clients, for the reason given on {@link #openAiCompatible}. */
     private ChatModel anthropic(String apiKey, String model) {
-        AnthropicClient client = AnthropicOkHttpClient.builder().apiKey(apiKey).build();
         return AnthropicChatModel.builder()
-                .anthropicClient(client)
+                .anthropicClient(AnthropicOkHttpClient.builder().apiKey(apiKey).build())
+                .anthropicClientAsync(AnthropicOkHttpClientAsync.builder().apiKey(apiKey).build())
                 .options(AnthropicChatOptions.builder().model(model).build())
                 .build();
     }
