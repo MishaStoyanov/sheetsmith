@@ -133,8 +133,21 @@ final class NearMatches {
         return longest == 0 ? 1 : 1.0 - (double) distance(a, b) / longest;
     }
 
-    /** Levenshtein, one row at a time: the column is scanned once and this runs per distinct value. */
+    /**
+     * Damerau-Levenshtein: the fewest edits turning one string into the other, counting a swap of
+     * two neighbouring characters as one.
+     * <p>
+     * Plain Levenshtein charges two for that swap — a delete and an insert — which is arithmetically
+     * fair and wrong about people. Typing "Nroth" for "North" is one slip of the fingers, and at two
+     * edits over five characters it scored below the threshold and was not offered, while "Nrth"
+     * (a plain omission, one edit) was. The most ordinary typo there is was the one the suggestion
+     * missed.
+     * <p>
+     * Three rows rather than two, because a transposition looks two rows back. Still linear in the
+     * shorter string, and this runs once per distinct value in the column.
+     */
     private static int distance(String a, String b) {
+        int[] twoBack = new int[b.length() + 1];
         int[] previous = new int[b.length() + 1];
         int[] current = new int[b.length() + 1];
         for (int j = 0; j <= b.length(); j++) {
@@ -144,11 +157,19 @@ final class NearMatches {
             current[0] = i;
             for (int j = 1; j <= b.length(); j++) {
                 int substitute = previous[j - 1] + (a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1);
-                current[j] = Math.min(substitute, Math.min(previous[j] + 1, current[j - 1] + 1));
+                int best = Math.min(substitute, Math.min(previous[j] + 1, current[j - 1] + 1));
+                boolean swapped = i > 1 && j > 1
+                        && a.charAt(i - 1) == b.charAt(j - 2)
+                        && a.charAt(i - 2) == b.charAt(j - 1);
+                if (swapped) {
+                    best = Math.min(best, twoBack[j - 2] + 1);
+                }
+                current[j] = best;
             }
-            int[] swap = previous;
+            int[] spare = twoBack;
+            twoBack = previous;
             previous = current;
-            current = swap;
+            current = spare;
         }
         return previous[b.length()];
     }

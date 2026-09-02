@@ -62,6 +62,16 @@ class FindRowsToolTest {
     }
 
     @Test
+    void countsTwoSwappedLettersAsOneSlip() {
+        Map<String, Object> props = props("A2:C6");
+        // Five letters, two of them swapped. Plain Levenshtein charges two edits for that and the
+        // score lands under the threshold, so the most ordinary typo there is went unoffered.
+        props.put("filters", List.of(Map.of("columnIndex", 1, "operator", "contains", "value", "Nroth")));
+
+        assertThat(suggestions(data(tool.execute(workbook, props)))).contains("North");
+    }
+
+    @Test
     void readsCyrillicAsTheLatinItStandsFor() {
         Map<String, Object> props = props("A2:C6");
         // The failure this was written for: the question is asked in one alphabet about a sheet
