@@ -96,7 +96,9 @@ public class CloudModelService {
                     "x-goog-api-key", key, null, null);
             case "DEEPSEEK" -> Endpoint.bearer("https://api.deepseek.com/models", key);
             // Anthropic answers the same shape but authenticates its own way, and dates its API.
-            case "CLAUDE" -> new Endpoint("https://api.anthropic.com/v1/models",
+            // The limit is not optional politeness: this endpoint paginates and defaults to 20,
+            // so without it the list comes back quietly cut short and looks complete.
+            case "CLAUDE" -> new Endpoint("https://api.anthropic.com/v1/models?limit=1000",
                     "x-api-key", key, "anthropic-version", "2023-06-01");
             default -> throw new ApiException(ErrorCode.LLM_FAILURE, "Unknown cloud provider: " + provider);
         };

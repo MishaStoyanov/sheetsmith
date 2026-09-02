@@ -27,6 +27,9 @@ import java.util.concurrent.atomic.AtomicReference;
 @Component
 public class LlmClientFactory {
 
+    /** Room for a plan over a wide sheet; Anthropic refuses a request that does not name a ceiling. */
+    private static final int ANTHROPIC_MAX_TOKENS = 8192;
+
     private static final String GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai";
     private static final String DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 
@@ -102,12 +105,28 @@ public class LlmClientFactory {
                 .build();
     }
 
-    /** Both clients, for the reason given on {@link #openAiCompatible}. */
+    /**
+     * Both clients, for the reason given on {@link #openAiCompatible}, and two options the other
+     * providers do not need.
+     * <p>
+     * Anthropic is the only one of the four whose API <em>requires</em> a token ceiling, so leaving
+     * it to whatever the library defaults to is leaving the size of an answer to a stranger. A plan
+     * for a wide sheet is a long piece of JSON and a low ceiling truncates it into nothing.
+     * <p>
+     * Thinking is off because this call wants one JSON object back. With it on, the reply leads
+     * with a reasoning block and the text this code reads can come back empty — a failure that
+     * arrives as "the AI returned an empty response" with no error anywhere to explain it.
+     */
     private ChatModel anthropic(String apiKey, String model) {
+        AnthropicChatOptions options = (AnthropicChatOptions) AnthropicChatOptions.builder()
+                .model(model)
+                .thinkingDisabled()
+                .maxTokens(ANTHROPIC_MAX_TOKENS)
+                .build();
         return AnthropicChatModel.builder()
                 .anthropicClient(AnthropicOkHttpClient.builder().apiKey(apiKey).build())
                 .anthropicClientAsync(AnthropicOkHttpClientAsync.builder().apiKey(apiKey).build())
-                .options(AnthropicChatOptions.builder().model(model).build())
+                .options(options)
                 .build();
     }
 

@@ -105,7 +105,17 @@ public class AiPlanningService {
 
         String raw = textOf(response);
         if (raw == null || raw.isBlank()) {
-            log.warn("LLM returned empty response");
+            // Say what the provider actually reported. An empty answer is not an error anywhere in
+            // the stack, so without this the only evidence is that nothing came back — and the
+            // cause (a ceiling that truncated it, a reply that was all reasoning and no text, a
+            // refusal) is exactly what the finish reason and the token counts distinguish.
+            log.warn("LLM returned empty response — finishReason={}, usage={}, results={}",
+                    response != null && response.getResult() != null
+                            && response.getResult().getMetadata() != null
+                            ? response.getResult().getMetadata().getFinishReason() : "none",
+                    response != null && response.getMetadata() != null
+                            ? response.getMetadata().getUsage() : "none",
+                    response != null && response.getResults() != null ? response.getResults().size() : 0);
             throw new ApiException(ErrorCode.LLM_FAILURE, "The AI returned an empty response — try again");
         }
 
