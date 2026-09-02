@@ -4,6 +4,7 @@ import com.ap0stole.sheetsmith.configs.ChatConfig;
 import com.ap0stole.sheetsmith.domain.dto.ChartDefinitionDto;
 import com.ap0stole.sheetsmith.domain.dto.ChartSeriesDto;
 import com.ap0stole.sheetsmith.domain.dto.ExcelSchemaDto;
+import com.ap0stole.sheetsmith.domain.dto.SheetSchemaDto;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xddf.usermodel.chart.AxisPosition;
 import org.apache.poi.xddf.usermodel.chart.ChartTypes;
@@ -160,7 +161,8 @@ class SchemaExtractorChartsTest {
         assertThat(chart.series()).isEmpty();
         // The rest of the workbook must survive it.
         assertThat(schema.getSheets()).hasSize(1);
-        assertThat(schema.getSheets().getFirst().getColumns()).containsExactly("Product", "Revenue");
+        assertThat(schema.getSheets().getFirst().getColumns().stream()
+                .map(SheetSchemaDto.ColumnSchema::name).toList()).containsExactly("Product", "Revenue");
     }
 
     @Test

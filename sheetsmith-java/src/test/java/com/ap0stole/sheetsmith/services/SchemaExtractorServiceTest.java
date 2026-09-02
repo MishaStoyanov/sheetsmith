@@ -32,6 +32,47 @@ class SchemaExtractorServiceTest {
     }
 
     @Test
+    @DisplayName("a column says how its values are stored, not just what it is called")
+    void columnsCarryTheirType() throws Exception {
+        Path file = write(sheet -> {
+            Row header = sheet.createRow(0);
+            header.createCell(0).setCellValue("customer");
+            header.createCell(1).setCellValue("amount");
+            header.createCell(2).setCellValue("paid");
+            Row data = sheet.createRow(1);
+            data.createCell(0).setCellValue("acme");
+            // Written as a string, which is what an export does and what the header hides.
+            data.createCell(1).setCellValue("1250.5");
+            data.createCell(2).setCellValue(1250.5);
+        });
+
+        SheetSchemaDto sheet = service.extract(file.toString()).getSheets().getFirst();
+
+        assertThat(sheet.getColumns().get(1).name()).isEqualTo("amount");
+        // The whole point: a column called "amount" whose cells are strings takes a number format
+        // and shows nothing, and the planner cannot see the cells to find that out for itself.
+        assertThat(sheet.getColumns().get(1).type()).isEqualTo("text");
+        assertThat(sheet.getColumns().get(2).type()).isEqualTo("number");
+    }
+
+    @Test
+    @DisplayName("the prompt the planner sends names each column's type")
+    void promptCarriesTheType() throws Exception {
+        Path file = write(sheet -> {
+            Row header = sheet.createRow(0);
+            header.createCell(0).setCellValue("amount");
+            Row data = sheet.createRow(1);
+            data.createCell(0).setCellValue("1250.5");
+        });
+
+        String prompt = service.extract(file.toString()).toPromptString();
+
+        // Asserted on the prompt rather than on the DTO, because the DTO is not what the model
+        // reads. A type that never reaches this string is a type nobody can act on.
+        assertThat(prompt).contains("amount (text)");
+    }
+
+    @Test
     @DisplayName("a gap in the header row does not blow up extraction")
     void survivesAGapInTheHeaderRow() throws Exception {
         Path file = write(sheet -> {
@@ -48,8 +89,8 @@ class SchemaExtractorServiceTest {
 
         SheetSchemaDto first = schema.getSheets().getFirst();
         assertThat(first.getColumns()).hasSize(3);
-        assertThat(first.getColumns().get(0)).isEqualTo("Product");
-        assertThat(first.getColumns().get(2)).isEqualTo("Revenue");
+        assertThat(first.getColumns().get(0).name()).isEqualTo("Product");
+        assertThat(first.getColumns().get(2).name()).isEqualTo("Revenue");
     }
 
     @Test
@@ -65,8 +106,8 @@ class SchemaExtractorServiceTest {
         SheetSchemaDto first = service.extract(file.toString()).getSheets().getFirst();
 
         // Revenue must stay at index 2 — it is column C, and the model derives columnIndex from here.
-        assertThat(first.getColumns().get(1)).contains("B");
-        assertThat(first.getColumns().indexOf("Revenue")).isEqualTo(2);
+        assertThat(first.getColumns().get(1).name()).contains("B");
+        assertThat(first.getColumns().stream().map(SheetSchemaDto.ColumnSchema::name).toList().indexOf("Revenue")).isEqualTo(2);
         assertThat(first.getHeaderRange()).isEqualTo("A1:C1");
     }
 
@@ -83,8 +124,8 @@ class SchemaExtractorServiceTest {
 
         SheetSchemaDto first = service.extract(file.toString()).getSheets().getFirst();
 
-        assertThat(first.getColumns().get(1)).isNotBlank().doesNotContain("null");
-        assertThat(first.getColumns()).noneMatch(String::isBlank);
+        assertThat(first.getColumns().get(1).name()).isNotBlank().doesNotContain("null");
+        assertThat(first.getColumns()).noneMatch(c -> c.name().isBlank());
     }
 
     // ── The structure-only guarantee ─────────────────────────────────────────
@@ -117,7 +158,8 @@ class SchemaExtractorServiceTest {
                 .as("a label is read out of a cell, so it is not structure and must not be sent")
                 .doesNotContain("Quarterly total")
                 .doesNotContain("Acme Corp confidential");
-        assertThat(strict.getColumns()).containsExactly("Product", "Revenue");
+        assertThat(strict.getColumns().stream().map(SheetSchemaDto.ColumnSchema::name).toList())
+                .containsExactly("Product", "Revenue");
         assertThat(strict.getExistingFormulas())
                 .as("the formula itself is structure, and the planner needs it to avoid duplicates")
                 .anyMatch(entry -> entry.contains("SUM(B2:B2)"));

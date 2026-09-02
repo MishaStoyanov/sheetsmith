@@ -17,7 +17,8 @@ covers both.
 ### The model never reads your table
 
 Both flows are built on the same idea: the LLM is never handed the spreadsheet. It receives the
-*structure* (sheet names, headers, ranges) and then has to **ask for computations** — sum this column,
+*structure* (sheet names, headers with each column's storage type, ranges) and then has to **ask for
+computations** — sum this column,
 find these rows, evaluate this formula. Java runs them with Apache POI and hands back only the small
 result. An answer like "Widget A sold most, 1 240 units" is produced from a `MAX` the engine ran, not
 from a model that read 50 000 rows.
@@ -149,8 +150,8 @@ SHEETSMITH_CHAT_ENABLED=false
 ```
 
 The instance becomes the improve flow alone, and the only thing that can reach the model is the
-sheet's **structure**: sheet names, column headers, ranges, and the text of formulas already in the
-file. No cell from a data row is sent, by any path.
+sheet's **structure**: sheet names, column headers with how each column stores its values,
+ranges, and the text of formulas already in the file. No cell from a data row is sent, by any path.
 
 That is enforced by removing the parts that could, not by not calling them:
 

@@ -32,6 +32,7 @@ import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.openxmlformats.schemas.drawingml.x2006.chart.CTSerTx;
 import org.openxmlformats.schemas.drawingml.x2006.chart.CTStrRef;
+import org.apache.poi.ss.usermodel.DateUtil;
 import org.springframework.stereotype.Service;
 
 import java.io.FileInputStream;
@@ -42,6 +43,10 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class SchemaExtractorService {
+
+    /** Rows read before deciding a column's type; the answer stops changing long before this. */
+    private static final int COLUMN_TYPE_SAMPLE = 50;
+
 
     /** What every "I cannot tell" answer in this file says, so they all say the same thing. */
     private static final String UNKNOWN = "unknown";
@@ -99,11 +104,12 @@ public class SchemaExtractorService {
 
         // A gap in the header row is common in real sheets. The placeholder keeps the list
         // positional, because the LLM derives columnIndex from a column's place in it.
-        List<String> columns = new ArrayList<>();
+        List<SheetSchemaDto.ColumnSchema> columns = new ArrayList<>();
         for (int i = firstColIdx; i <= lastColIdx; i++) {
             Cell header = headerRow.getCell(i);
             String name = header == null ? "" : header.toString().trim();
-            columns.add(name.isEmpty() ? "(unnamed column " + CellReference.convertNumToColString(i) + ")" : name);
+            String label = name.isEmpty() ? "(unnamed column " + CellReference.convertNumToColString(i) + ")" : name;
+            columns.add(new SheetSchemaDto.ColumnSchema(label, columnType(sheet, i, firstRowIdx + 1, lastRowIdx)));
         }
 
         return SheetSchemaDto.builder()
@@ -113,6 +119,53 @@ public class SchemaExtractorService {
                 .columns(columns)
                 .existingFormulas(extractFormulas(sheet))
                 .build();
+    }
+
+    /**
+     * How a column's values are stored, read from the cells rather than guessed from the header.
+     * <p>
+     * This exists because a header lies about storage. "amount" reads as a number and is very often
+     * text — an export writes strings, and a number format laid over strings shows nothing at all.
+     * The planner cannot see the cells, so without this it proposes that no-op and the run reports
+     * a step that succeeded and changed nothing.
+     * <p>
+     * A sample rather than the whole column: the answer is the same after a few dozen rows and a
+     * schema is not the place to walk a hundred thousand of them. Blank cells do not vote, so a
+     * column with gaps still answers by what it holds; a column of nothing but gaps is empty, and
+     * one holding genuinely different kinds is mixed rather than whichever came first.
+     */
+    private String columnType(XSSFSheet sheet, int columnIdx, int firstDataRow, int lastRow) {
+        String seen = null;
+        int sampled = 0;
+        for (int r = firstDataRow; r <= lastRow && sampled < COLUMN_TYPE_SAMPLE; r++) {
+            XSSFRow row = sheet.getRow(r);
+            Cell cell = row == null ? null : row.getCell(columnIdx);
+            String kind = typeOf(cell);
+            if (kind == null) {
+                continue;
+            }
+            sampled++;
+            if (seen == null) {
+                seen = kind;
+            } else if (!seen.equals(kind)) {
+                return "mixed";
+            }
+        }
+        return seen == null ? "empty" : seen;
+    }
+
+    /** Null for a cell that holds nothing, which is a gap rather than a kind. */
+    private String typeOf(Cell cell) {
+        if (cell == null) {
+            return null;
+        }
+        return switch (cell.getCellType()) {
+            case FORMULA -> "formula";
+            case BOOLEAN -> "boolean";
+            case NUMERIC -> DateUtil.isCellDateFormatted(cell) ? "date" : "number";
+            case STRING -> cell.getStringCellValue().trim().isEmpty() ? null : "text";
+            default -> null;
+        };
     }
 
     /**

@@ -75,7 +75,8 @@ what would change and writes nothing until you say so.
 ## The model does not read your table
 
 The engine is built the other way round from most spreadsheet assistants. The model is handed the
-**structure** — sheet names, column headers, ranges, the formulas already present — and then has to
+**structure** — sheet names, column headers and how each column stores its values, ranges, the
+formulas already present — and then has to
 *ask* for computations: sum this column, find these rows, evaluate this formula. Java runs them
 with Apache POI and hands back only the small result.
 
@@ -91,7 +92,8 @@ Two things to be precise about, because a privacy claim is worth only its except
   avoid duplicating totals it already added.
 
 Both go away with one setting. `SHEETSMITH_CHAT_ENABLED=false` makes an improve-only instance where the
-only thing that can reach the model is the sheet's structure — names, headers, ranges, formula text —
+only thing that can reach the model is the sheet's structure — names, headers, column types, ranges,
+formula text —
 and the parts that could send anything else are absent from the running application rather than
 merely unused. The [backend README](sheetsmith-java/README.md#running-without-the-chat) lists
 exactly what is removed.

@@ -329,6 +329,12 @@ Three things about the shape of this, because each was a trap:
   `ChatAgentService.inspect()`, which runs query tools over real values. `ExcelController` therefore
   injects `ObjectProvider<SuggestionService>` and answers with a clear error when it is absent —
   without that, the whole controller would fail to start.
+- **The schema names each column's storage type**, as `amount (text)`, read from a sample of the
+  cells rather than from the header. Without it the planner cannot tell a column of numerals from a
+  column of strings that look like numerals, and the catalogue's own rule — a number format does
+  nothing to text, run `TRANSFORM_COLUMN` with `TO_NUMBER` first — is one it has no way to apply.
+  Every model tested got the repository's own sample wrong for that reason. The type is metadata:
+  derived from the cells, carrying no value out of them.
 - **`SchemaExtractorService.adjacentLabel()` is the one place the ordinary improve prompt carries a
   cell value** — the text beside a formula, used to tell "Total" from "Average" on a follow-up round.
   It is suppressed when the flag is off.

@@ -10,9 +10,11 @@ import com.ap0stole.sheetsmith.services.excel.transform.ColumnTransformRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Component;
@@ -98,6 +100,13 @@ public class TransformColumnHandler implements ActionHandler {
     private record Placement(int sourceColumn, int targetColumn, int rowOffset, boolean inPlace) {
     }
 
+    /** Whether the cell already holds a number, which is the question a numeric rule is asking. */
+    private boolean isNumeric(XSSFSheet sheet, int row, int column) {
+        XSSFRow sheetRow = sheet.getRow(row);
+        Cell cell = sheetRow == null ? null : sheetRow.getCell(column);
+        return cell != null && cell.getCellType() == CellType.NUMERIC;
+    }
+
     /**
      * Converts one cell, and says which of the three things happened to it.
      * <p>
@@ -116,7 +125,14 @@ public class TransformColumnHandler implements ActionHandler {
         if (after.isEmpty()) {
             return Outcome.UNCONVERTIBLE;
         }
-        if (placement.inPlace() && after.get().equals(before)) {
+        // Same text is not the same cell when the rule produces a number. "1250.5" read from a
+        // string cell renders back as "1250.5", so comparing text calls it unchanged and skips the
+        // write — leaving a string that no number format can touch. TO_NUMBER over a tidy column of
+        // numerals then converted only the whole ones, because those are the values whose text
+        // happens to differ ("980" becoming "980.0"). What changes here is the cell's type, so a
+        // numeric rule asks the cell, not the string.
+        boolean alreadyNumeric = transform.numeric() && isNumeric(sheet, row, placement.sourceColumn());
+        if (placement.inPlace() && after.get().equals(before) && (!transform.numeric() || alreadyNumeric)) {
             return Outcome.UNTOUCHED;
         }
 

@@ -64,7 +64,7 @@ class DocumentSessionServiceTest {
                         .sheetName("Sales")
                         .headerRange("A1:B1")
                         .dataRange("A2:B2")
-                        .columns(List.of("Product", "Revenue"))
+                        .columns(List.of(new SheetSchemaDto.ColumnSchema("Product", "text"), new SheetSchemaDto.ColumnSchema("Revenue", "text")))
                         .existingFormulas(List.of())
                         .build()))
                 .charts(List.of())

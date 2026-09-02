@@ -39,6 +39,13 @@ public class AiPlanningService {
             - Use ONLY the keys listed above for each action
             - Return ONLY the JSON object, nothing else
             - Use "sheetName" (exact match) when you know the sheet name; use "sheetIndex" otherwise
+            - Each column is listed as "name (type)". READ THE TYPE before choosing a step.
+              A column marked (text) holds strings, whatever its name suggests. NUMBER_FORMAT
+              cannot change how a string reads — it applies to numbers only and does nothing at
+              all to text. So when the request asks to show a (text) column as currency, percent,
+              a date or any other number format, emit TRANSFORM_COLUMN with "TO_NUMBER" over that
+              range FIRST, then NUMBER_FORMAT. Two steps, in that order. Skipping the first leaves
+              a step that reports success and changes nothing.
             """;
 
     private final LlmSettingsService llmSettingsService;
