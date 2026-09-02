@@ -1,9 +1,11 @@
 package com.ap0stole.sheetsmith.controller;
 
 import com.ap0stole.sheetsmith.domain.dto.LlmSettingsDto;
+import com.ap0stole.sheetsmith.domain.dto.CloudModelsResponseDto;
 import com.ap0stole.sheetsmith.domain.dto.OllamaModelsResponseDto;
 import com.ap0stole.sheetsmith.domain.dto.StorageSettingsDto;
 import com.ap0stole.sheetsmith.services.LlmSettingsService;
+import com.ap0stole.sheetsmith.services.CloudModelService;
 import com.ap0stole.sheetsmith.services.OllamaModelService;
 import com.ap0stole.sheetsmith.services.StorageSettingsService;
 import jakarta.validation.constraints.NotBlank;
@@ -41,6 +43,7 @@ public class SettingsController {
 
     private final LlmSettingsService llmSettingsService;
     private final OllamaModelService ollamaModelService;
+    private final CloudModelService cloudModelService;
     private final StorageSettingsService storageSettingsService;
 
     @Operation(summary = "The model settings, without the keys",
@@ -72,6 +75,15 @@ public class SettingsController {
     @PutMapping("/storage")
     public ResponseEntity<StorageSettingsDto> updateStorage(@RequestBody StorageSettingsDto.Update update) {
         return ResponseEntity.ok(storageSettingsService.update(update));
+    }
+
+    @Operation(summary = "Ask a cloud vendor which models it will answer to",
+            description = "Uses the key already saved for that provider; a key is never accepted as a parameter. Names that cannot hold a conversation — embeddings, speech, images — are left out.")
+    @ApiResponse(responseCode = "502", description = "No key is saved for that provider, or the vendor could not be reached.",
+            content = @Content(schema = @Schema(ref = "#/components/schemas/ErrorResponse")))
+    @GetMapping("/cloud/models")
+    public ResponseEntity<CloudModelsResponseDto> listCloudModels(@RequestParam @NotBlank String provider) {
+        return ResponseEntity.ok(new CloudModelsResponseDto(cloudModelService.listModels(provider)));
     }
 
     @Operation(summary = "Ask an Ollama server what it has")

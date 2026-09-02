@@ -5,13 +5,14 @@ import userEvent from '@testing-library/user-event';
 vi.mock('./settingsApi.js', () => ({
   getSettings: vi.fn(),
   updateSettings: vi.fn(),
+  getCloudModels: vi.fn(),
   getOllamaModels: vi.fn(),
   getStorageSettings: vi.fn(),
   updateStorageSettings: vi.fn(),
 }));
 
 import SettingsPanel from './SettingsPanel.jsx';
-import { getSettings, getStorageSettings, updateSettings, updateStorageSettings } from './settingsApi.js';
+import { getCloudModels, getSettings, getStorageSettings, updateSettings, updateStorageSettings } from './settingsApi.js';
 
 /**
  * The storage tab: what it shows about the disk, and what it sends when somebody sets a cap.
@@ -41,6 +42,10 @@ const storage = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // The model lists are cached in localStorage so a person switching providers does not re-ask.
+  // That cache outlives a render, so without this a test that fetched leaves the next one looking
+  // at a dropdown it never asked for.
+  localStorage.clear();
   getSettings.mockResolvedValue(llm);
   getStorageSettings.mockResolvedValue(storage);
   updateStorageSettings.mockImplementation(async (update) => ({ ...storage, ...update }));
@@ -77,6 +82,38 @@ describe('SettingsPanel keys', () => {
     expect(link).toHaveAttribute('href', 'https://platform.openai.com/api-keys');
     // Opening a vendor's site from a self-hosted page: no window.opener back into this instance.
     expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+  });
+
+  it('will not ask a provider for its models until a key is saved for it', async () => {
+    render(<SettingsPanel open maySetStorage onClose={() => {}} />);
+
+    // The fixture has a key for OPENAI, which is the active provider.
+    const button = await screen.findByRole('button', { name: 'Fetch models' });
+    expect(button).toBeEnabled();
+    expect(button).toHaveAttribute('title', expect.stringContaining('what it offers'));
+  });
+
+  it('offers what the provider answered, and keeps the typed box until it has', async () => {
+    getCloudModels.mockResolvedValue(['gpt-5', 'gpt-5-mini']);
+    render(<SettingsPanel open maySetStorage onClose={() => {}} />);
+
+    // Before asking: a box, because a model released this morning is on no list yet.
+    expect(await screen.findByPlaceholderText('Model name')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Fetch models' }));
+
+    await waitFor(() => expect(getCloudModels).toHaveBeenCalledWith('OPENAI'));
+    const picked = await screen.findByRole('option', { name: 'gpt-5-mini' });
+    expect(picked).toBeInTheDocument();
+  });
+
+  it('shows what the server said when the provider cannot be asked', async () => {
+    getCloudModels.mockRejectedValue(new Error('No API key is saved for OPENAI.'));
+    render(<SettingsPanel open maySetStorage onClose={() => {}} />);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Fetch models' }));
+
+    expect(await screen.findByText('No API key is saved for OPENAI.')).toBeInTheDocument();
   });
 
   it('clearing a typed key is the way to remove it, and says so', async () => {

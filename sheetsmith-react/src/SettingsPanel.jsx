@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { getSettings, updateSettings, getOllamaModels, getStorageSettings, updateStorageSettings } from './settingsApi.js';
+import { getCloudModels, getOllamaModels, getSettings, getStorageSettings,
+  updateSettings, updateStorageSettings } from './settingsApi.js';
 import { formatBytes, fromSizeInput, toSizeInput } from './components/bytes.js';
 
 const mono = "'JetBrains Mono', monospace";
@@ -13,6 +14,25 @@ function loadModelsCache() {
     return JSON.parse(localStorage.getItem(MODELS_CACHE_KEY) ?? '{}');
   } catch {
     return {};
+  }
+}
+
+const CLOUD_MODELS_CACHE_KEY = 'ss-cloud-models-cache';
+
+function loadCloudModelsCache() {
+  try {
+    return JSON.parse(localStorage.getItem(CLOUD_MODELS_CACHE_KEY) ?? '{}');
+  } catch {
+    return {};
+  }
+}
+
+function saveCloudModelsCache(byProvider) {
+  try {
+    localStorage.setItem(CLOUD_MODELS_CACHE_KEY, JSON.stringify(byProvider));
+  } catch {
+    // A browser refusing to store this is not a reason to fail the screen; the list is a
+    // convenience and asking the vendor again costs one request.
   }
 }
 
@@ -43,6 +63,11 @@ export default function SettingsPanel({ open, onClose, maySetStorage = false }) 
   const [ollamaModels, setOllamaModels] = useState([]);
   const [fetchingModels, setFetchingModels] = useState(false);
   const [modelsError, setModelsError] = useState(null);
+  // Kept per provider: the four have different catalogues and somebody comparing them should not
+  // have to re-ask the moment they switch the dropdown.
+  const [cloudModels, setCloudModels] = useState(() => loadCloudModelsCache());
+  const [fetchingCloud, setFetchingCloud] = useState(false);
+  const [cloudError, setCloudError] = useState(null);
 
   // What the server says is there right now, and the form over it. Kept apart so the usage figures
   // keep reading the disk rather than whatever has just been typed into the boxes above them.
@@ -82,6 +107,23 @@ export default function SettingsPanel({ open, onClose, maySetStorage = false }) 
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, [open, maySetStorage]);
+
+  const handleFetchCloudModels = async (provider) => {
+    setFetchingCloud(true);
+    setCloudError(null);
+    try {
+      const models = await getCloudModels(provider);
+      setCloudModels(current => {
+        const next = { ...current, [provider]: models };
+        saveCloudModelsCache(next);
+        return next;
+      });
+    } catch (e) {
+      setCloudError(e.message);
+    } finally {
+      setFetchingCloud(false);
+    }
+  };
 
   const handleFetchOllamaModels = async () => {
     setFetchingModels(true);
@@ -342,12 +384,52 @@ export default function SettingsPanel({ open, onClose, maySetStorage = false }) 
                                 : 'A key is saved for this provider. Clear the box to remove it.'}
                             </div>
                           )}
-                          <input
-                            value={settings.cloud.models[active.key] ?? ''}
-                            onChange={e => setCloudModel(active.key, e.target.value)}
-                            placeholder="Model name"
-                            style={inputStyle}
-                          />
+                          {/* Same shape as the local model field: a list once the vendor has been
+                              asked, a box to type in until then. Typed either way, because a model
+                              released this morning is not on any list yet. */}
+                          {(cloudModels[active.key] ?? []).length > 0 ? (
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <select
+                                value={cloudModels[active.key].includes(settings.cloud.models[active.key])
+                                  ? settings.cloud.models[active.key] : ''}
+                                onChange={e => setCloudModel(active.key, e.target.value)}
+                                style={{ ...selectStyle, flex: 1 }}
+                              >
+                                <option value="" disabled>Pick a model…</option>
+                                {cloudModels[active.key].map(m => <option key={m} value={m}>{m}</option>)}
+                              </select>
+                              <button
+                                onClick={() => handleFetchCloudModels(active.key)}
+                                disabled={fetchingCloud}
+                                title="Refresh"
+                                style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 8, border: '1px solid var(--border-strong)', background: 'transparent', color: 'var(--text-dim)', fontFamily: 'inherit', fontSize: 13, cursor: fetchingCloud ? 'default' : 'pointer' }}
+                              >
+                                {fetchingCloud ? '…' : '↻'}
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <input
+                                value={settings.cloud.models[active.key] ?? ''}
+                                onChange={e => setCloudModel(active.key, e.target.value)}
+                                placeholder="Model name"
+                                style={{ ...inputStyle, flex: 1 }}
+                              />
+                              <button
+                                onClick={() => handleFetchCloudModels(active.key)}
+                                disabled={fetchingCloud || !keySaved(settings, active.key)}
+                                title={keySaved(settings, active.key)
+                                  ? 'Ask this provider what it offers'
+                                  : 'Save a key first — the list is fetched with it'}
+                                style={{ flexShrink: 0, height: 36, padding: '0 14px', borderRadius: 8, border: '1px solid var(--border-strong)', background: 'transparent', color: 'var(--text-dim)', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 500, cursor: fetchingCloud ? 'default' : 'pointer' }}
+                              >
+                                {fetchingCloud ? 'Fetching…' : 'Fetch models'}
+                              </button>
+                            </div>
+                          )}
+                          {cloudError && (
+                            <div style={{ fontSize: 11.5, color: 'var(--del)' }}>{cloudError}</div>
+                          )}
                         </div>
                       </div>
                     );

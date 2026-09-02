@@ -42,6 +42,22 @@ export async function updateStorageSettings(update) {
   return res.json();
 }
 
+/**
+ * What a cloud vendor will answer to, asked with the key already saved for it.
+ *
+ * No key travels in this call: the server reads the stored one. A key in a query string is a key in
+ * an access log.
+ */
+export async function getCloudModels(provider) {
+  const res = await authFetch(`${BASE}/api/settings/cloud/models?provider=${encodeURIComponent(provider)}`);
+  if (!res.ok) {
+    // The server's sentence is the useful part here — "no key saved for GEMINI" tells somebody
+    // what to do next, where a status code does not.
+    throw new Error(await apiMessage(res, `Failed to fetch models: ${res.status}`));
+  }
+  return (await res.json()).models;
+}
+
 export async function getOllamaModels(baseUrl) {
   const res = await authFetch(`${BASE}/api/settings/ollama/models?baseUrl=${encodeURIComponent(baseUrl)}`);
   if (!res.ok) {
