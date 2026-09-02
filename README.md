@@ -53,7 +53,7 @@ Two more screens, once an instance has been used for a while:
 - **Analytics** — what has been asked of the models and what it cost: tokens and money by provider,
   by model and by person, spend over time, and whether the runs themselves succeeded.
 
-![Analytics: tokens and spend by provider, model and person, with how the runs themselves went](docs/analytics.png)
+![Analytics: 48 calls and 158 475 tokens broken down by provider, by model and by person — with the three models nobody has priced named outright rather than counted as free](docs/analytics.png)
 
 ## What a run costs
 

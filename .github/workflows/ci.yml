@@ -89,3 +89,49 @@ jobs:
       - name: Build
         working-directory: sheetsmith-react
         run: npm run build
+
+  # Neither job above builds anything somebody would run. The tests pass against classes on a
+  # classpath; the quick-start in the README is `docker compose up --build`, and the gap between
+  # those two is where a dependency change hides. This closed after Spring Boot 4 landed with new
+  # modules and moved artifacts: every test stayed green, and whether the image still built was
+  # nobody's business until somebody tried it by hand.
+  image:
+    name: Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # The same command the README gives, from the repository root, because the UI is a sibling
+      # directory the build has to reach. Not pushed anywhere — the question is whether it builds.
+      - name: Build the image the quick-start builds
+        run: docker build -f sheetsmith-java/Dockerfile -t sheetsmith:ci .
+
+      # Building is not starting. This is the first thing a stranger sees, so it is worth a check
+      # that the container comes up, serves the UI and answers the call the browser makes first.
+      - name: Start it against a throwaway Postgres
+        run: |
+          docker network create ci-net
+          docker run -d --name ci-db --network ci-net             -e POSTGRES_DB=xlsxai -e POSTGRES_USER=xlsxai -e POSTGRES_PASSWORD=xlsxai_pass             postgres:16-alpine
+          docker run -d --name ci-app --network ci-net -p 8080:8080             -e DB_HOST=ci-db -e DB_NAME=xlsxai -e DB_USERNAME=xlsxai -e DB_PASSWORD=xlsxai_pass             sheetsmith:ci
+
+      - name: Wait for it to answer
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/api/capabilities > /dev/null; then
+              echo "up after ${i}0s at most"; exit 0
+            fi
+            sleep 10
+          done
+          echo "never came up"; docker logs ci-app | tail -50; exit 1
+
+      - name: It serves the UI and its own API document
+        run: |
+          curl -fsS http://localhost:8080/ > /dev/null
+          curl -fsS http://localhost:8080/v3/api-docs > /dev/null
+          echo "index.html and /v3/api-docs both answered"
+
+      - name: Logs, when it did not work
+        if: failure()
+        run: docker logs ci-app | tail -100
