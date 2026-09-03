@@ -11,7 +11,7 @@
 
     <groupId>com.ap0stole</groupId>
     <artifactId>sheetsmith</artifactId>
-    <version>0.1.0</version>
+    <version>1.0.0</version>
     <name>SheetSmith</name>
     <description>Improve a spreadsheet from a plain-language instruction, reviewing every step before it runs.</description>
 
