@@ -12,6 +12,10 @@ docker compose up --build     # Postgres, Ollama, the model and the app
 
 Runs against a local Ollama by default; OpenAI and Anthropic are one profile switch away.
 
+There is no login screen until you ask for one — the right default for your own machine, and
+the wrong one the moment somebody else can reach the address. Read [Accounts](#accounts) before
+you put it anywhere shared.
+
 ![The plan: four steps, each a sentence, each editable or dismissable before anything runs](docs/plan-review.png)
 
 Every step is a sentence you can read, edit or drop. Nothing touches the file until you say so:
