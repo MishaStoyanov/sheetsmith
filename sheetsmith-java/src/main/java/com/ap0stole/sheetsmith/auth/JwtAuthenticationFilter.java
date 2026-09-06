@@ -40,6 +40,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return !authConfig.isEnabled();
     }
 
+    /**
+     * Run on the async dispatch too, which {@link OncePerRequestFilter} sits out by default.
+     * <p>
+     * A streamed chat turn returns an {@code SseEmitter} and finishes on another thread; completing
+     * it sends the request through this chain a second time, and that pass is authorised like any
+     * other. Skipped here, nothing reads the token on it — and the chain is stateless, so there is
+     * no context to restore either. The caller arrived anonymous, {@code AuthorizationFilter}
+     * refused {@code /api/chat/**}, and by then the response was committed, so the refusal could
+     * not even be delivered: the turn had run and its answer was already in the database, while the
+     * browser saw a stream that stopped mid-air. Every streamed turn, on any instance with accounts
+     * turned on.
+     */
+    @Override
+    protected boolean shouldNotFilterAsyncDispatch() {
+        return false;
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
