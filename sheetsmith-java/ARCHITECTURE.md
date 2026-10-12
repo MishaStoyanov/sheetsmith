@@ -1,6 +1,6 @@
 # ARCHITECTURE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+How the backend is built, run and tested, and how its pieces fit together.
 
 ## Commands
 
