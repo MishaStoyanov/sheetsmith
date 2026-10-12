@@ -52,7 +52,7 @@ public class OpenApiConfig {
                         .description(description())
                         .contact(new Contact().name("SheetSmith").url("https://github.com/MishaStoyanov/sheetsmith"))
                         .license(new License().name("SheetSmith Source-Available License 1.0")
-                                .url("https://github.com/MishaStoyanov/sheetsmith/blob/master/LICENSE")))
+                                .url("https://github.com/MishaStoyanov/sheetsmith/blob/main/LICENSE")))
                 .externalDocs(new ExternalDocumentation()
                         .description("The long-form reference: setup, the action catalogue, and why each rule is the way it is")
                         .url("https://github.com/MishaStoyanov/sheetsmith#readme"))

@@ -12,7 +12,7 @@ on:
 # it — except on the default branch, where every commit's result is worth keeping.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
 
